@@ -16,6 +16,7 @@ import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
 import { h, clone } from './dom.js';
+import { VERSION, versionIn } from './changelog.js';
 
 export class App {
   constructor(root) {
@@ -80,6 +81,8 @@ export class App {
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
       this.iv = setInterval(() => this.tick(), 500);
+      // A wall screen can run for weeks, so it looks for a new release once an hour.
+      setTimeout(() => this.checkVersion(), 10 * 60e3); setInterval(() => this.checkVersion(), 36e5);
       this.drift();
     });
   }
@@ -148,12 +151,27 @@ export class App {
     this.paintHighlight();
     if (this.S.editing && now - (this.lastThumbs || 0) > 3000) { this.lastThumbs = now; this.editor.refreshThumbs(); }
     this.rolls(now);
+    this.maybeReload(now);
     this.wrap.style.opacity = this.quietMode() === 'dim' ? '0.22' : '1';
     const text = g.map(r => r.map(c => isChip(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
     if (text !== this.lastAria) { this.lastAria = text; this.liveRegion.textContent = text; }
     const stale = this.S.editing ? 0 : this.live.staleMinutes(this.currentPage());
     if (stale !== this.lastStale) { this.lastStale = stale; this.renderOverlay(); }
     if (force && this.S.editing) this.editor.composer.paintGrid();
+  }
+  // Fetches changelog.js as text (no query string, so the service worker keeps one
+  // entry) and marks a reload when it names another version. The reload waits for quiet
+  // hours or 04:00, and never happens while the editor is open.
+  async checkVersion() {
+    try {
+      const r = await fetch(new URL('./changelog.js', import.meta.url), { cache: 'no-cache' });
+      const v = r.ok ? versionIn(await r.text()) : null;
+      if (v && v !== VERSION) this.reloadPending = true;
+    } catch { /* offline: try again next hour */ }
+  }
+  maybeReload(now) {
+    if (!this.reloadPending || this.S.editing || this.S.share) return;
+    if (this.quietMode() || new Date(now).getHours() === 4) { this.reloadPending = false; location.reload(); }
   }
   // Rolls: every flap turns once when the board starts (after the first page has
   // settled), and optionally on the hour. Not while editing, in quiet hours or during a

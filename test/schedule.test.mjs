@@ -167,3 +167,12 @@ test('rolls are kept when switched on and dropped otherwise', () => {
   assert.equal(pick({ start: false, hourly: false }), undefined);
   assert.equal(pick('fast'), undefined);
 });
+
+test('the version is read from the text of changelog.js itself', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { versionIn, VERSION } = await import('../src/changelog.js');
+  const text = readFileSync(new URL('../src/changelog.js', import.meta.url), 'utf8');
+  assert.equal(versionIn(text), VERSION);
+  assert.equal(versionIn("  {\n    v: '0.9', date: '2027-01-01',\n  },\n  {\n    v: '0.8',"), '0.9');
+  assert.equal(versionIn('<html>502 Bad Gateway</html>'), null);
+});
