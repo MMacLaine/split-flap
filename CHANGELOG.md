@@ -17,6 +17,6 @@ Day one: a split-flap board for any screen, from a blank page to live on maclain
 - Seven templates, from a hallway dashboard to Everything at once, which fills the screen and never sits still.
 - Playlists with page timers, day and time windows, and quiet hours that dim or blank the board overnight.
 - Four transitions at three speeds, played on the board as you pick them. Authentic turns every flap the full way round.
-- Four synthesised flap sounds: Clack, Heavy, Soft and Tick.
+- Four synthesised flap sounds: Clack, Heavy, Soft and Tick, with a volume slider.
 - Board links and QR (Quick Response) codes carry a whole board to another screen, including a version for wall screens with no controls. Nothing is stored on a server.
 - Made for walls: keeps the screen awake, shifts one pixel every few minutes against burn-in, keeps running offline, and says when live data is getting old.

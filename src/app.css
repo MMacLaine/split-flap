@@ -243,3 +243,7 @@ html[data-chrome="light"], html[data-chrome="light"] body { background: #F4F0E7;
 .sf-log-desc { margin: 0; font-size: 13px; color: var(--pale); text-wrap: pretty; }
 .sf-log-list { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.55; color: var(--text); }
 .sf-log-list li::marker { color: var(--muted); }
+
+/* ---------- volume ---------- */
+.sf-vol { flex: 1; min-width: 120px; height: 34px; margin: 0; accent-color: var(--accent); background: transparent; }
+.sf-vol-out { font-family: var(--mono); font-size: 12px; color: var(--pale); width: 3ch; text-align: right; }

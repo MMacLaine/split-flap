@@ -9,7 +9,7 @@ const page = (name, layout, dur, zones, win = null) => ({ id: newId('p'), name, 
 const z = (ch, o = {}) => ({ ch, o });
 const base = (name, extra) => Object.assign({
   id: newId('b'), name, size: '6x22', rows: 6, cols: 22, theme: 'black', transition: 'classic', speed: 'fast',
-  sound: false, soundStyle: 'clack', quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, pages: []
+  sound: false, soundStyle: 'clack', volume: 70, quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, pages: []
 }, extra);
 
 const sl = (home, site, name, extra) => home ? z('sl', { home: true, eta: 'min', ...extra }) : z('sl', { sites: [site], name, eta: 'min', ...extra });
