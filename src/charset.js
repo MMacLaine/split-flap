@@ -42,10 +42,15 @@ export function cleanChar(ch) {
 }
 
 // A stored cell to a drum entry. Chips pass through; everything else is cleaned.
+// '~' + a character is the same flap drawn faint (the letter clock's unlit letters and
+// dots). A faint blank is just a blank.
 export function cellChar(ch) {
+  if (typeof ch === 'string' && ch.length > 1 && ch[0] === '~') { const b = cellChar(ch.slice(1)); return b === ' ' ? ' ' : '~' + b; }
   if (isChip(ch)) return ch;
   return cleanChar(ch).ch;
 }
+export const isDim = ch => typeof ch === 'string' && ch.length > 1 && ch[0] === '~';
+export const baseChar = ch => isDim(ch) ? ch.slice(1) : ch;
 
 // Free text to flaps, expanding multi-letter stand-ins (ß to SS). Chips are not
 // reachable from free text on purpose: lowercase letters must print as capitals.

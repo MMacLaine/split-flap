@@ -106,6 +106,13 @@ export const TEMPLATES = [
     ] })
   },
   {
+    id: 'letters',
+    name: { en: 'Letter clock', sv: 'Bokstavsklocka' },
+    desc: { en: 'The time lit up in a grid of letters, with a dot in a corner for each minute in between.', sv: 'Tiden tänd i ett rutnät av bokstäver, med en prick i ett hörn för varje minut däremellan.' },
+    make: sv => base(sv ? 'Bokstavsklocka' : 'Letter clock', { size: 'custom', rows: 11, cols: 15, speed: 'gentle', transition: 'drift', soundStyle: 'soft',
+      quiet: { on: true, from: '23:00', to: '06:30', mode: 'dim' }, pages: [page(sv ? 'Klocka' : 'Clock', 'full', 3600, [z('letterclock')])] })
+  },
+  {
     id: 'blank',
     name: { en: 'Blank', sv: 'Tom' },
     desc: { en: 'One empty page to type on.', sv: 'En tom sida att skriva på.' },

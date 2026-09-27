@@ -2,6 +2,15 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.4 (2026-09-27): Letter clock
+
+A letter clock, like the designer word clocks where only the words for the time light up.
+
+- The Letter clock is a grid of letters where the words for the time light up and the rest stay faint, in five minute steps. A dot in a corner lights for each minute in between.
+- It follows the board language, with a grid of its own in English and Swedish. On the hour the Swedish one says KLOCKAN ÄR PRECIS.
+- When the time moves on, the letters fade up and down in place.
+- The Letter clock template sets up a square board for it, with quiet hours overnight. As a tile in the picker it needs a zone of 9 × 13, and anything smaller spells the time out like the Word clock.
+
 ## v0.3 (2026-09-27): Planning the week, part one
 
 This one is about when pages show. There is also a heart flap and a few things for wall screens.

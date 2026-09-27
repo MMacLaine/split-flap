@@ -196,3 +196,42 @@ test('the Café menu fits: every item ends in its price, no word cut', () => {
     });
   }
 });
+
+test('letter clock: every five minutes lights its words in order, with a gap between them', async () => {
+  const { LETTER_GRIDS, letterWords, letterCells } = await import('../src/content.js');
+  for (const lang of ['en', 'sv']) {
+    const G = LETTER_GRIDS[lang], gw = G.rows[0].length;
+    assert.ok(G.rows.every(r => [...r].length === gw), lang);
+    for (let t = 0; t < 24 * 60; t += 5) {
+      const d = new Date(2026, 0, 1, Math.floor(t / 60), t % 60), { words, hour } = letterWords(d, lang), lit = letterCells(G, words, hour);
+      assert.ok(lit, `${lang} ${t}`);
+      const cells = [...lit].sort((a, b) => a - b), runs = [];
+      cells.forEach(i => { const last = runs[runs.length - 1]; if (last && last.end === i - 1 && Math.floor(i / gw) === Math.floor(last.end / gw)) last.end = i; else runs.push({ start: i, end: i }); });
+      const read = runs.map(x => [...G.rows[Math.floor(x.start / gw)]].slice(x.start % gw, x.end % gw + 1).join(''));
+      assert.deepEqual(read, words, `${lang} ${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`);
+    }
+  }
+});
+
+test('letter clock: 10:07 is five past ten with two dots, faint letters elsewhere', () => {
+  const g = compose(page('full', [{ ch: 'letterclock', o: {} }]), 11, 15, at(2026, 9, 27, 10, 7), 'en', {});
+  const lit = g.map(r => r.filter(c => c.length === 1 && c !== ' ' && c !== 'f').join('')).join('');
+  assert.equal(lit, 'ITISFIVEPASTTEN');
+  assert.deepEqual([g[0][0], g[0][14], g[10][14], g[10][0]], ['f', 'f', '~f', '~f']);
+  assert.equal(g[1][3], '~R');                                           // a filler letter, faint
+  const sv = compose(page('full', [{ ch: 'letterclock', o: {} }]), 11, 15, at(2026, 9, 27, 10, 2), 'sv', {});
+  assert.equal(sv.map(r => r.filter(c => c.length === 1 && c !== ' ' && c !== 'f').join('')).join(''), 'KLOCKANÄRPRECISTIO');
+  // too small for the grid: the time in words
+  assert.match(text(compose(page('full', [{ ch: 'letterclock', o: {} }]), 6, 22, at(2026, 9, 27, 10, 7), 'en', {})), /FIVE PAST TEN/);
+  // no dots when switched off
+  const off = compose(page('full', [{ ch: 'letterclock', o: { dots: false } }]), 11, 15, at(2026, 9, 27, 10, 7), 'en', {});
+  assert.equal(off[0][0], ' ');
+});
+
+test('a faint flap keeps its letter, a faint blank is a blank', async () => {
+  const { cellChar } = await import('../src/charset.js');
+  assert.equal(cellChar('~a'), '~A');
+  assert.equal(cellChar('~f'), '~f');
+  assert.equal(cellChar('~ '), ' ');
+  assert.equal(cellChar('~~'), ' ');
+});

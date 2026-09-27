@@ -4,7 +4,7 @@
 // keep focus and the phone keyboard stays up.
 
 import { Board, THEMES, fillGrid, renderStatic, staticGeom } from './renderer.js';
-import { isChip } from './charset.js';
+import { isChip, isDim } from './charset.js';
 import { compose, FALLBACK_PAGE, newId, blank } from './content.js';
 import { TEMPLATES, fromTemplate } from './templates.js';
 import { RAINBOW } from './pixels.js';
@@ -153,7 +153,7 @@ export class App {
     this.rolls(now);
     this.maybeReload(now);
     this.wrap.style.opacity = this.quietMode() === 'dim' ? '0.22' : '1';
-    const text = g.map(r => r.map(c => isChip(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
+    const text = g.map(r => r.map(c => isChip(c) || isDim(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
     if (text !== this.lastAria) { this.lastAria = text; this.liveRegion.textContent = text; }
     const stale = this.S.editing ? 0 : this.live.staleMinutes(this.currentPage());
     if (stale !== this.lastStale) { this.lastStale = stale; this.renderOverlay(); }
