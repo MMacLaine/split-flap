@@ -40,7 +40,7 @@ export const HELP = {
       ['As a guest, boards are kept in this browser and nowhere else. To move one, use its link, or export it from ', { k: 'start', t: 'Boards and templates' }, ' and import it in the other browser.'],
       ['With an account, your boards are kept with it as well, and come back on any device you sign in on. ', { k: 'account', t: 'Account' }, ', at the foot of the page list, has signing in, export and delete, and the ', { href: 'privacy', t: 'privacy page' }, ' says what it stores.']
     ] },
-    { h: 'Keys', keys: [['E', 'Open and close the editor'], ['F', 'Fullscreen'], ['S', 'Sound on and off'], ['Esc', 'Back one step'], ['Ctrl Z', 'Undo in a message, with Shift to redo']] }
+    { h: 'Keys', keys: [['E', 'Open and close the editor'], ['F', 'Fullscreen'], ['S', 'Sound on and off'], ['R', 'Read the board aloud, with a screen reader on'], ['Esc', 'Back one step'], ['Ctrl Z', 'Undo in a message, with Shift to redo']] }
   ],
   sv: [
     { h: 'Så är en tavla uppbyggd', fig: 'board', p: [
@@ -73,6 +73,6 @@ export const HELP = {
       ['Som gäst sparas tavlorna i den här webbläsaren och ingen annanstans. För att flytta en, använd dess länk, eller exportera den från ', { k: 'start', t: 'Tavlor och mallar' }, ' och importera den i den andra webbläsaren.'],
       ['Med ett konto sparas tavlorna också med kontot, och finns kvar på alla enheter där du loggar in. ', { k: 'account', t: 'Konto' }, ', längst ned i sidlistan, har inloggning, export och radering, och ', { href: 'privacy', t: 'integritetssidan' }, ' säger vad det sparar.']
     ] },
-    { h: 'Tangenter', keys: [['E', 'Öppna och stäng redigeraren'], ['F', 'Helskärm'], ['S', 'Ljud på och av'], ['Esc', 'Tillbaka ett steg'], ['Ctrl Z', 'Ångra i ett meddelande, med Skift för att göra om']] }
+    { h: 'Tangenter', keys: [['E', 'Öppna och stäng redigeraren'], ['F', 'Helskärm'], ['S', 'Ljud på och av'], ['R', 'Läs upp tavlan, med en skärmläsare på'], ['Esc', 'Tillbaka ett steg'], ['Ctrl Z', 'Ångra i ett meddelande, med Skift för att göra om']] }
   ]
 };
