@@ -17,6 +17,7 @@ import { GROUPS, TILES, tileFor, previewLive, SAMPLE_FEED } from './catalogue.js
 import { sampleImage, mapImage, stamp, HEART } from './photo.js';
 import { Composer } from './composer.js';
 import { CHANGELOG, VERSION } from './changelog.js';
+import { HELP } from './help.js';
 import * as sound from './sound.js';
 
 const DURS = [3, 5, 8, 10, 12, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1800, 3600];
@@ -50,7 +51,7 @@ export class Editor {
   }
   backTarget() {
     const lv = this.E.lv;
-    if (lv === 'log') return this.prevLv || 'playlist';
+    if (lv === 'log' || lv === 'help') return this.prevLv || 'playlist';
     return this.phone() ? { page: 'playlist', content: 'page', settings: 'playlist', start: 'playlist' }[lv] : { content: 'page', settings: 'playlist', start: 'playlist' }[lv];
   }
   back() { const b = this.backTarget(); if (b) this.go(b, {}, true); else this.app.toggleEdit(); }
@@ -112,10 +113,10 @@ export class Editor {
   // ---------- the drawer ----------
   render() {
     this.specs = new Map();
-    const t = this.t, lv = this.E.lv, plv = this.panelLv(), rail = !this.phone() && lv !== 'start' && lv !== 'log';
+    const t = this.t, lv = this.E.lv, plv = this.panelLv(), rail = !this.phone() && lv !== 'start' && lv !== 'log' && lv !== 'help';
     const anim = this.E.navKey !== this.lastNav ? (this.E.fx === 'back' ? ' sf-nav-back' : ' sf-nav-in') : '';
     this.lastNav = this.E.navKey;
-    const body = { playlist: () => this.playlistLevel(), page: () => this.pageLevel(), content: () => this.contentLevel(), settings: () => this.settingsLevel(), start: () => this.startLevel(), log: () => this.logLevel() }[plv]();
+    const body = { playlist: () => this.playlistLevel(), page: () => this.pageLevel(), content: () => this.contentLevel(), settings: () => this.settingsLevel(), start: () => this.startLevel(), log: () => this.logLevel(), help: () => this.helpLevel() }[plv]();
     return h('aside', { class: 'sf-drawer' + (rail ? ' with-rail' : ''), 'aria-label': t.editor },
       rail ? this.rail() : null,
       h('section', { class: 'sf-panel-col' }, this.head(plv), h('div', { class: 'sf-panel-body' + anim, 'data-lv': plv }, body)));
@@ -130,7 +131,7 @@ export class Editor {
       playlist: [t.playlist, b.name],
       page: [t.pageOf(this.app.selIdx() + 1, b.pages.length), p ? p.name || t.page : ''],
       content: [`${p ? p.name || t.page : ''} · ${this.zoneName(this.zi())}`, this.E.picking || !tile ? t.chooseContent : this.L(tile.name)],
-      settings: [b.name, t.boardSettings], start: [t.boardsTemplates, t.startTitle], log: [`v${VERSION}`, t.versionLog]
+      settings: [b.name, t.boardSettings], start: [t.boardsTemplates, t.startTitle], log: [`v${VERSION}`, t.versionLog], help: ['Split-Flap', t.help]
     }[plv];
     return h('header', { class: 'sf-panel-head' },
       back ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, backLabel)) : null,
@@ -161,7 +162,9 @@ export class Editor {
       h('span', null, h('strong', null, label), h('span', null, sub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›'));
     return h('div', { class: 'sf-secs' },
       row('open-settings', t.boardSettings, `${this.app.sizeLabel(b)} · ${THEMES[b.theme].label}`, 'settings'),
-      row('open-start', t.boardsTemplates, `${t.boardsCount(this.app.boards.length)} · ${t.templatesCount(TEMPLATES.length)}`, 'start'));
+      row('open-start', t.boardsTemplates, `${t.boardsCount(this.app.boards.length)} · ${t.templatesCount(TEMPLATES.length)}`, 'start'),
+      h('button', { class: 'sf-sec' + (this.E.lv === 'help' ? ' on' : ''), 'data-k': 'open-help', onclick: () => { this.prevLv = this.E.lv; this.go('help'); } },
+        h('span', null, h('strong', null, t.help), h('span', null, t.helpSub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')));
   }
   rail() {
     const t = this.t, b = this.app.cur();
@@ -257,7 +260,8 @@ export class Editor {
     return h('div', { class: 'sf-level' },
       h('label', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.pageName),
         h('input', { class: 'sf-input big', value: p.name, 'data-k': 'page-name', oninput: e => { this.app.updPage(pp => { pp.name = e.target.value.slice(0, 80); }, true); }, onchange: () => this.app.render() })),
-      h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.layout), layouts),
+      h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.layout), layouts,
+        h('span', { class: 'sf-hint' }, t.gridIs(d.rows, d.cols), ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'grid-size', onclick: () => this.go('settings') }, t.changeSize))),
       h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.zones), h('span', { class: 'sf-sub' }, zs.length > 1 ? t.tapZone : t.tapZoneOne), diagram, zoneRows),
       h('div', { class: 'sf-field gap' }, h('span', { class: 'sf-eyebrow' }, t.timing),
         h('div', { class: 'sf-row between' }, h('span', { class: 'sf-label' }, t.showFor),
@@ -334,7 +338,7 @@ export class Editor {
       oninput: e => { this.E.search = e.target.value; groups.replaceWith(groups = this.pickerGroups(zd, cur)); this.paintThumbs(); } });
     let groups = this.pickerGroups(zd, cur);
     return h('div', { class: 'sf-picker' },
-      h('div', { class: 'sf-field' }, input, h('span', { class: 'sf-sub' }, t.shapeNote(zd.h, zd.w))),
+      h('div', { class: 'sf-field' }, input, h('span', { class: 'sf-sub' }, t.shapeNote(zd.h, zd.w), ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'grid-size', onclick: () => this.go('settings') }, t.changeSize))),
       groups);
   }
   pickerGroups(zd, cur) {
@@ -593,6 +597,13 @@ export class Editor {
     const k = id + this.lang;
     if (!this.tplCache.has(k)) this.tplCache.set(k, fromTemplate(id, this.lang, this.app.live.data.home));
     return this.tplCache.get(k);
+  }
+
+  // ---------- help ----------
+  helpLevel() {
+    const part = x => typeof x === 'string' ? x : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => this.go(x.k) }, x.t);
+    return h('div', { class: 'sf-level sf-help' }, (HELP[this.lang] || HELP.en).map(sec => h('section', null,
+      h('h3', null, sec.h), sec.p.map(p => h('p', null, Array.isArray(p) ? p.map(part) : p)))));
   }
 
   // ---------- version log ----------
