@@ -7,13 +7,13 @@ export const CHANGELOG = [
     v: '0.1', date: '2026-09-27',
     tag: { en: 'First version', sv: 'Första versionen' },
     desc: {
-      en: 'Day one: a split-flap board for any screen, from a blank page to live on maclaine.se.',
-      sv: 'Dag ett: en fällbladstavla för vilken skärm som helst, från tom sida till live på maclaine.se.'
+      en: 'Everything from the first day of work. A split-flap board for any screen, now live on maclaine.se.',
+      sv: 'Allt från första arbetsdagen. En fällbladstavla för vilken skärm som helst, nu live på maclaine.se.'
     },
     items: {
       en: [
         'The board itself, drawn on one canvas so a Raspberry Pi keeps up: every flap steps forward through the drum, folds over its hinge and settles with a small bounce. Three themes: Vestaboard Black, Vestaboard White and Solari Amber.',
-        'Å Ä Ö Æ Ø Ü É are real flaps, not lookalikes.',
+        'Å Ä Ö Æ Ø Ü É each have their own flap.',
         'Channels: messages typed straight onto the grid, clock, a big clock and big text made of colour chips, countdowns, SL departures, weather, colour patterns (Nordic flags, rain, waves, confetti) and quotes.',
         'SL departures from any SL stop, or from the home station you starred on the Stockholm SL map. Search forgives spelling, so "vestra skogen" finds Västra skogen.',
         'Departures keep loading when SL\'s servers are busy: a refused request is retried within seconds instead of the board giving up.',
@@ -29,7 +29,7 @@ export const CHANGELOG = [
       ],
       sv: [
         'Själva tavlan, ritad på en enda canvas så att en Raspberry Pi hänger med: varje blad stegar framåt genom trumman, fäller över gångjärnet och landar med en liten studs. Tre teman: Vestaboard Black, Vestaboard White och Solari Amber.',
-        'Å Ä Ö Æ Ø Ü É är riktiga blad, inga ersättare.',
+        'Å Ä Ö Æ Ø Ü É har varsitt eget blad.',
         'Kanaler: meddelanden som skrivs direkt på rutnätet, klocka, en stor klocka och stor text av färgbrickor, nedräkningar, SL-avgångar, väder, färgmönster (nordiska flaggor, regn, vågor, konfetti) och citat.',
         'SL-avgångar från vilken SL-hållplats som helst, eller från hemstationen du stjärnmärkt på SL-kartan. Sökningen förlåter stavfel, så "vestra skogen" hittar Västra skogen.',
         'Avgångarna fortsätter laddas när SL:s servrar är upptagna: en nekad förfrågan görs om inom några sekunder i stället för att tavlan ger upp.',
