@@ -21,7 +21,8 @@ async function browser(name) {
     name,
     ev: async expr => { const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }, sessionId); if (r.result.exceptionDetails) throw new Error(name + ': ' + (r.result.exceptionDetails.exception?.description || r.result.exceptionDetails.text)); return r.result.result.value; },
     go: async url => { await send('Page.navigate', { url }, sessionId); await sleep(2500); },
-    offline: async off => send('Network.emulateNetworkConditions', { offline: off, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, sessionId)
+    offline: async off => send('Network.emulateNetworkConditions', { offline: off, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, sessionId),
+    blockApi: async on => send('Network.setBlockedURLs', { urls: on ? ['*/split-flap/api/*'] : [] }, sessionId)
   };
   return b;
 }
@@ -60,6 +61,14 @@ try {
   check('A gets B\'s copy', (await names(A)).includes('B offline edit (copy)'), await names(A));
   const menu = await B.ev(`(() => { splitFlap.set({ switcher: true }); const rows = [...document.querySelectorAll('.sf-menu-item')].map(x => x.textContent); splitFlap.set({ switcher: false }); return JSON.stringify(rows); })()`);
   check('the board menu shows when each account board changed', JSON.parse(menu).filter(r => /Changed \d\d:\d\d/.test(r)).length >= 2, menu);
+
+  // The API does not answer when the page loads (the Worker mid-deploy): a board made then
+  // must still reach the account once the API is back
+  await A.blockApi(true); await A.go('http://localhost:8787/');
+  check('with no API, no account controls', (await A.ev(`String(splitFlap.account.available)`)) === 'false');
+  await A.ev(`splitFlap.duplicateBoard(0); splitFlap.upd(b => { b.name = 'Made while the API was down'; })`); await sleep(1000);
+  await A.blockApi(false); await A.ev(`dispatchEvent(new Event('online'))`); await sleep(4000);
+  check('once the API is back, that board reaches the account', (await server(A)).includes('Made while the API was down'), await server(A));
 
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);

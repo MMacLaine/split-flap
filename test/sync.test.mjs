@@ -2,7 +2,7 @@
 // whose on a shared computer. Pure functions, no server.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState, refused, unrefuse, unsynced } from '../src/sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState, refused, unrefuse, unsynced, strays } from '../src/sync.js';
 
 let n = 0; const newId = () => 'copy' + (++n);
 const B = (id, name = id) => ({ id, name, pages: [] });
@@ -128,6 +128,12 @@ test('after the server is restored to an older copy or delete, the newer board h
   assert.deepEqual(names(r), ['Alive', 'Newer', 'Same']);                  // no copies, and c is not removed by the older delete
   assert.deepEqual(r.push.sort(), ['a', 'c']);                             // b has the same content, nothing to send
   assert.deepEqual([r.state.boards.a, r.state.boards.c.rev, r.state.boards.b.dirty], [{ rev: 3, dirty: true, owner: 'u1' }, 4, false]);
+});
+
+test('a board made while the account could not be reached is the account\'s, guest boards on offer are not', () => {
+  const s = st({ a: { rev: 1, dirty: false, owner: 'u1' } });
+  assert.deepEqual(strays([B('a'), B('made-offline'), B('offered'), B('declined')], s, ['offered', 'declined']), ['made-offline']);
+  assert.deepEqual(strays([B('x')], emptyState()), []);                  // no account in this browser: a guest
 });
 
 test('a board deleted before its first push is forgotten, so the status can settle', () => {

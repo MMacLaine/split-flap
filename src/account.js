@@ -4,7 +4,7 @@
 // without the Worker (npm run serve) never gets past init(), and the app shows
 // no account controls at all.
 
-import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsynced, offerable, signOut, switchUser, emptyState } from './sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsynced, strays, offerable, signOut, switchUser, emptyState } from './sync.js';
 import { newId } from './content.js';
 import { getFlag, setFlag } from './store.js';
 
@@ -39,13 +39,13 @@ export class Account {
   // Is there an API, and who is signed in? Anything but a JSON 200 or 401 means no API.
   async init() {
     let res;
-    try { res = await this.api('GET', '/me'); } catch { return; }
+    try { res = await this.api('GET', '/me'); } catch { this.retryInit(); return; }   // offline, or the Worker mid-deploy
     if (res.status === 401 && res.data && res.data.error) {
       this.available = true;
       if (this.state.user) this.status = 'signedout';   // this browser holds an account's boards: changes keep being marked
       this.app.render(); return;
     }
-    if (res.status !== 200 || !res.data || !res.data.id) return;
+    if (res.status !== 200 || !res.data || !res.data.id) { if (res.status >= 500) this.retryInit(); return; }
     this.available = true; this.user = res.data;
     const b = this.app.boards;
     if (this.state.user && this.state.user !== this.user.id) {
@@ -63,6 +63,14 @@ export class Account {
     await this.sync();
   }
 
+  // The API did not answer: ask again when back online, or in half a minute. A copy served
+  // without the Worker answers 404, which is not retried.
+  retryInit() {
+    if (this.retrying) return; this.retrying = true;
+    const again = () => { removeEventListener('online', again); clearTimeout(t); this.retrying = false; this.init(); };
+    addEventListener('online', again); const t = setTimeout(again, 30000);
+  }
+
   signedIn() { return !!this.user; }
 
   // Pull, merge, push. Safe to call at any time; one run at a time.
@@ -70,6 +78,8 @@ export class Account {
     if (!this.user || this.running) return;
     this.running = true; this.status = 'syncing'; this.paint();
     try {
+      const stray = strays(this.app.boards, this.state, this.offer.concat(this.state.declined || []));
+      if (stray.length) this.state = Object.assign(adopt(this.state, stray, this.user.id), { declined: this.state.declined || [] });
       const res = await this.api('GET', '/boards');
       if (res.status === 401) { this.lostSession(); return; }
       if (res.status !== 200) throw new Error(res.status);
