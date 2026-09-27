@@ -38,14 +38,34 @@ export default {
       if (env.DEV_APP) return fetch(env.DEV_APP + url.pathname + url.search, req);
       return fail(404, 'not_found');
     }
+    let res;
     try {
-      return await route(req, env, url);
+      res = await route(req, env, url);
     } catch (err) {
       console.error(err && err.stack || err);
-      return fail(500, 'server_error');
+      res = fail(500, 'server_error');
     }
+    await logFailure(req, url, res);
+    return res;
   }
 };
+
+// One line per failed request, for Workers Logs: route, status and error code. Never the
+// user, the email, the address or the board. Workers Logs adds the CPU time itself.
+// A guest's 401 from /me is how the app learns it is signed out, so it is not a failure.
+export async function logFailure(req, url, res) {
+  const path = url.pathname.slice(API.length) || '/';
+  const auth = path.startsWith('/auth/'), loc = res.headers.get('location') || '';
+  const failed = res.status >= 400 || (auth && /[?&]error=/.test(loc));
+  if (!failed || (res.status === 401 && path === '/me')) return null;
+  let error = null;
+  if (res.status >= 400) { try { error = (await res.clone().json()).error || null; } catch { error = null; } }
+  else error = new URL(loc, url).searchParams.get('error');
+  const line = { failed: routeName(path), method: req.method, status: res.status, error };
+  console.warn(JSON.stringify(line));
+  return line;
+}
+export const routeName = path => path.startsWith('/auth/') ? '/auth/' + path.split('/')[2] : path.replace(/^\/boards\/.+$/, '/boards/:id');
 
 async function route(req, env, url) {
   const path = url.pathname.slice(API.length) || '/', auth = authFor(env);

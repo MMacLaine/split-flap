@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { devTest } from '../src/index.js';
+import { devTest, logFailure, routeName } from '../src/index.js';
 
 test('the test-only session route cannot open with the production settings', async () => {
   const { readFileSync } = await import('node:fs');
@@ -18,4 +18,20 @@ test('the test-only session route cannot open with the production settings', asy
 test('D1 enforces that a board belongs to an account, so a deleted account cannot gain boards', () => {
   const run = sql => execFileSync('npx', ['wrangler', 'd1', 'execute', 'split-flap', '--local', '--env', 'dev', '--command', sql], { cwd: new URL('..', import.meta.url).pathname, stdio: 'pipe' }).toString();
   assert.throws(() => run("INSERT INTO board (user_id, id, rev, updated, deleted, json) VALUES ('no-such-user', 'x', 1, 0, 0, '{}')"), /FOREIGN KEY/);
+});
+
+test('a failed request is logged with its route, status and code, and nothing about the user', async () => {
+  const req = (method, path) => [new Request('https://maclaine.se/split-flap/api' + path, { method }), new URL('https://maclaine.se/split-flap/api' + path)];
+  const res = (status, body, headers = {}) => new Response(body ? JSON.stringify(body) : null, { status, headers });
+  const quiet = console.warn; console.warn = () => {};
+  try {
+    assert.deepEqual(await logFailure(...req('PUT', '/boards/b-secret-id'), res(413, { error: 'too_many_boards' })),
+      { failed: '/boards/:id', method: 'PUT', status: 413, error: 'too_many_boards' });
+    assert.equal(await logFailure(...req('GET', '/me'), res(401, { error: 'signed_out' })), null);        // a guest, not a failure
+    assert.equal(await logFailure(...req('GET', '/boards'), res(200, { boards: [] })), null);
+    assert.deepEqual(await logFailure(...req('GET', '/auth/callback/google'), res(302, null, { location: '/split-flap/api/auth/error?error=state_mismatch' })),
+      { failed: '/auth/callback', method: 'GET', status: 302, error: 'state_mismatch' });
+    assert.equal(await logFailure(...req('GET', '/auth/callback/google'), res(302, null, { location: '/split-flap/' })), null);
+  } finally { console.warn = quiet; }
+  assert.equal(routeName('/export'), '/export');
 });
