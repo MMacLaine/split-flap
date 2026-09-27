@@ -51,6 +51,12 @@ function ensure() {
   comp.threshold.value = -20; comp.knee.value = 12; comp.ratio.value = 6; comp.attack.value = 0.002; comp.release.value = 0.12;
   bus = ac.createGain(); bus.gain.value = gainFor(volume);
   bus.connect(comp); comp.connect(ac.destination);
+  // Stereo: five fixed panner buses, each click goes to the nearest. One panner per click
+  // would cost a node per flap; five is plenty for a modest spread left to right.
+  pans = PAN_AT.map(x => {
+    if (!ac.createStereoPanner) return bus;
+    const p = ac.createStereoPanner(); p.pan.value = x; p.connect(bus); return p;
+  });
   const len = Math.floor(ac.sampleRate * 0.06);
   noise = ac.createBuffer(1, len, ac.sampleRate);
   const d = noise.getChannelData(0);
@@ -62,18 +68,23 @@ export function unlock() {
   try { ensure(); if (ac.state === 'suspended') ac.resume(); } catch { ac = null; }
 }
 
-function click(t, freq, q, dur, gain) {
+const PAN_AT = [-0.5, -0.25, 0, 0.25, 0.5];
+let pans = null;
+// pan -1..1 (the column across the board) to the nearest bus.
+const outFor = pan => pans ? pans[Math.max(0, Math.min(4, Math.round(((+pan || 0) + 1) * 2)))] : bus;
+
+function click(t, freq, q, dur, gain, out) {
   const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
   s.buffer = noise; s.playbackRate.value = 0.9 + Math.random() * 0.2;
   f.type = 'bandpass'; f.frequency.value = freq * (0.88 + Math.random() * 0.24); f.Q.value = q;
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(gain, t + 0.0006);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(f); f.connect(g); g.connect(bus);
+  s.connect(f); f.connect(g); g.connect(out || bus);
   s.start(t, Math.random() * 0.03, dur + 0.01);
 }
 
-function thump(t, f0, f1, dur, gain) {
+function thump(t, f0, f1, dur, gain, out) {
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = 'sine';
   o.frequency.setValueAtTime(f0 * (0.95 + Math.random() * 0.1), t);
@@ -81,25 +92,26 @@ function thump(t, f0, f1, dur, gain) {
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(gain, t + 0.002);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(bus);
+  o.connect(g); g.connect(out || bus);
   o.start(t); o.stop(t + dur + 0.02);
 }
 
-// One flap. final = the last flap of a character, which gets the chunk.
+// One flap. final = the last flap of a character, which gets the chunk. pan is where the
+// flap is across the board, -1 at the left edge to 1 at the right.
 // Steps are thinned to one per 12ms and finals to one per 18ms: past that the ear
 // hears a rattle either way and the audio thread would only do extra work.
-export function play(final, profile) {
+export function play(final, profile, pan) {
   if (!ac || ac.state !== 'running' || volume <= 0) return;
   const now = performance.now();
   if (final) { if (now - lastFinal < 18) return; lastFinal = now; }
   else { if (now - lastStep < 12) return; lastStep = now; }
   const p = PROFILES[profile] || PROFILES.clack, t = ac.currentTime + 0.005;
-  const level = 0.85 + Math.random() * 0.3;
+  const level = 0.85 + Math.random() * 0.3, out = outFor(pan);
   try {
     for (const part of final ? p.final : p.step) {
       const at = t + (part.at || 0);
-      if (part.click) { const [f, q, d, g] = part.click; click(at, f, q, d, g * level); }
-      if (part.thump) { const [a, b, d, g] = part.thump; thump(at, a, b, d, g * level); }
+      if (part.click) { const [f, q, d, g] = part.click; click(at, f, q, d, g * level, out); }
+      if (part.thump) { const [a, b, d, g] = part.thump; thump(at, a, b, d, g * level, out); }
     }
   } catch { /* audio is decoration; never let it break the board */ }
 }

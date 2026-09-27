@@ -230,7 +230,7 @@ export class Board {
       const row = [];
       for (let c = 0; c < this.o.cols; c++) {
         const p = old[r] && old[r][c];
-        row.push({ cur: p ? p.cur : ' ', q: [], a: null, due: 0 });
+        row.push({ cur: p ? p.cur : ' ', q: [], a: null, due: 0, c });
       }
       this.cells.push(row);
     }
@@ -363,7 +363,7 @@ export class Board {
   _start(cell, now, sp) {
     const to = cell.q.shift(), final = cell.q.length === 0;
     if (this.o.reduced) return { kind: 'fade', from: cell.cur, to, start: now, dur: FOLD.fade };
-    if (this.o.onFlip) this.o.onFlip(final);
+    if (this.o.onFlip) this.o.onFlip(final, this.o.cols > 1 ? cell.c / (this.o.cols - 1) * 2 - 1 : 0);
     return { kind: 'flip', from: cell.cur, to, start: now, dur: final ? sp.final : sp.step, final };
   }
   // Frame budget: 45 long frames (over 34ms, so under ~30fps) in one run of animation
