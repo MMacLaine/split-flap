@@ -122,6 +122,14 @@ test('boards refused for the limit go again once there is room, other refusals s
   assert.equal(r.state.boards.b.error, 'too_big');
 });
 
+test('after the server is restored to an older copy, the newer one here is kept as a copy', () => {
+  const s = st({ a: { rev: 5, dirty: false, owner: 'u1' }, b: { rev: 4, dirty: false, owner: 'u1' } });
+  const r = merge([B('a', 'Newer'), B('b', 'Same')], [R('a', 3, 'Older'), R('b', 2, 'Same')], s, 'u1', { newId });
+  assert.deepEqual(names(r), ['Newer (copy)', 'Older', 'Same']);          // a: both kept; b: same content, nothing to keep
+  assert.equal(r.push.length, 1);
+  assert.equal(r.state.boards.a.rev, 3);
+});
+
 test('a board deleted before its first push is forgotten, so the status can settle', () => {
   const s = markDeleted(adopt(st({}), ['n'], 'u1'), 'n');
   const r = merge([], [], s, 'u1', { newId });

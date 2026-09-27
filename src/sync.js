@@ -54,6 +54,14 @@ export function merge(local, remote, state, user, { suffix = ' (copy)', newId } 
       out.push(b); st.boards[b.id] = Object.assign({}, e, { rev: r.rev, dirty, owner: user }); if (dirty && wants(b.id)) push.push(b.id);
       continue;
     }
+    if (!dirty && r.rev < agreed && !r.deleted && JSON.stringify(r.board) !== JSON.stringify(b)) {
+      // The server went back in time (the database was restored): its copy is older than
+      // what this browser last agreed with it. Keep both, this browser's as a copy.
+      const c = copyOf(b, suffix, newId);
+      out.push(r.board, c); st.boards[b.id] = { rev: r.rev, dirty: false, owner: user };
+      st.boards[c.id] = { rev: 0, dirty: true, owner: user }; push.push(c.id);
+      continue;
+    }
     if (!dirty) {                                           // server changed, this browser did not
       if (!r.deleted) out.push(r.board);
       if (r.deleted) delete st.boards[b.id]; else st.boards[b.id] = { rev: r.rev, dirty: false, owner: user };
