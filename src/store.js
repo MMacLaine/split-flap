@@ -131,6 +131,7 @@ export function sanitizeBoard(b) {
     ...(typeof b.from === 'string' && /^[a-z]{2,12}$/.test(b.from) ? { from: b.from } : {}),
     quiet: { on: !!q.on, from: time(q.from, '23:00'), to: time(q.to, '07:00'), mode: q.mode === 'blank' ? 'blank' : 'dim' },
     ...(b.loc && typeof b.loc === 'object' && place(b.loc) ? { loc: place(b.loc) } : {}),
+    ...(b.roll && (b.roll.start === true || b.roll.hourly === true) ? { roll: { start: b.roll.start === true, hourly: b.roll.hourly === true } } : {}),
     pages
   };
 }

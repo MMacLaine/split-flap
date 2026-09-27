@@ -143,12 +143,22 @@ export class App {
     if (!this.previewing) this.board.setGrid(g);
     this.paintHighlight();
     if (this.S.editing && now - (this.lastThumbs || 0) > 3000) { this.lastThumbs = now; this.editor.refreshThumbs(); }
+    this.rolls(now);
     this.wrap.style.opacity = this.quietMode() === 'dim' ? '0.22' : '1';
     const text = g.map(r => r.map(c => isChip(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
     if (text !== this.lastAria) { this.lastAria = text; this.liveRegion.textContent = text; }
     const stale = this.S.editing ? 0 : this.live.staleMinutes(this.currentPage());
     if (stale !== this.lastStale) { this.lastStale = stale; this.renderOverlay(); }
     if (force && this.S.editing) this.editor.composer.paintGrid();
+  }
+  // Rolls: every flap turns once when the board starts (after the first page has
+  // settled), and optionally on the hour. Not while editing, in quiet hours or during a
+  // transition preview.
+  rolls(now) {
+    const r = this.cur().roll; if (!r || this.S.editing || this.previewing || this.quietMode()) return;
+    if (r.start && !this.startRolled && this.board.isIdle()) { this.startRolled = true; this.board.roll('curtain'); return; }
+    const d = new Date(now), hour = d.toDateString() + d.getHours();
+    if (r.hourly && d.getMinutes() === 0 && this.lastRollHour !== hour) { this.lastRollHour = hour; this.board.roll('curtain'); }
   }
   // The zone being edited, outlined on the big board in the chrome's accent.
   paintHighlight() {

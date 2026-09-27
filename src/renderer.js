@@ -352,12 +352,26 @@ export class Board {
         if (opt.instant) { cell.cur = want; cell.q = []; cell.a = null; continue; }
         const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
         if (want === dest) continue;
-        cell.q = this.o.reduced ? [want] : drumPath(dest, want, sp.maxSteps);
+        cell.q = this.o.reduced ? [want] : drumPath(dest, want, sp.maxSteps); cell.sp = null;
         if (!cell.a) cell.due = now + st(r, c);
         any = true;
       }
     }
     if (opt.instant) this._full(); else if (any) this._kick();
+  }
+  // Every flap turns the whole drum once and lands where it already was, like a Solari
+  // board on power up. At the authentic step timing whatever the board's speed, with
+  // the named stagger. A setGrid during the roll takes over from wherever each flap is.
+  roll(stagger) {
+    if (this.o.reduced) return;
+    const now = performance.now(), st = STAGGER[stagger] || STAGGER.curtain;
+    for (let r = 0; r < this.o.rows; r++) for (let c = 0; c < this.o.cols; c++) {
+      const cell = this.cells[r][c];
+      const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
+      cell.q = drumPath(dest, dest, Infinity); cell.sp = FOLD.authentic;
+      if (!cell.a) cell.due = now + st(r, c);
+    }
+    this._kick();
   }
   _kick() { if (!this._raf) { this._last = 0; this._slow = 0; this._raf = requestAnimationFrame(this._tick); } }
   _start(cell, now, sp) {
@@ -381,15 +395,17 @@ export class Board {
     this._budget(now);
     for (let r = 0; r < this.o.rows; r++) for (let c = 0; c < this.o.cols; c++) {
       const cell = this.cells[r][c];
-      if (!cell.a && cell.q.length && now >= cell.due) cell.a = this._start(cell, now, sp);
+      const csp = cell.sp || sp;   // a roll runs at its own timing
+      if (!cell.a && cell.q.length && now >= cell.due) cell.a = this._start(cell, now, csp);
       const a = cell.a;
       if (a) {
         if (now - a.start >= a.dur) {
           if (a.kind === 'flip') {
             cell.cur = a.to;
-            cell.a = a.final ? { kind: 'settle', from: a.to, to: a.to, start: now, dur: sp.settle } : null;
+            cell.a = a.final ? { kind: 'settle', from: a.to, to: a.to, start: now, dur: csp.settle } : null;
           } else { cell.cur = a.to; cell.a = null; }
-          if (!cell.a && cell.q.length) cell.a = this._start(cell, now, sp);
+          if (!cell.a && cell.q.length) cell.a = this._start(cell, now, csp);
+          if (!cell.a && !cell.q.length) cell.sp = null;
         }
         this._drawCell(r, c, now);
       }
