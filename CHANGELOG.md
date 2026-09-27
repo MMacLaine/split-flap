@@ -2,6 +2,15 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.6.3 (2026-09-28): Accounts
+
+Making an account after using Split-Flap as a guest, with nothing lost on the way.
+
+- The first time you sign in, the question about your guest boards stays until you answer it. Before, closing the tab while it showed skipped it, and the boards went into your account without asking.
+- You choose board by board what goes to your account. The rest stay in this browser as they are.
+- The app keeps a copy of your guest boards until the server has every one you kept, then tells you how many are now in your account.
+- As a guest, once you have made a second board, the app suggests signing in once, and asks the browser not to clear your boards on its own. Dismiss it and it does not come back.
+
 ## v0.6.2 (2026-09-28): Fix
 
 A sync bug that could delete boards from your account. It deleted most of mine, and it is fixed here.
