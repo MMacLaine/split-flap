@@ -2,6 +2,13 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.4.1 (2026-09-27): Fixes
+
+Two fixes to 0.4, found in a review.
+
+- On the Letter clock, a letter that lit up while its flap was still turning spun the drum round to itself, with sound. It fades in place now, whatever the flap is doing.
+- A wall screen reloads once for each new version. If a browser cache brings the old version back, it does not try again until the next release.
+
 ## v0.4 (2026-09-27): Letter clock
 
 A letter clock, like the designer word clocks where only the words for the time light up.

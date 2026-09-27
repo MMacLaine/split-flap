@@ -3,6 +3,24 @@
 
 export const CHANGELOG = [
   {
+    v: '0.4.1', date: '2026-09-27',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'Two fixes to 0.4, found in a review.',
+      sv: 'Två rättningar av 0.4, som hittades vid en genomgång.'
+    },
+    items: {
+      en: [
+        'On the Letter clock, a letter that lit up while its flap was still turning spun the drum round to itself, with sound. It fades in place now, whatever the flap is doing.',
+        'A wall screen reloads once for each new version. If a browser cache brings the old version back, it does not try again until the next release.'
+      ],
+      sv: [
+        'På bokstavsklockan snurrade en bokstav som tändes medan bladet fortfarande vände trumman runt till sig själv, med ljud. Nu tonar den på plats, vad bladet än gör.',
+        'En väggskärm laddar om en gång för varje ny version. Om webbläsarens cache ger tillbaka den gamla versionen försöker den inte igen förrän nästa version.'
+      ]
+    }
+  },
+  {
     v: '0.4', date: '2026-09-27',
     tag: { en: 'Letter clock', sv: 'Bokstavsklocka' },
     desc: {
