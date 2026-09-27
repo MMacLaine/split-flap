@@ -58,6 +58,8 @@ try {
   check('the server has both', sv.includes('A online edit') && sv.includes('B offline edit (copy)'), sv);
   await A.ev(`splitFlap.account.sync()`); await sleep(2000);
   check('A gets B\'s copy', (await names(A)).includes('B offline edit (copy)'), await names(A));
+  const menu = await B.ev(`(() => { splitFlap.set({ switcher: true }); const rows = [...document.querySelectorAll('.sf-menu-item')].map(x => x.textContent); splitFlap.set({ switcher: false }); return JSON.stringify(rows); })()`);
+  check('the board menu shows when each account board changed', JSON.parse(menu).filter(r => /Changed \d\d:\d\d/.test(r)).length >= 2, menu);
 
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);
