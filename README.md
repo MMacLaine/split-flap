@@ -1,6 +1,6 @@
 # Split-Flap Board
 
-A free split-flap message board for any screen. Put a spare monitor on the wall, open the page, and it flips through your messages, the time, Stockholm public transport departures, the weather and countdowns, one letter at a time like a railway board.
+A free split-flap message board for any screen. Put a spare monitor on the wall, open the page, and it flips through your messages, the time, Stockholm public transport departures, the weather, electricity prices and countdowns, one letter at a time like a railway board.
 
 **Live:** [maclaine.se/split-flap](https://maclaine.se/split-flap)
 
@@ -11,16 +11,20 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 ## What it does
 
 - **A physical-looking board.** Each flap steps forward through the drum to its letter, folds over its hinge with light and shadow, and settles with a small rebound. Drawn on one canvas, so a Raspberry Pi keeps up.
-- **Channels:** free-text messages with colour chips, clock and date, a big clock and big text drawn in colour chips, countdowns, SL departures (any stop in Storstockholms Lokaltrafik, or the home station you starred on the [Stockholm SL map](https://maclaine.se/en/stockholm-sl-map)), weather from Open-Meteo (now, next hours or three days, with colour chip icons), animated colour patterns (Nordic flags, rain, waves, confetti), and a rotating quote.
-- **Templates:** Demo, Home dashboard, Station board, Weather station, Colour mosaic, a blank page, and Everything at once: fill the screen, roll every flap the long way round, never sit still.
-- **Layouts:** a page can be one zone or two (header and body, split, ticker row), each showing a different channel.
+- **Words:** messages with colour chips, rotating messages, big text drawn in colour chips, quotes, and menus with prices lined up on the right.
+- **Time:** clock and date, a big clock, a word clock ("QUARTER PAST TEN", "KVART ÖVER TIO"), countdowns that can also count up from a date, and Today, with the week number, Swedish red days and flag days, and sunrise and sunset.
+- **Live:** SL departures for up to six stops in Storstockholms Lokaltrafik, or the home station you starred on the [Stockholm SL map](https://maclaine.se/en/stockholm-sl-map). Weather from Open-Meteo, electricity spot prices by price area, exchange rates, On this day from Wikipedia, and Follow a URL, which prints lines from any JSON or text address that lets other sites read it.
+- **Pictures:** paint with the colour chips, turn a photo into chips in the browser, or run an animated pattern (Nordic flags, rain, waves, confetti).
+- **Templates:** nine to start from, including Home dashboard, Station board, Café, Office lobby and Everything at once, which fills the screen and rolls every flap the long way round.
+- **Layouts:** a page can be one zone or two (header and body, split, ticker row, or stacked halves for portrait screens), each showing a different channel.
 - **Playlist:** pages rotate on their own timers, optionally only at certain times and days (departures on weekday mornings). Quiet hours dim or blank the board overnight.
 - **Three themes** (Vestaboard Black, Vestaboard White, Solari Amber), any grid from 1 × 4 to 24 × 60, and four transitions at three speeds, previewed on the board as you pick them. Authentic rolls every flap the whole way round.
 - **Four flap sounds** (Clack, Heavy, Soft, Tick), synthesised: a plastic tick for each flap and a ka-chunk when the last one lands.
-- **Type on the grid.** The composer is the board: you see exactly where each letter lands.
-- **Share by link or QR (Quick Response) code.** The link holds the whole board, compressed into the part of the URL after `#`, which browsers never send to a server.
+- **The editor.** Each kind of content is a tile drawn as a small board in the shape of the zone it fills, so you see it before you pick it. On a wide screen the pages stay beside the editor as thumbnails you can drag to reorder. On a phone it goes one step at a time with the board above.
+- **Messages are made on the grid** in Type, Paint or Photo mode, with undo and redo. A message you change is kept under Earlier messages in this browser.
+- **Share by link or QR (Quick Response) code.** The link holds the whole board, compressed into the part of the URL after `#`, which browsers never send to a server. Save as image downloads the page as a PNG.
 - **Made for walls:** kiosk mode (`?kiosk=1`), screen wake lock, a one pixel drift against burn-in, offline support, and a small note when live data is getting old.
-- English and Swedish. Å Ä Ö Æ Ø Ü É are real flaps.
+- English and Swedish. Å Ä Ö Æ Ø Ü É each have their own flap.
 
 ![A board showing the Swedish flag in blue and yellow colour chips, part of the Nordic flags pattern](docs/mosaic.png)
 
@@ -59,20 +63,29 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `src/renderer.js` | The canvas board: glyph atlas, fold, stagger, frame budget. Its constants are the design spec. |
 | `src/charset.js` | The drum (73 flaps), typed text to flaps, Vestaboard character codes for import. |
 | `src/content.js` | Layouts, zones and what each channel prints, as pure functions. |
+| `src/almanac.js` | Week numbers, Swedish red days and flag days, sunrise and sunset. |
 | `src/pixels.js` | The 3 × 5 pixel font and the animated colour patterns. |
 | `src/templates.js` | The ready-made boards. |
 | `src/sound.js` | The four synthesised flap sounds. |
 | `src/schedule.js` | Page timers, time windows, quiet hours. |
-| `src/live.js` | SL and Open-Meteo fetchers, station and city search. |
+| `src/live.js` | The fetchers (SL, Open-Meteo, electricity, exchange rates, Wikipedia, Follow a URL), station and city search. |
 | `src/store.js` | localStorage, board links, and the sanitizer every imported board goes through. |
-| `src/app.js` | Control bar, editor drawer, composer, share, kiosk mode. |
+| `src/app.js` | Control bar, share, kiosk mode, and the board state the editor works on. |
+| `src/editor.js` | The editor drawer: playlist, page, content picker, options, board settings, templates. |
+| `src/catalogue.js` | The picker's tiles, their defaults and their option fields. |
+| `src/composer.js` | Type, Paint and Photo on the grid, undo and redo, earlier messages. |
+| `src/photo.js` | A photo to colour chips, with dithering. |
 
-The visual design (tile anatomy, fold shading, themes, timing) came from a design pass documented in [`DESIGN-HANDOVER.md`](DESIGN-HANDOVER.md), with the prototype and spec sheet in [`design/`](design/).
+The visual design (tile anatomy, fold shading, themes, timing) came from a design pass documented in [`DESIGN-HANDOVER.md`](DESIGN-HANDOVER.md), with the prototype and spec sheet in [`design/`](design/). The editor came from a second pass, in [`DESIGN-HANDOVER-editor.md`](DESIGN-HANDOVER-editor.md) and [`design/editor/`](design/editor/). What might come next is in [`ROADMAP.md`](ROADMAP.md).
 
 ## Data and credits
 
-- Departures: [SL](https://sl.se) through [Trafiklab](https://www.trafiklab.se), fetched straight from your browser.
+- Departures: [SL](https://sl.se) through [Trafiklab](https://www.trafiklab.se).
 - Weather and city search: [Open-Meteo](https://open-meteo.com), CC BY 4.0 (Creative Commons Attribution 4.0).
+- Electricity prices: [elprisetjustnu.se](https://www.elprisetjustnu.se).
+- Exchange rates: European Central Bank reference rates through [Frankfurter](https://frankfurter.dev).
+- On this day: [Wikipedia](https://www.wikipedia.org), CC BY-SA 4.0 (Creative Commons Attribution-ShareAlike 4.0).
+- Every source is keyless and read straight from your browser. Follow a URL only reads the addresses you give it.
 - QR codes: [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase, MIT, vendored in `src/vendor/`.
 - Fonts: DM Mono, Schibsted Grotesk, Plus Jakarta Sans and Cormorant Garamond, all SIL Open Font License 1.1.
 
