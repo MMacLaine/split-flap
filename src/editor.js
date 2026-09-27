@@ -718,9 +718,13 @@ export class Editor {
     return h('div', { class: 'sf-level' },
       a.offer.length ? h('section', { class: 'sf-field sf-offer' },
         h('strong', null, t.offerTitle(a.offer.length)), h('span', { class: 'sf-hint' }, t.offerBody(a.offer.length)),
+        a.offer.length > 1 ? h('div', { class: 'sf-offer-list' }, a.offer.map(id => {
+          const bd = this.app.boards.find(x => x.id === id); if (!bd) return null;
+          return h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !a.unticked.has(id), 'data-k': 'offer-' + id, onchange: () => a.toggleOffer(id) }), h('span', null, bd.name));
+        })) : null,
         h('div', { class: 'sf-row' },
-          h('button', { class: 'sf-btn primary', 'data-k': 'offer-keep', onclick: () => a.answerOffer(true) }, t.offerKeep),
-          h('button', { class: 'sf-btn', 'data-k': 'offer-leave', onclick: () => a.answerOffer(false) }, t.offerLeave))) : null,
+          h('button', { class: 'sf-btn primary', 'data-k': 'offer-keep', disabled: a.offer.every(id => a.unticked.has(id)), onclick: () => a.answerOffer(true) }, t.offerKeep),
+          h('button', { class: 'sf-btn', 'data-k': 'offer-leave', onclick: () => a.answerOffer(false) }, t.offerLeave(a.offer.length)))) : null,
       h('section', { class: 'sf-field' },
         h('strong', { class: 'sf-acc-name' }, a.user.name), h('span', { class: 'sf-hint' }, a.user.email),
         h('span', { class: 'sf-acc-status' + (a.status === 'failed' ? ' fail' : ''), role: 'status', 'data-account-status': '' }, status)),

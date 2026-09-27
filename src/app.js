@@ -111,7 +111,21 @@ export class App {
   // Under 1024 px the editor stacks: the board on top, one drawer level below it.
   isMobile() { return innerWidth < 1024; }
   set(patch, render = true) { Object.assign(this.S, patch); if (render) this.render(); }
-  save() { saveBoards(this.boards, this.active); if (this.account) this.account.changed(); }
+  save() { saveBoards(this.boards, this.active); if (this.account) { this.account.changed(); if (!this.account.state.user) this.keepStorage(); } }
+  // A guest has made something: ask the browser not to clear this site's storage on its
+  // own (Chrome and recent Safari honour it). Once per page.
+  keepStorage() {
+    if (this.askedPersist || !navigator.storage || !navigator.storage.persist) return;
+    this.askedPersist = true; navigator.storage.persist().catch(() => {});
+  }
+  // The one sign-in prompt (0.6.3): for a guest where accounts exist, once they have put
+  // something in, a second board or three minutes in the editor. Dismissed for good.
+  promptDue() {
+    const a = this.account;
+    if (!a || !a.available || a.user || a.state.user || this.S.cue || getFlag('sf_signin_prompt') === 'done') return false;
+    return this.boards.length >= 2 || (+getFlag('sf_edit_ms') || 0) >= 180000;
+  }
+  dismissPrompt() { setFlag('sf_signin_prompt', 'done'); this.renderOverlay(); }
   // The whole list at once (a sync pull, signing out), keeping the board on screen when it
   // is still there. Not counted as an edit to push. An empty list becomes a blank board.
   replaceBoards(list) {
@@ -201,6 +215,10 @@ export class App {
     if (!this.previewing && this.board.o.transition !== this.transitionNow()) this.board.setOptions({ transition: this.transitionNow() });
     if (!this.previewing) this.board.setGrid(g);
     this.paintHighlight();
+    if (this.S.editing && !this.account.state.user) {   // editor time, for the sign-in prompt
+      this.editMs = (this.editMs || 0) + Math.min(now - (this.lastEditTick || now), 1000); this.lastEditTick = now;
+      if (this.editMs >= 10000) { setFlag('sf_edit_ms', String((+getFlag('sf_edit_ms') || 0) + this.editMs)); this.editMs = 0; }
+    } else this.lastEditTick = 0;
     if (this.S.editing && now - (this.lastThumbs || 0) > 3000) { this.lastThumbs = now; this.editor.refreshThumbs(); }
     this.rolls(now);
     this.maybeReload(now);
@@ -442,6 +460,12 @@ export class App {
       if (S.switcher) wrap.append(this.renderSwitcher());
       if (S.notice) wrap.append(h('div', { class: 'sf-pop sf-toast', role: 'status' }, S.notice));
       if (S.cue) wrap.append(h('div', { class: 'sf-cue' }, h('span', null, t.cue), h('button', { onclick: () => this.dismissCue() }, t.gotIt)));
+      else if (this.promptDue()) {
+        const safari = /^((?!chrome|chromium|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+        wrap.append(h('div', { class: 'sf-cue', role: 'status', 'data-k': 'signin-prompt' }, h('span', null, t.signInPrompt(safari)),
+          h('button', { class: 'accent', 'data-k': 'prompt-signin', onclick: () => { setFlag('sf_signin_prompt', 'done'); this.account.signIn(); } }, t.signIn),
+          h('button', { 'data-k': 'prompt-dismiss', onclick: () => this.dismissPrompt() }, t.notNow)));
+      }
       wrap.append(h('nav', { class: 'sf-bar', 'aria-label': t.controls },
         h('button', { class: 'sf-btn primary caps', 'aria-keyshortcuts': 'E', 'data-k': 'bar-edit', onclick: () => this.toggleEdit() }, t.edit),
         h('button', { class: 'sf-bar-board', 'aria-haspopup': 'menu', 'aria-expanded': String(S.switcher), 'data-k': 'bar-board', onclick: () => this.set({ switcher: !S.switcher, share: false }) },
