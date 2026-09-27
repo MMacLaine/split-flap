@@ -4,7 +4,7 @@
 // online (so a new page never meets an old module, the mismatch that once stranded
 // Tunnelbana on a loading screen), and the last good copy when offline. Live data
 // (SL, Open-Meteo) is cross-origin and never touched here: the board shows its age.
-const CACHE = 'split-flap-v1';
+const CACHE = 'split-flap-v2';
 // Paths this worker answers for: the page it controls (its scope) and the folder the
 // app's files live in, which on maclaine.se differs from the page (?assets=/split-flap/).
 const SCOPE = new URL(self.registration.scope).pathname;
@@ -24,7 +24,12 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
-      const res = await fetch(req);
+      // cache: 'no-cache' revalidates with the server (a cheap 304) instead of trusting the
+      // browser's HTTP cache, which the maclaine.se zone holds for 4 hours whatever _headers
+      // says. A navigation request cannot be re-initialised, so it is refetched by URL.
+      const res = req.mode === 'navigate'
+        ? await fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
+        : await fetch(req, { cache: 'no-cache' });
       if (res.ok) cache.put(req, res.clone());
       return res;
     } catch {
