@@ -70,6 +70,21 @@ try {
   await A.blockApi(false); await A.ev(`dispatchEvent(new Event('online'))`); await sleep(4000);
   check('once the API is back, that board reaches the account', (await server(A)).includes('Made while the API was down'), await server(A));
 
+  // The 28 September incident: a short board list here (another tab wrote an older one),
+  // the API down at load, one edit. That must never read as deleting the missing boards.
+  const liveBefore = JSON.parse(await server(A)).length;
+  await A.blockApi(true);
+  await A.ev(`(() => { const all = JSON.parse(localStorage.getItem('sf_boards')); localStorage.setItem('sf_boards', JSON.stringify(all.slice(0, 1))); })()`);
+  await A.go('http://localhost:8787/');
+  await A.ev(`splitFlap.upd(b => { b.name = 'Edited with a short list'; })`); await sleep(1000);
+  await A.blockApi(false); await A.ev(`dispatchEvent(new Event('online'))`); await sleep(5000);
+  const liveAfter = JSON.parse(await server(A));
+  check('a short list and an edit delete nothing on the server', liveAfter.length === liveBefore, `${liveBefore} before, ${liveAfter.length} after`);
+  check('and the missing boards come back here', (await A.ev(`splitFlap.boards.length`)) >= liveBefore, String(await A.ev(`splitFlap.boards.length`)));
+  // a real delete still reaches the account
+  await A.ev(`splitFlap.deleteBoard(splitFlap.boards.findIndex(b => b.name === 'Made while the API was down'))`); await sleep(3500);
+  check('a board deleted by a person is deleted on the server', !(await server(A)).includes('Made while the API was down'), await server(A));
+
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);
   await B.ev(`splitFlap.upd(b => { b.name = 'B unsynced at sign out'; })`); await sleep(2500);

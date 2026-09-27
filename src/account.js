@@ -138,7 +138,6 @@ export class Account {
     const owner = this.user ? this.user.id : this.state.user;
     if (!owner || this.replacing) return;
     let st = this.state;
-    const ids = new Set(this.app.boards.map(b => b.id));
     for (const b of this.app.boards) {
       const known = st.boards[b.id];
       if (!known) {
@@ -146,12 +145,21 @@ export class Account {
         st = adopt(st, [b.id], owner);
       } else if (known.owner === owner && this.seen.get(b.id) !== JSON.stringify(b)) st = markDirty(st, b.id);
     }
-    for (const id of Object.keys(st.boards)) if (!ids.has(id) && st.boards[id].owner === owner && !st.boards[id].deleted) st = markDeleted(st, id);
+    // Deletes are never worked out from a board being missing here: a list can be short for
+    // other reasons (another tab wrote an older list, a board did not load), and reading
+    // that as deletes once removed a whole account's boards. deleted() below is the only way.
     this.state = Object.assign(st, { declined: this.state.declined || [] });
     this.remember(); this.saveState();
     if (!this.user) { this.paint(); return; }
     this.status = 'waiting'; this.paint();
     clearTimeout(this.timer); this.timer = setTimeout(() => this.sync(), 2000);
+  }
+  // A person deleted this board, in this page. The one way a delete reaches the account.
+  deleted(id) {
+    const owner = this.user ? this.user.id : this.state.user, e = this.state.boards[id];
+    if (!owner || !e || e.owner !== owner || e.deleted) return;
+    this.state = Object.assign(markDeleted(this.state, id), { declined: this.state.declined || [] });
+    this.saveState();
   }
   // Boards the server refused, with why, for the account panel.
   refusedBoards() {
