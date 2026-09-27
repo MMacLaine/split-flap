@@ -86,6 +86,8 @@ html, body { margin: 0; background: #13151A; }
 .sf-menu-rename { width: 34px; height: 38px; flex: none; border: 0; border-radius: 8px; background: none; color: var(--muted); }
 .sf-menu-rename:hover { background: var(--bg-2); color: var(--text); }
 .sf-bar-btn.signin { color: var(--accent); }
+.sf-narrow { display: none; }
+@media (max-width: 440px) { .sf-wide { display: none; } .sf-narrow { display: inline; } }
 .sf-bar-fail { color: var(--accent); }
 .sf-refused { gap: 4px; }
 .sf-rail-foot { padding: 8px 10px 12px 10px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
