@@ -8,10 +8,12 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 routes = [{ pattern = "maclaine.se/split-flap/api/*", zone_name = "maclaine.se" }]
 
-# Workers Logs: the failure lines from logFailure() in src/index.js, with CPU time per
-# request, kept three days. 200,000 events a day on the free plan.
+# Workers Logs: only the failure lines from logFailure() in src/index.js, kept three days,
+# 200,000 events a day on the free plan. Invocation logs stay off, since they carry request
+# metadata this app promises not to keep. CPU time is in the Worker's Metrics tab.
 [observability]
 enabled = true
+logs = { invocation_logs = false }
 
 [vars]
 BASE_URL = "https://maclaine.se"
