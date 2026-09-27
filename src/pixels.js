@@ -89,8 +89,11 @@ const FLAGS = [
 
 export const PATTERNS = ['rainbow', 'nordic', 'rain', 'confetti', 'wave', 'checker'];
 
-// One frame of an animated pattern over a zone. step: seconds per frame.
-export function drawPattern(g, z, name, now, step) {
+// One frame of an animated pattern over a zone. step: seconds per frame. palette, when
+// given, replaces the rainbow in the rainbow, confetti and wave patterns, and its first
+// two colours make the checker.
+export function drawPattern(g, z, name, now, step, palette) {
+  const PAL = Array.isArray(palette) && palette.length ? palette : RAINBOW, n = PAL.length;
   const frame = Math.floor(now / (Math.max(2, step || 4) * 1000));
   const H = z.h, W = z.w;
   const set = (r, c, v) => { if (g[z.r + r] && c >= 0 && c < W) g[z.r + r][z.c + c] = v; };
@@ -108,15 +111,15 @@ export function drawPattern(g, z, name, now, step) {
   }
   for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
     let v = ' ';
-    if (name === 'rainbow') v = RAINBOW[((c + r + frame) % 6 + 6) % 6];
-    else if (name === 'checker') v = ((r + c + frame) % 2) ? 'b' : 'y';
-    else if (name === 'confetti') v = hash(r, c, frame) < 0.4 ? RAINBOW[Math.floor(hash(c, r, frame + 7) * 6)] : ' ';
+    if (name === 'rainbow') v = PAL[((c + r + frame) % n + n) % n];
+    else if (name === 'checker') v = ((r + c + frame) % 2) ? (PAL === RAINBOW ? 'b' : PAL[0]) : (PAL === RAINBOW ? 'y' : PAL[1 % n]);
+    else if (name === 'confetti') v = hash(r, c, frame) < 0.4 ? PAL[Math.floor(hash(c, r, frame + 7) * n)] : ' ';
     else if (name === 'rain') {
       const cycle = H + 3, head = Math.floor(hash(c, 1, 3) * cycle + frame) % cycle;
       v = r === head ? 'w' : r === head - 1 || r === head - 2 ? 'b' : ' ';
     } else if (name === 'wave') {
       const y = Math.round((H - 1) / 2 * (1 + Math.sin(c / 2.2 + frame * 0.9)));
-      v = r === y ? RAINBOW[Math.floor(c / 2) % 6] : ' ';
+      v = r === y ? PAL[Math.floor(c / 2) % n] : ' ';
     }
     set(r, c, v);
   }

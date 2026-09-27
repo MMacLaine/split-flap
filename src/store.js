@@ -5,7 +5,7 @@
 // which rebuilds the board field by field, so a hand-edited or hostile payload can only
 // ever produce a valid board.
 
-import { CHANNELS, LAYOUTS, defaultBoard, newId } from './content.js';
+import { CHANNELS, LAYOUTS, AREAS, defaultBoard, newId } from './content.js';
 import { cellChar, CHIP_KEYS } from './charset.js';
 import { PATTERNS } from './pixels.js';
 import { PROFILE_IDS } from './sound.js';
@@ -23,6 +23,10 @@ const int = (v, lo, hi, dflt) => { const n = Math.round(+v); return Number.isFin
 const color = v => v === 'rainbow' || CHIP_KEYS.includes(v) ? v : 'f';
 const time = (v, dflt) => /^\d{2}:\d{2}$/.test(v) ? v : dflt;
 const num = (v, lo, hi) => { const n = +v; return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
+const list = (v, n, len) => (Array.isArray(v) ? v : []).slice(0, n).map(x => str(x, len));
+const chipList = v => [...new Set((Array.isArray(v) ? v : []).filter(k => CHIP_KEYS.includes(k)))].slice(0, 9);
+const place = o => { const lat = num(o.lat, -90, 90), lon = num(o.lon, -180, 180); return lat != null && lon != null ? { lat, lon, city: str(o.city, 80) } : null; };
+const CURRENCIES = ['EUR', 'USD', 'GBP', 'NOK', 'DKK', 'SEK', 'CHF', 'JPY', 'PLN'];
 
 function sanitizeZone(z) {
   const ch = pick(z && z.ch, CHANNELS, 'message'), o = (z && typeof z.o === 'object' && z.o) || {}, out = {};
@@ -30,21 +34,52 @@ function sanitizeZone(z) {
     if (Array.isArray(o.cells)) out.cells = o.cells.slice(0, 24).map(r => (Array.isArray(r) ? r : []).slice(0, 60).map(c => cellChar(typeof c === 'string' ? c : ' ')));
     else if (Array.isArray(o.lines)) out.lines = o.lines.slice(0, 24).map(l => str(l, 60));
     else if (typeof o.text === 'string') out.text = str(o.text, 500);
-  } else if (ch === 'clock') out.fmt = o.fmt === '12' ? '12' : '24';
-  else if (ch === 'countdown') { out.label = str(o.label, 60); out.date = /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : '2027-06-25'; }
+    if (o.mode === 'paint' || o.mode === 'photo') out.mode = o.mode;   // which composer mode the editor opens in
+  } else if (ch === 'clock') { out.fmt = o.fmt === '12' ? '12' : '24'; if (o.date === false) out.date = false; if (o.week) out.week = true; }
+  else if (ch === 'countdown') {
+    out.label = str(o.label, 60); out.date = /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : '2027-06-25';
+    if (o.dir === 'up') out.dir = 'up';
+    if (o.unit === 'days') out.unit = 'days';
+  }
   else if (ch === 'bigclock') { out.fmt = o.fmt === '12' ? '12' : '24'; out.color = color(o.color); }
   else if (ch === 'bigtext') { out.text = str(o.text, 80, 'HEJ'); out.color = color(o.color); }
-  else if (ch === 'art') { out.pattern = pick(o.pattern, PATTERNS, 'rainbow'); out.step = int(o.step, 2, 60, 4); }
-  else if (ch === 'sl') {
+  else if (ch === 'art') {
+    out.pattern = pick(o.pattern, PATTERNS, 'rainbow'); out.step = int(o.step, 2, 60, 4);
+    const pal = chipList(o.palette); if (pal.length) out.palette = pal;
+  } else if (ch === 'sl') {
     if (o.home) out.home = true;
-    const sites = (Array.isArray(o.sites) ? o.sites : [o.site]).map(v => int(v, 1, 99999999, null)).filter(Boolean).slice(0, 6);
-    if (sites.length) { out.sites = sites; out.name = str(o.name, 80); }
+    const stations = (Array.isArray(o.stations) ? o.stations : []).slice(0, 6).map(x => x && typeof x === 'object' ? { id: int(x.id, 1, 99999999, null), name: str(x.name, 80) } : null).filter(x => x && x.id);
+    if (stations.length) out.stations = stations;
+    else {
+      const sites = (Array.isArray(o.sites) ? o.sites : [o.site]).map(v => int(v, 1, 99999999, null)).filter(Boolean).slice(0, 6);
+      if (sites.length) { out.sites = sites; out.name = str(o.name, 80); }
+    }
     if (Array.isArray(o.modes)) out.modes = o.modes.filter(m => MODES.includes(m));
     out.eta = pick(o.eta, ['min', 'clock', 'cycle'], 'min'); out.fmt = o.fmt === '12' ? '12' : '24';
+    if (o.rows != null) out.rows = int(o.rows, 1, 12, 3);
+    if (o.walk) out.walk = int(o.walk, 0, 30, 0);
   } else if (ch === 'weather') {
-    const lat = num(o.lat, -90, 90), lon = num(o.lon, -180, 180);
-    if (lat != null && lon != null) { out.lat = lat; out.lon = lon; out.city = str(o.city, 80); }
+    const pl = place(o); if (pl) Object.assign(out, pl);
     out.view = pick(o.view, ['now', 'hours', 'days'], 'now');
+    if (o.units === 'f') out.units = 'f';
+    if (o.wind === false) out.wind = false;
+  } else if (ch === 'quote') { if (o.set === 'work') out.set = 'work'; }
+  else if (ch === 'rotating') {
+    out.messages = list(o.messages, 12, 120); out.interval = int(o.interval, 3, 120, 8);
+    if (o.order === 'shuffle') out.order = 'shuffle';
+  } else if (ch === 'menu') {
+    out.title = str(o.title, 60); out.items = list(o.items, 16, 60); out.suffix = pick(o.suffix, ['', ' KR', ':-'], '');
+  } else if (ch === 'today') { if (o.week === false) out.week = false; if (o.sun === false) out.sun = false; if (o.days === false) out.days = false; if (o.doy) out.doy = true; }
+  else if (ch === 'electricity') { out.area = AREAS[o.area] ? o.area : 'SE3'; out.view = o.view === 'chart' ? 'chart' : 'now'; if (o.vat === false) out.vat = false; }
+  else if (ch === 'currency') {
+    out.base = o.base === 'EUR' ? 'EUR' : 'SEK'; out.dec = int(o.dec, 0, 4, 2);
+    const pairs = [...new Set((Array.isArray(o.pairs) ? o.pairs : []).filter(c => CURRENCIES.includes(c)))].slice(0, 6);
+    out.pairs = pairs.length ? pairs : ['EUR', 'USD', 'GBP'];
+  } else if (ch === 'url') {
+    // https only: a page on https cannot read http anyway, and it keeps javascript: and data: out.
+    const u = str(o.url, 500).trim(); out.url = /^https:\/\/[^\s]+$/.test(u) ? u : '';
+    out.every = pick(String(o.every), ['1', '5', '15', '60'], '5'); out.tpl = str(o.tpl, 200, '{{text}}');
+    out.path = str(o.path, 100).replace(/[^\w.]/g, ''); out.max = int(o.max, 1, 12, 4); out.header = str(o.header, 60);
   }
   return { ch, o: out };
 }
@@ -73,6 +108,7 @@ export function sanitizeBoard(b) {
     sound: !!b.sound, soundStyle: pick(b.soundStyle, PROFILE_IDS, 'clack'), volume: int(b.volume, 0, 100, 70),
     ...(typeof b.from === 'string' && /^[a-z]{2,12}$/.test(b.from) ? { from: b.from } : {}),
     quiet: { on: !!q.on, from: time(q.from, '23:00'), to: time(q.to, '07:00'), mode: q.mode === 'blank' ? 'blank' : 'dim' },
+    ...(b.loc && typeof b.loc === 'object' && place(b.loc) ? { loc: place(b.loc) } : {}),
     pages
   };
 }

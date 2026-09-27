@@ -130,7 +130,7 @@ export class App {
   refresh(quiet) {
     this.board.setOptions(this.boardOpts());
     sound.setVolume(this.cur().volume ?? sound.DEFAULT_VOLUME);
-    this.live.want(this.cur());
+    this.live.want(this.cur(), this.S.lang);
     this.tick(true);
     if (!quiet) this.render();
   }
@@ -451,7 +451,7 @@ export class App {
 
   pageEditor(page, b) {
     const t = this.t, d = this.dims();
-    const LP = { full: ['1fr', '1fr', [['1', '1', 1]]], header: ['1fr', '1fr 2.4fr', [['1', '1', 0], ['1', '2', 1]]], split: ['1fr 1fr', '1fr', [['1', '1', 1], ['2', '1', 0]]], ticker: ['1fr', '2.4fr 1fr', [['1', '1', 1], ['1', '2', 0]]] };
+    const LP = { full: ['1fr', '1fr', [['1', '1', 1]]], header: ['1fr', '1fr 2.4fr', [['1', '1', 0], ['1', '2', 1]]], split: ['1fr 1fr', '1fr', [['1', '1', 1], ['2', '1', 0]]], ticker: ['1fr', '2.4fr 1fr', [['1', '1', 1], ['1', '2', 0]]], stacked: ['1fr', '1fr 1fr', [['1', '1', 1], ['1', '2', 0]]] };
     const layouts = h('div', { class: 'sf-layouts' }, LAYOUTS.map(id => {
       const [cols, rows, parts] = LP[id];
       return h('button', { class: 'sf-layout', 'aria-pressed': String(page.layout === id), 'data-k': 'layout-' + id, onclick: () => this.setLayout(id) },
