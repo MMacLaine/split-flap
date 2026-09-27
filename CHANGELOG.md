@@ -4,10 +4,10 @@ One version per day of work. The app shows this log under Edit, at the foot of t
 
 ## v0.1 (2026-09-27): First version
 
-Day one: a split-flap board for any screen, from a blank page to live on maclaine.se.
+Everything from the first day of work. A split-flap board for any screen, now live on maclaine.se.
 
 - The board itself, drawn on one canvas so a Raspberry Pi keeps up: every flap steps forward through the drum, folds over its hinge and settles with a small bounce. Three themes: Vestaboard Black, Vestaboard White and Solari Amber.
-- Å Ä Ö Æ Ø Ü É are real flaps, not lookalikes.
+- Å Ä Ö Æ Ø Ü É each have their own flap.
 - Channels: messages typed straight onto the grid, clock, a big clock and big text made of colour chips, countdowns, SL departures, weather, colour patterns (Nordic flags, rain, waves, confetti) and quotes.
 - SL departures from any SL stop, or from the home station you starred on the Stockholm SL map. Search forgives spelling, so "vestra skogen" finds Västra skogen.
 - Departures keep loading when SL's servers are busy: a refused request is retried within seconds instead of the board giving up.
