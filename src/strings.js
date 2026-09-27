@@ -41,6 +41,7 @@ export const STR = {
     moveUp: 'Move up', moveDown: 'Move down', delPage: 'Delete page', lang: 'Language', controls: 'Board controls', editor: 'Editor',
     boardLink: 'Board link', fallback: 'No page is scheduled right now, so the board shows the clock.',
     // editor drawer (DESIGN-HANDOVER-editor.md)
+    help: 'Help', helpSub: 'How the board works', gridIs: (r, c) => `The board is ${r} × ${c} flaps.`, changeSize: 'Change the size',
     chooseContent: 'Choose content', pageOf: (i, n) => `Page ${i} / ${n}`, boardSettings: 'Board settings', boardsTemplates: 'Boards and templates',
     startTitle: 'Start from a template', startBody: 'Pick one to begin. Everything can be changed afterwards.', skip: 'Keep the current board', yourBoards: 'Your boards',
     moveNamed: name => `Move ${name}`, reorderHint: 'Drag to reorder, or focus the handle and use the arrow keys',
@@ -101,6 +102,7 @@ export const STR = {
     chip: name => `Infoga ${name} färgbricka`, typeOnBoard: 'Skriv på tavlan', duration: 'Tid i sekunder',
     moveUp: 'Flytta upp', moveDown: 'Flytta ned', delPage: 'Ta bort sida', lang: 'Språk', controls: 'Tavlans kontroller', editor: 'Redigerare',
     boardLink: 'Tavellänk', fallback: 'Ingen sida är schemalagd just nu, så tavlan visar klockan.',
+    help: 'Hjälp', helpSub: 'Så fungerar tavlan', gridIs: (r, c) => `Tavlan är ${r} × ${c} flappar.`, changeSize: 'Ändra storleken',
     chooseContent: 'Välj innehåll', pageOf: (i, n) => `Sida ${i} / ${n}`, boardSettings: 'Tavlans inställningar', boardsTemplates: 'Tavlor och mallar',
     startTitle: 'Börja från en mall', startBody: 'Välj en att börja med. Allt går att ändra efteråt.', skip: 'Behåll nuvarande tavla', yourBoards: 'Dina tavlor',
     moveNamed: name => `Flytta ${name}`, reorderHint: 'Dra för att ändra ordning, eller markera handtaget och använd piltangenterna',

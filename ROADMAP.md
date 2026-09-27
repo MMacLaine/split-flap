@@ -85,6 +85,18 @@ The constraints from the design brief carry over, so plain CSS on the chrome tok
 - **Board words in more languages.** Norwegian, Danish, Finnish and German for what the board prints (days, months, the short words in `WORDS`), while the chrome stays English and Swedish. The drum already carries Æ Ø Ü É.
 - **Drafts and history.** Messages typed in the composer kept in localStorage, so a past message can be brought back. Undo and redo in the composer at the same time.
 
+### Planning the week
+
+The idea is to plan a board around a week. For example, train times alone from 06:30 to 07:15 on weekdays, a welcome home message at 17:00, and the weather and a countdown the rest of the evening.
+
+Most of this can be done today with a time window on each page, but it is hard to see, and it has two gaps. A page without a window shows at any time, so a morning page only shows alone if every other page has a window too. A page also has one window, so weekday mornings and Saturday mid-morning need two copies of the page.
+
+- **Week view.** Seven days across and the hours down, with each page's windows drawn as blocks in the page's thumbnail colours. Drag on an empty slot to give a page a window there, drag a block's edge to change it, tap a block to open the page. It sits beside the playlist as a second way to see the same pages. It wants a design pass, especially at 400 px, where a day at a time is likely the answer.
+- **Several windows per page.** `win` becomes a list. Old boards read as a list of one, so nothing breaks.
+- **Show alone.** A per-page switch so that while its window is open, only pages in their window show. This is the train times case. It is a switch, so boards that rely on today's behaviour keep it.
+- **Dated pages** (above) fit the same view as blocks on a date.
+- Later, with the relay, the phone could push a one-off block for tonight without editing the week.
+
 ### Board and wall
 
 - **Record a flip.** Capture the canvas with MediaRecorder to a short video while a page changes. WebM in Chrome and Firefox, MP4 in Safari, so pick whichever format `isTypeSupported` says yes to. That shares to social without a GIF encoder. GIF later if people ask.
@@ -125,11 +137,14 @@ All of these need a relay, an account, or both. None of them changes what is bui
 
 ## Suggested order
 
+Steps 0 to 5 were done on 27 September.
+
 0. Design session for the editor in Claude Design: drawer, picker, zone diagram, composer modes.
 1. Static render helper, save as image, and the content picker. The helper serves both.
 2. Board location, then rotating messages, word clock, count up, today, sun and moon, electricity. Six channels the picker can show off.
 3. Photo to chips and paint mode.
 4. Menu and price list with its two templates. Follow a URL.
 5. Playlist thumbnails, Start panel, composer modes.
-6. Record a flip, more themes, web component.
-7. Relay, then the rest of the future list.
+6. Week planner: several windows per page and Show alone first, then the week view after a design pass.
+7. Record a flip, more themes, web component.
+8. Relay, then the rest of the future list.
