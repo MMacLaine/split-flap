@@ -17,7 +17,7 @@ import { GROUPS, TILES, tileFor, previewLive, SAMPLE_FEED } from './catalogue.js
 import { sampleImage, mapImage, stamp, HEART } from './photo.js';
 import { Composer } from './composer.js';
 import { CHANGELOG, VERSION } from './changelog.js';
-import { HELP } from './help.js';
+import { HELP, INTRO } from './help.js';
 import * as sound from './sound.js';
 
 const DURS = [3, 5, 8, 10, 12, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1800, 3600];
@@ -600,10 +600,37 @@ export class Editor {
   }
 
   // ---------- help ----------
+  // The guide, laid out like the Start panel and the steps below the board: a serif
+  // title, then numbered sections, some with a small board drawn by the renderer.
   helpLevel() {
-    const part = x => typeof x === 'string' ? x : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => this.go(x.k) }, x.t);
-    return h('div', { class: 'sf-level sf-help' }, (HELP[this.lang] || HELP.en).map(sec => h('section', null,
-      h('h3', null, sec.h), sec.p.map(p => h('p', null, Array.isArray(p) ? p.map(part) : p)))));
+    const intro = INTRO[this.lang] || INTRO.en, part = x => typeof x === 'string' ? x : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => this.go(x.k) }, x.t);
+    return h('div', { class: 'sf-level sf-help' },
+      h('div', { class: 'sf-start-head' }, h('h2', null, intro.title), h('p', null, intro.lede)),
+      (HELP[this.lang] || HELP.en).map((sec, i) => h('section', { class: 'sf-help-sec' },
+        h('span', { class: 'sf-help-num' }, String(i + 1).padStart(2, '0')),
+        h('h3', null, sec.h),
+        sec.fig ? this.helpFig(sec.fig) : null,
+        (sec.p || []).map(p => h('p', null, Array.isArray(p) ? p.map(part) : p)),
+        sec.keys ? h('dl', { class: 'sf-keys' }, sec.keys.map(([k, d]) => h('div', null, h('dt', null, k.split(' ').map(x => h('kbd', null, x))), h('dd', null, d)))) : null)));
+  }
+  helpFig(kind) {
+    const b = this.app.cur(), T = b.theme, sv = this.lang === 'sv', t = this.t;
+    const grid = (rows, cols, lines) => { const g = blank(rows, cols); lines.forEach((l, r) => { const a = [...l], off = Math.floor((cols - a.length) / 2); a.forEach((c, j) => { if (g[r] && off + j >= 0 && off + j < cols) g[r][off + j] = c; }); }); return g; };
+    if (kind === 'board') {
+      const d = this.app.dims(), p = b.pages[0];
+      return h('figure', { class: 'sf-help-fig' }, this.thumb('help-board', d.rows, d.cols, () => compose(p, d.rows, d.cols, Date.now(), this.lang, this.app.live.data), T),
+        h('figcaption', null, `${b.name} · ${t.pagesCount(b.pages.length)}`));
+    }
+    if (kind === 'layouts') return h('figure', { class: 'sf-help-fig' }, h('div', { class: 'sf-layouts' }, LAYOUTS.map(id => {
+      const [cols, rows, parts] = LAYOUT_PIC[id];
+      return h('span', { class: 'sf-layout', 'aria-hidden': 'true' },
+        h('span', { class: 'sf-layout-pic', style: `grid-template-columns:${cols};grid-template-rows:${rows}` }, parts.map(([c, r, strong]) => h('span', { class: strong ? 'strong' : '', style: `grid-column:${c};grid-row:${r}` }))),
+        h('span', null, t.layouts[id]));
+    })));
+    if (kind === 'message') return h('figure', { class: 'sf-help-fig small' }, this.thumb('help-msg', 4, 15, () => grid(4, 15, ['', sv ? 'FIKA KL 15' : 'FIKA AT 3', 'roygbv', '']), T));
+    if (kind === 'week') return h('figure', { class: 'sf-help-fig small' }, this.thumb('help-week', 3, 15, () => grid(3, 15, [sv ? 'MÅN TILL FRE' : 'MON TO FRI', '06:30 07:30', 'bbyyyyyybb']), T),
+      h('figcaption', null, sv ? 'En sida med ett fönster visas bara då.' : 'A page with a window shows only then.'));
+    return null;
   }
 
   // ---------- version log ----------
