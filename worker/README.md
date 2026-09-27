@@ -13,7 +13,7 @@ no telemetry. Deleting the account deletes all of it.
 ## Run it locally
 
 ```sh
-cd ~/split-flap && python3 -m http.server 8801 &          # the app
+cd ~/split-flap && npm run serve &                         # the app
 cd worker && npm install
 npx wrangler d1 migrations apply split-flap --local --env dev
 npx wrangler dev --env dev --port 8787                     # app and API on http://localhost:8787

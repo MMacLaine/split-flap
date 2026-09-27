@@ -58,7 +58,7 @@ There is no build step and no dependencies. Any static file server will do:
 ```sh
 git clone https://github.com/MMacLaine/split-flap.git
 cd split-flap
-python3 -m http.server 8801    # then open http://localhost:8801
+npm run serve                 # then open http://localhost:8801 (python3 -m http.server 8801 works too)
 ```
 
 Tests use Node's built-in runner: `npm test` (Node 18 or newer).
