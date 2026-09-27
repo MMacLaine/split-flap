@@ -115,6 +115,7 @@ test('Follow a URL: templates, dotted paths, plain text', () => {
   assert.deepEqual(feedItems('first line\n\nsecond', ''), [{ text: 'first line' }, { text: 'second' }]);
   assert.deepEqual(templateTokens('{{a}} {{b.c}} {{a}}'), ['a', 'b.c']);
   assert.equal(applyTemplate('{{missing}} X', {}), 'X');
+  assert.equal(applyTemplate('', items[0]), '4 RADIOHUSET 3');
   const live = { url: { 'https://x.test/a.json': { items } } };
   const res = channelLines('url', { url: 'https://x.test/a.json', tpl: '{{line}} {{dest}}', max: 1, header: 'Buses' }, Z(6, 22), 0, 'en', live);
   assert.deepEqual(res.lines, ['BUSES', '4 RADIOHUSET']);
