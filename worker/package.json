@@ -1,0 +1,17 @@
+{
+  "name": "split-flap-worker",
+  "private": true,
+  "type": "module",
+  "description": "Split-Flap accounts API: Cloudflare Worker with D1 and Better Auth. The app itself has no dependencies; these are for the Worker only.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "better-auth": "1.7.6"
+  },
+  "devDependencies": {
+    "wrangler": "4.142.0"
+  }
+}

@@ -1,0 +1,34 @@
+# Split-Flap accounts API. Deployed with `npx wrangler deploy` from this folder, on the
+# route below; the app itself stays on Cloudflare Pages. Secrets (BETTER_AUTH_SECRET,
+# GOOGLE_CLIENT_SECRET) are set with `wrangler secret put`, never written here.
+name = "split-flap-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+routes = [{ pattern = "maclaine.se/split-flap/api/*", zone_name = "maclaine.se" }]
+
+[vars]
+BASE_URL = "https://maclaine.se"
+GOOGLE_CLIENT_ID = ""   # not secret; filled in when the Google client exists
+
+[[d1_databases]]
+binding = "DB"
+database_name = "split-flap"
+database_id = "00000000-0000-0000-0000-000000000000"   # replaced after `wrangler d1 create split-flap --jurisdiction eu`
+migrations_dir = "migrations"
+
+# 60 board writes a minute per account, counted by Cloudflare, not in D1
+[[ratelimits]]
+name = "WRITES"
+namespace_id = "5051"
+simple = { limit = 60, period = 60 }
+
+# Local development: `npm run dev` serves the app through the Worker from the plain
+# static server on 8801, so the app and the API share http://localhost:8787.
+[env.dev]
+vars = { BASE_URL = "http://localhost:8787", DEV_APP = "http://localhost:8801", GOOGLE_CLIENT_ID = "" }
+# DEV_TEST=1 comes from .dev.vars when running the tests, never from here
+d1_databases = [{ binding = "DB", database_name = "split-flap", database_id = "00000000-0000-0000-0000-000000000000", migrations_dir = "migrations" }]
+ratelimits = [{ name = "WRITES", namespace_id = "5051", simple = { limit = 60, period = 60 } }]
+routes = []
