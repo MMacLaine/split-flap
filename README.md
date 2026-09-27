@@ -17,14 +17,15 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 - **Pictures:** paint with the colour chips, turn a photo into chips in the browser, or run an animated pattern (Nordic flags, rain, waves, confetti).
 - **Templates:** nine to start from, including Home dashboard, Station board, Café, Office lobby and Everything at once, which fills the screen and rolls every flap the long way round.
 - **Layouts:** a page can be one zone or two (header and body, split, ticker row, or stacked halves for portrait screens), each showing a different channel.
-- **Playlist:** pages rotate on their own timers, optionally only at certain times and days (departures on weekday mornings). Quiet hours dim or blank the board overnight.
+- **Playlist:** pages rotate on their own timers. A page can have several times, by days of the week or on a date once or every year, and Show alone gives a page its time to itself (the train times on weekday mornings). Each page can have its own transition. Quiet hours dim or blank the board overnight.
 - **Three themes** (Vestaboard Black, Vestaboard White, Solari Amber), any grid from 1 × 4 to 24 × 60, and four transitions at three speeds, previewed on the board as you pick them. Authentic rolls every flap the whole way round.
 - **Four flap sounds** (Clack, Heavy, Soft, Tick), synthesised: a plastic tick for each flap and a ka-chunk when the last one lands.
 - **The editor.** Each kind of content is a tile drawn as a small board in the shape of the zone it fills, so you see it before you pick it. On a wide screen the pages stay beside the editor as thumbnails you can drag to reorder. On a phone it goes one step at a time with the board above.
 - **Messages are made on the grid** in Type, Paint or Photo mode, with undo and redo. A message you change is kept under Earlier messages in this browser.
 - **Share by link or QR (Quick Response) code.** The link holds the whole board, compressed into the part of the URL after `#`, which browsers never send to a server. Save as image downloads the page as a PNG.
-- **Made for walls:** kiosk mode (`?kiosk=1`), screen wake lock, a one pixel drift against burn-in, offline support, and a small note when live data is getting old.
-- English and Swedish. Å Ä Ö Æ Ø Ü É each have their own flap.
+- **Made for walls:** kiosk mode (`?kiosk=1`), screen wake lock, a one pixel drift against burn-in, offline support, a small note when live data is getting old, and a reload in quiet hours when a new version is live. Every flap can roll once at start up and on the hour. `?bg=transparent` draws the board on nothing, for OBS.
+- **Stereo flaps:** each flap's sound is panned by its column.
+- English and Swedish. Å Ä Ö Æ Ø Ü É each have their own flap, and so does ♥.
 
 ![A board showing the Swedish flag in blue and yellow colour chips, part of the Nordic flags pattern](docs/mosaic.png)
 
@@ -61,13 +62,13 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | File | What it does |
 |---|---|
 | `src/renderer.js` | The canvas board: glyph atlas, fold, stagger, frame budget. Its constants are the design spec. |
-| `src/charset.js` | The drum (73 flaps), typed text to flaps, Vestaboard character codes for import. |
+| `src/charset.js` | The drum (74 flaps), typed text to flaps, Vestaboard character codes for import. |
 | `src/content.js` | Layouts, zones and what each channel prints, as pure functions. |
 | `src/almanac.js` | Week numbers, Swedish red days and flag days, sunrise and sunset. |
 | `src/pixels.js` | The 3 × 5 pixel font and the animated colour patterns. |
 | `src/templates.js` | The ready-made boards. |
 | `src/sound.js` | The four synthesised flap sounds. |
-| `src/schedule.js` | Page timers, time windows, quiet hours. |
+| `src/schedule.js` | Page timers, time windows by day or date, Show alone, quiet hours. |
 | `src/live.js` | The fetchers (SL, Open-Meteo, electricity, exchange rates, Wikipedia, Follow a URL), station and city search. |
 | `src/store.js` | localStorage, board links, and the sanitizer every imported board goes through. |
 | `src/app.js` | Control bar, share, kiosk mode, and the board state the editor works on. |
