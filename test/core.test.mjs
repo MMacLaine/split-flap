@@ -216,3 +216,11 @@ test('departure times as minutes, 24 h or 12 h clock', () => {
   assert.equal(line({ eta: 'cycle' }), '11 AKALLA    191 MIN');
   assert.equal(channelLines('sl', { ...o, eta: 'cycle' }, z, now + 6000, 'en', live).lines[1], '11 AKALLA      08:11'); // 12 h drops the leading zero, like the clock channel; gap 20-9-7 = 4
 });
+
+test('volume is clamped to 0..100 and defaults to 70', () => {
+  const mk = volume => sanitizeBoard({ volume, pages: [{ layout: 'full', zones: [{ ch: 'clock' }] }] }).volume;
+  assert.equal(mk(undefined), 70);
+  assert.equal(mk(250), 100);
+  assert.equal(mk(-3), 0);
+  assert.equal(mk('35'), 35);
+});

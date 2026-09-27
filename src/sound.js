@@ -33,14 +33,23 @@ export const PROFILES = {
 };
 export const PROFILE_IDS = Object.keys(PROFILES);
 
-let ac = null, bus = null, noise = null, lastStep = 0, lastFinal = 0;
+let ac = null, bus = null, noise = null, lastStep = 0, lastFinal = 0, volume = 70;
+
+// 0 to 100. Squared so the slider feels linear to the ear: 50 sounds about half as
+// loud, not nearly as loud as 100. Full scale is a little over the old fixed level.
+export const DEFAULT_VOLUME = 70;
+const gainFor = v => Math.pow(Math.max(0, Math.min(100, v)) / 100, 2) * 1.3;
+export function setVolume(v) {
+  volume = Math.max(0, Math.min(100, +v || 0));
+  if (bus && ac) bus.gain.setTargetAtTime(gainFor(volume), ac.currentTime, 0.02);
+}
 
 function ensure() {
   if (ac) return ac;
   ac = new (window.AudioContext || window.webkitAudioContext)();
   const comp = ac.createDynamicsCompressor();
   comp.threshold.value = -20; comp.knee.value = 12; comp.ratio.value = 6; comp.attack.value = 0.002; comp.release.value = 0.12;
-  bus = ac.createGain(); bus.gain.value = 0.9;
+  bus = ac.createGain(); bus.gain.value = gainFor(volume);
   bus.connect(comp); comp.connect(ac.destination);
   const len = Math.floor(ac.sampleRate * 0.06);
   noise = ac.createBuffer(1, len, ac.sampleRate);
@@ -80,7 +89,7 @@ function thump(t, f0, f1, dur, gain) {
 // Steps are thinned to one per 12ms and finals to one per 18ms: past that the ear
 // hears a rattle either way and the audio thread would only do extra work.
 export function play(final, profile) {
-  if (!ac || ac.state !== 'running') return;
+  if (!ac || ac.state !== 'running' || volume <= 0) return;
   const now = performance.now();
   if (final) { if (now - lastFinal < 18) return; lastFinal = now; }
   else { if (now - lastStep < 12) return; lastStep = now; }

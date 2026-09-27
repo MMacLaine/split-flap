@@ -129,6 +129,7 @@ export class App {
   // quiet) the drawer.
   refresh(quiet) {
     this.board.setOptions(this.boardOpts());
+    sound.setVolume(this.cur().volume ?? sound.DEFAULT_VOLUME);
     this.live.want(this.cur());
     this.tick(true);
     if (!quiet) this.render();
@@ -726,7 +727,21 @@ export class App {
         h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!b.sound, 'data-k': 'sound', onchange: () => this.toggleSound() }), h('span', { class: 'sf-eyebrow' }, t.sound)),
         h('div', { class: 'sf-row' }, h('span', { style: 'font-size:12px;color:var(--muted);width:72px' }, t.soundStyle),
           this.seg(sound.PROFILE_IDS.map(id => [id, t.sounds[id]]), b.soundStyle || 'clack', v => { this.upd(bb => { bb.soundStyle = v; }); sound.preview(v); }, 'ss')),
+        this.volumeSlider(b),
         h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'ss-preview', onclick: () => sound.preview(b.soundStyle || 'clack') }, t.previewSound))));
+  }
+
+  // Volume applies live while dragging and plays a short sample when the drag ends,
+  // so the level is judged by ear rather than by the number.
+  volumeSlider(b) {
+    const t = this.t, v = b.volume ?? sound.DEFAULT_VOLUME;
+    const out = h('output', { class: 'sf-vol-out' }, String(v));
+    const input = h('input', {
+      type: 'range', class: 'sf-vol', min: 0, max: 100, step: 5, value: v, 'aria-label': t.volume, 'data-k': 'volume',
+      oninput: e => { out.textContent = e.target.value; sound.setVolume(e.target.value); },
+      onchange: e => { const nv = +e.target.value; this.upd(bb => { bb.volume = nv; }, true); if (nv > 0) sound.preview(b.soundStyle || 'clack'); }
+    });
+    return h('div', { class: 'sf-row' }, h('span', { style: 'font-size:12px;color:var(--muted);width:72px' }, t.volume), input, out);
   }
 
   panelBoards() {

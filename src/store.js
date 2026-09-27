@@ -70,7 +70,7 @@ export function sanitizeBoard(b) {
     id: str(b.id, 40) || newId('b'), name: str(b.name, 80) || d.name,
     size: pick(b.size, SIZES, '6x22'), rows: int(b.rows, 1, 24, 6), cols: int(b.cols, 4, 60, 22),
     theme: pick(b.theme, THEMES, 'black'), transition: pick(b.transition, TRANSITIONS, 'classic'), speed: pick(b.speed, SPEEDS, 'fast'),
-    sound: !!b.sound, soundStyle: pick(b.soundStyle, PROFILE_IDS, 'clack'),
+    sound: !!b.sound, soundStyle: pick(b.soundStyle, PROFILE_IDS, 'clack'), volume: int(b.volume, 0, 100, 70),
     ...(typeof b.from === 'string' && /^[a-z]{2,12}$/.test(b.from) ? { from: b.from } : {}),
     quiet: { on: !!q.on, from: time(q.from, '23:00'), to: time(q.to, '07:00'), mode: q.mode === 'blank' ? 'blank' : 'dim' },
     pages
