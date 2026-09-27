@@ -3,7 +3,7 @@
 //   node _dev/gen-changelog.mjs
 import { writeFileSync } from 'node:fs';
 import { CHANGELOG } from '../src/changelog.js';
-let md = '# Changelog\n\nOne version per day of work. The app shows this log under Edit, at the foot of the drawer.\n';
+let md = '# Changelog\n\nEach version is a release, newest first. The app shows this log under Edit, at the foot of the page list.\n';
 for (const r of CHANGELOG) {
   md += `\n## v${r.v} (${r.date}): ${r.tag.en}\n\n${r.desc.en}\n\n`;
   for (const it of r.items.en) md += `- ${it}\n`;
