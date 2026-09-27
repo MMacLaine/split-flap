@@ -90,7 +90,8 @@ export const TILES = [
 
   { id: 'scoreboard', g: 'later', later: 1, name: t2('Scoreboard', 'Resultattavla') },
   { id: 'timer', g: 'later', later: 1, name: t2('Timer', 'Timer') },
-  { id: 'list', g: 'later', later: 1, name: t2('List', 'Lista') }
+  { id: 'list', g: 'later', later: 1, name: t2('List', 'Lista') },
+  { id: 'stocks', g: 'later', later: 1, name: t2('Stock ticker', 'Aktiekurser') }
 ];
 export const TILE = Object.fromEntries(TILES.map(t => [t.id, t]));
 

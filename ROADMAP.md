@@ -103,7 +103,8 @@ All of these need a relay, an account, or both. None of them changes what is bui
 - **Screens.** One phone, several kiosks. Mirroring, last seen, current page, version, remote reload. This is SplitFlapTV's screen management.
 - **Shortcuts and voice.** A `send` URL with id, key and text, so iOS Shortcuts and Siri can post.
 - **Vestaboard API shape.** The relay accepts Vestaboard's read/write message format. `charset.js` already decodes the codes. Every existing Vestaboard integration then works here by changing a URL.
-- **Integrations that need a secret.** Calendar by ICS, Spotify now playing, Strava, RSS headlines, stocks, sports. Each needs a proxy holding a key or an OAuth token, so they wait for the relay.
+- **Stock ticker.** Share and ETF (exchange-traded fund) prices with the day's change, coloured green or red, and a ticker row that pages through a watchlist. Every free price API I know of needs a key, so it waits for the relay. It is already a Later tile in the picker.
+- **Integrations that need a secret.** Calendar by ICS, Spotify now playing, Strava, RSS headlines, sports. Each needs a proxy holding a key or an OAuth token, so they wait for the relay.
 - **Public gallery.** Shared boards on the about page. Needs moderation, which means accounts.
 - **Google TV package.** A trusted web activity, so a television runs the board without a laptop casting to it. Apple TV has no browser, so AirPlay from a phone is the answer there.
 

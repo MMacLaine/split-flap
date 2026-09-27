@@ -46,7 +46,7 @@ Made after the handoff, against the code. Where this section and the rest of the
 
 - Search at the top, then groups: Words, Time, Live, Pictures, Later. Search matches names and descriptions in both languages.
 - Each tile is a thumbnail drawn at the zone's own rows and columns, a name, and one line. Zones wider than 3.2:1, such as a ticker row, switch the grid to a single column.
-- Later tiles (Scoreboard, Timer, List) are dashed outlines with the name and "Arrives with the relay", with no preview and no action.
+- Later tiles (Scoreboard, Timer, List, Stock ticker) are dashed outlines with the name and "Arrives with the relay", with no preview and no action.
 - A tap puts the channel into the zone with its defaults. The picker gives way to the channel header, with its options below. Change reopens the picker, and Escape from there keeps what was there before.
 
 ## Channel options pattern
