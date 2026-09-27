@@ -122,6 +122,11 @@ export function unrefuse(state, error) {
   return Object.assign({}, state, { boards });
 }
 
+// Boards made in a browser that already belongs to an account, while the account could
+// not be reached (signed out, or the API did not answer): not guest boards from before
+// the first sign-in (those are offered or declined), so they are the account's.
+export const strays = (boards, state, skip = []) => state.user ? boards.filter(b => !state.boards[b.id] && !skip.includes(b.id)).map(b => b.id) : [];
+
 // Boards of the account with changes the server has not got yet.
 export const unsynced = state => Object.entries(state.boards).filter(([, e]) => e.owner === state.user && e.dirty && !e.deleted).map(([id]) => id);
 
