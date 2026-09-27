@@ -90,7 +90,7 @@ export const TEMPLATES = [
     name: { en: 'Café', sv: 'Kafé' },
     desc: { en: 'Today’s menu with prices, and a fika call, on a white board.', sv: 'Dagens meny med priser, och ett fikarop, på en vit tavla.' },
     make: sv => base(sv ? 'Kafé' : 'Café', { theme: 'white', soundStyle: 'soft', pages: [
-      page(sv ? 'Meny' : 'Menu', 'full', 20, [z('menu', { title: sv ? 'IDAG' : 'TODAY', items: ['KAFFE 30', 'KANELBULLE 35', 'SMÖRGÅS 65', 'SOPPA 95', sv ? 'DAGENS KAKA 45' : 'CAKE OF THE DAY 45'], suffix: ' KR' })]),
+      page(sv ? 'Meny' : 'Menu', 'full', 20, [z('menu', { title: sv ? 'IDAG' : 'TODAY', items: ['KAFFE 30', 'KANELBULLE 35', 'SMÖRGÅS 65', 'SOPPA 95', sv ? 'DAGENS KAKA 45' : 'CAKE 45'], suffix: ' KR' })]),
       page('Fika', 'full', 8, [z('bigtext', { text: 'FIKA', color: 'o' })]),
       page(sv ? 'Öppet' : 'Opening hours', 'full', 12, [z('message', { lines: ['', sv ? 'ÖPPET' : 'OPEN', '', sv ? 'VARDAGAR 7 TILL 18' : 'WEEKDAYS 7 TO 18', sv ? 'HELGER 9 TILL 16' : 'WEEKENDS 9 TO 16', 'oooooo'] })])
     ] })
