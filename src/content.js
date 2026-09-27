@@ -291,8 +291,10 @@ export function channelLines(ch, o, z, now, lang, live) {
 }
 
 // {{name}} and {{a.b}} tokens filled from one item of a feed, printed in capitals.
+// With no template, the item's plain values in order, separated by spaces.
 export function applyTemplate(tpl, item) {
-  return String(tpl || '{{text}}').replace(/\{\{\s*([\w.]+)\s*\}\}/g, (m, k) => {
+  if (!tpl) return Object.values(item || {}).filter(v => v != null && typeof v !== 'object').join(' ').toUpperCase().replace(/\s+/g, ' ').trim();
+  return String(tpl).replace(/\{\{\s*([\w.]+)\s*\}\}/g, (m, k) => {
     const v = k.split('.').reduce((x, p) => (x != null && typeof x === 'object' ? x[p] : undefined), item);
     return v == null || typeof v === 'object' ? '' : String(v);
   }).toUpperCase().replace(/\s+/g, ' ').trim();

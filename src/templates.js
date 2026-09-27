@@ -86,6 +86,26 @@ export const TEMPLATES = [
     ] })
   },
   {
+    id: 'cafe',
+    name: { en: 'Café', sv: 'Kafé' },
+    desc: { en: 'Today’s menu with prices, and a fika call, on a white board.', sv: 'Dagens meny med priser, och ett fikarop, på en vit tavla.' },
+    make: sv => base(sv ? 'Kafé' : 'Café', { theme: 'white', soundStyle: 'soft', pages: [
+      page(sv ? 'Meny' : 'Menu', 'full', 20, [z('menu', { title: sv ? 'IDAG' : 'TODAY', items: ['KAFFE 30', 'KANELBULLE 35', 'SMÖRGÅS 65', 'SOPPA 95', sv ? 'DAGENS KAKA 45' : 'CAKE OF THE DAY 45'], suffix: ' KR' })]),
+      page('Fika', 'full', 8, [z('bigtext', { text: 'FIKA', color: 'o' })]),
+      page(sv ? 'Öppet' : 'Opening hours', 'full', 12, [z('message', { lines: ['', sv ? 'ÖPPET' : 'OPEN', '', sv ? 'VARDAGAR 7 TILL 18' : 'WEEKDAYS 7 TO 18', sv ? 'HELGER 9 TILL 16' : 'WEEKENDS 9 TO 16', 'oooooo'] })])
+    ] })
+  },
+  {
+    id: 'lobby',
+    name: { en: 'Office lobby', sv: 'Kontorsentré' },
+    desc: { en: 'A welcome that takes turns with notices, the time and room prices.', sv: 'Ett välkommen som turas om med meddelanden, tiden och rumspriser.' },
+    make: sv => base(sv ? 'Entré' : 'Lobby', { quiet: { on: true, from: '20:00', to: '07:00', mode: 'dim' }, pages: [
+      page(sv ? 'Välkommen' : 'Welcome', 'header', 20, [z('clock', { fmt: '24', date: false }), z('rotating', { messages: sv ? ['VÄLKOMMEN TILL ATELJÉN', 'GÄSTNÄT: ATELJE', 'MÖTEN PÅ PLAN 3'] : ['WELCOME TO THE STUDIO', 'GUEST WIFI: STUDIO', 'MEETINGS ON FLOOR 3'], interval: 6 })]),
+      page(sv ? 'Rum' : 'Rooms', 'full', 15, [z('menu', { title: sv ? 'RUM PER TIMME' : 'ROOMS PER HOUR', items: [sv ? 'STORA SALEN 900' : 'THE HALL 900', sv ? 'BIBLIOTEKET 450' : 'THE LIBRARY 450', sv ? 'TELEFONRUM 150' : 'PHONE ROOM 150'], suffix: ' KR' })]),
+      page(sv ? 'Idag' : 'Today', 'full', 10, [z('today', {})])
+    ] })
+  },
+  {
     id: 'blank',
     name: { en: 'Blank', sv: 'Tom' },
     desc: { en: 'One empty page to type on.', sv: 'En tom sida att skriva på.' },
