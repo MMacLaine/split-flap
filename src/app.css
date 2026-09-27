@@ -86,6 +86,8 @@ html, body { margin: 0; background: #13151A; }
 .sf-menu-rename { width: 34px; height: 38px; flex: none; border: 0; border-radius: 8px; background: none; color: var(--muted); }
 .sf-menu-rename:hover { background: var(--bg-2); color: var(--text); }
 .sf-bar-btn.signin { color: var(--accent); }
+.sf-bar-fail { color: var(--accent); }
+.sf-refused { gap: 4px; }
 .sf-rail-foot { padding: 8px 10px 12px 10px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
 .sf-pls { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .sf-pls.compact { padding: 4px 10px 10px 10px; flex: 1; min-height: 0; overflow: auto; }
@@ -131,6 +133,7 @@ html, body { margin: 0; background: #13151A; }
 .sf-hint.block { display: block; margin-top: 2px; }
 .sf-hint.warn { color: var(--accent); }
 .sf-note.big { font-size: 13px; color: var(--pale); }
+.sf-row .sf-confirm-why { flex-basis: 100%; }
 .sf-input.big { height: 44px; padding: 0 12px; border-radius: 8px; background: var(--bg-2); font-size: 15px; font-weight: 500; }
 .sf-input { height: 42px; padding: 0 12px; border-radius: 8px; background: var(--bg-2); }
 .sf-input.mono { font-family: var(--mono); font-size: 14px; text-transform: none; }
