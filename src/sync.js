@@ -54,12 +54,14 @@ export function merge(local, remote, state, user, { suffix = ' (copy)', newId } 
       out.push(b); st.boards[b.id] = Object.assign({}, e, { rev: r.rev, dirty, owner: user }); if (dirty && wants(b.id)) push.push(b.id);
       continue;
     }
-    if (!dirty && r.rev < agreed && !r.deleted && JSON.stringify(r.board) !== JSON.stringify(b)) {
-      // The server went back in time (the database was restored): its copy is older than
-      // what this browser last agreed with it. Keep both, this browser's as a copy.
-      const c = copyOf(b, suffix, newId);
-      out.push(r.board, c); st.boards[b.id] = { rev: r.rev, dirty: false, owner: user };
-      st.boards[c.id] = { rev: 0, dirty: true, owner: user }; push.push(c.id);
+    if (!dirty && r.rev < agreed) {
+      // The server went back in time (the database was restored): its copy, or its delete,
+      // is older than what this browser last agreed with it. This browser's is newer by
+      // construction, so it goes back up to the same board. If another browser got there
+      // first, the 409 makes the normal conflict copy.
+      out.push(b);
+      const same = !r.deleted && JSON.stringify(r.board) === JSON.stringify(b);
+      st.boards[b.id] = { rev: r.rev, dirty: !same, owner: user }; if (!same && wants(b.id)) push.push(b.id);
       continue;
     }
     if (!dirty) {                                           // server changed, this browser did not

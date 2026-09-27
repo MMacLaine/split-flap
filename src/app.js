@@ -203,7 +203,10 @@ export class App {
     const pageKey = [b.id, this.S.editing ? 'e' + this.selIdx() : this.S.pageIdx, this.S.lang].join(':');
     if (pageKey !== this.lastPageKey) {
       this.lastPageKey = pageKey; this.stage.setAttribute('aria-label', this.stageLabel()); this.stage.setAttribute('aria-roledescription', this.t.stageRole);
-      if (!this.S.editing) { clearTimeout(this.sayT); this.sayT = setTimeout(() => this.announce(), 1200); }   // after live data has had a moment to arrive
+      // Spoken only when a person caused the change: the first load, a board picked, the
+      // editor closed, a page chosen in the editor. A playlist rotating by itself stays
+      // silent, or it would talk every few seconds all day. R reads the board at any time.
+      if (this.sayNext !== false || this.S.editing) { this.sayNext = false; clearTimeout(this.sayT); this.sayT = setTimeout(() => this.announce(), 1200); }   // after live data has had a moment to arrive
     }
     const stale = this.S.editing ? 0 : this.live.staleMinutes(this.currentPage());
     if (stale !== this.lastStale) { this.lastStale = stale; this.renderOverlay(); }
@@ -350,6 +353,7 @@ export class App {
     else { this.S.pageIdx = this.selIdx(b); }
     this.S.pageStart = Date.now();
     this.wrap.style.transform = '';
+    if (!editing) this.sayNext = true;   // set before refresh(), whose tick speaks
     if (editing) this.editor.open(); else this.refresh();
     if (!editing) { this.wake(); const edit = this.root.querySelector('[data-k="bar-edit"]'); if (edit && (!document.activeElement || document.activeElement === document.body)) edit.focus({ preventScroll: true }); }
   }
@@ -510,7 +514,7 @@ export class App {
     return this.t.changedAt(today ? d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString(loc, { day: 'numeric', month: 'short' }));
   }
   sizeLabel(bd) { return bd.size === 'fill' ? this.t.fill : bd.size === 'custom' ? `${bd.rows} × ${bd.cols}` : bd.size.replace('x', ' × '); }
-  pickBoard(i) { this.active = i; this.save(); Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }); this.refresh(); }
+  pickBoard(i) { this.active = i; this.sayNext = true; this.save(); Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }); this.refresh(); }
   // New board, from the board switcher: the Start panel, where a template adds a board.
   newBoard() {
     Object.assign(this.S, { switcher: false, editing: true, cz: -1 });
