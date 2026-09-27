@@ -245,3 +245,11 @@ test('faint to lit never turns the drum, busy or still', async () => {
   assert.equal(retargetFaint({ cur: 'C', q: [], a: null }, 'C', 5), false);
 });
 
+test('a reload is made once per version, even if the page comes back old', async () => {
+  const { shouldReload } = await import('../src/changelog.js');
+  assert.equal(shouldReload('0.4', '0.4.1', ''), true);
+  assert.equal(shouldReload('0.4', '0.4.1', '0.4.1'), false);        // tried already and still old: no loop
+  assert.equal(shouldReload('0.4', '0.5', '0.4.1'), true);           // a newer release is tried again
+  assert.equal(shouldReload('0.4.1', '0.4.1', ''), false);
+  assert.equal(shouldReload('0.4', null, ''), false);
+});

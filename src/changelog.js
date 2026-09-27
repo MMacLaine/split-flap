@@ -150,4 +150,8 @@ export const VERSION = CHANGELOG[0].v;
 
 // The newest version named in this file's own text, so a wall screen can fetch the file
 // and see whether a newer release is live (see App.checkVersion).
+// Whether to reload for a fetched version. tried is the version a reload was last made
+// for: if the page came back still on the old version (a browser cache without the
+// service worker), it does not reload for that version again, so it cannot loop.
+export const shouldReload = (current, fetched, tried) => !!fetched && fetched !== current && fetched !== tried;
 export const versionIn = text => { const m = /\bv:\s*'([^']+)'/.exec(String(text || '')); return m ? m[1] : null; };
