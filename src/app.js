@@ -67,7 +67,7 @@ export class App {
     }
 
     this.board = new Board(this.canvas, Object.assign(this.boardOpts(), {
-      onFlip: f => { const b = this.cur(); if (b.sound && !this.quietMode()) sound.play(f, b.soundStyle); }
+      onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode()) sound.play(f, b.soundStyle, pan); }
     }));
     this.chromeTheme();
     this.bind();
