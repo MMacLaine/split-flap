@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.6.1', date: '2026-09-28',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'Three changes from using 0.6.0, one of them a sync fix.',
+      sv: 'Tre ändringar efter att ha använt 0.6.0, varav en rättar synken.'
+    },
+    items: {
+      en: [
+        'A board made while the app could not reach your account, during a server update say, stayed in that browser only, even once the account was back. It goes to your account now, and the app asks the server again when you are back online or after half a minute.',
+        'Language has moved from the control bar and Board settings to Account, since it is yours and applies to every board. A page keeps its own language the first time you open it, and once you pick one it is remembered.',
+        'Delete account looked greyed out, as if it did not work. It is red now.'
+      ],
+      sv: [
+        'En tavla som gjordes medan appen inte nådde ditt konto, till exempel under en uppdatering av servern, fanns bara kvar i den webbläsaren, även när kontot var tillbaka. Den går till ditt konto nu, och appen frågar servern igen när du är online igen eller efter en halv minut.',
+        'Språk har flyttat från kontrollraden och Tavlans inställningar till Konto, eftersom det är ditt och gäller alla tavlor. En sida behåller sitt eget språk första gången du öppnar den, och när du har valt ett kommer appen ihåg det.',
+        'Radera kontot såg gråmarkerad ut, som om den inte fungerade. Den är röd nu.'
+      ]
+    }
+  },
+  {
     v: '0.6.0', date: '2026-09-27',
     tag: { en: 'Groundwork', sv: 'Grundarbete' },
     desc: {

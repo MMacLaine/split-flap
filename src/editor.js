@@ -136,7 +136,7 @@ export class Editor {
       playlist: [t.playlist, b.name],
       page: [t.pageOf(this.app.selIdx() + 1, b.pages.length), p ? p.name || t.page : ''],
       content: [`${p ? p.name || t.page : ''} · ${this.zoneName(this.zi())}`, this.E.picking || !tile ? t.chooseContent : this.L(tile.name)],
-      settings: [b.name, t.boardSettings], start: [t.boardsTemplates, t.startTitle], log: [`v${VERSION}`, t.versionLog], help: ['Split-Flap', t.help], account: ['Split-Flap', t.account]
+      settings: [b.name, t.boardSettings], start: [t.boardsTemplates, t.startTitle], log: [`v${VERSION}`, t.versionLog], help: ['Split-Flap', t.help], account: ['Split-Flap', this.app.account.available ? t.account : t.lang]
     }[plv];
     return h('header', { class: 'sf-panel-head' },
       back ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, backLabel)) : null,
@@ -170,8 +170,8 @@ export class Editor {
       row('open-start', t.boardsTemplates, `${t.boardsCount(this.app.boards.length)} · ${t.templatesCount(TEMPLATES.length)}`, 'start'),
       h('button', { class: 'sf-sec' + (this.E.lv === 'help' ? ' on' : ''), 'data-k': 'open-help', onclick: () => { this.prevLv = this.E.lv; this.go('help'); } },
         h('span', null, h('strong', null, t.help), h('span', null, t.helpSub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')),
-      this.app.account.available ? h('button', { class: 'sf-sec' + (this.E.lv === 'account' ? ' on' : ''), 'data-k': 'open-account', onclick: () => { this.prevLv = this.E.lv; this.go('account'); } },
-        h('span', null, h('strong', null, t.account), h('span', { 'data-account-sub': '' }, this.accountSub())), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')) : null);
+      h('button', { class: 'sf-sec' + (this.E.lv === 'account' ? ' on' : ''), 'data-k': 'open-account', onclick: () => { this.prevLv = this.E.lv; this.go('account'); } },
+        h('span', null, h('strong', null, this.app.account.available ? t.account : t.lang), h('span', { 'data-account-sub': '' }, this.app.account.available ? this.accountSub() : this.lang === 'sv' ? 'Svenska' : 'English')), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')));
   }
   rail() {
     const t = this.t, b = this.app.cur();
@@ -607,9 +607,7 @@ export class Editor {
         h('div', { class: 'sf-row' }, h('span', { class: 'sf-label muted w' }, t.soundStyle),
           seg(sound.PROFILE_IDS.map(id => [id, t.sounds[id]]), b.soundStyle || 'clack', v => { app.upd(bb => { bb.soundStyle = v; }); sound.preview(v); }, 'ss')),
         app.volumeSlider(b),
-        h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'ss-preview', onclick: () => sound.preview(b.soundStyle || 'clack') }, t.previewSound))),
-      h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.lang),
-        h('div', { class: 'sf-row' }, seg([['en', 'English'], ['sv', 'Svenska']], this.lang, v => app.setLang(v), 'lang'))));
+        h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'ss-preview', onclick: () => sound.preview(b.soundStyle || 'clack') }, t.previewSound))));
   }
 
   // ---------- boards and templates ----------
@@ -699,13 +697,22 @@ export class Editor {
     } }, armed ? again : label),
     armed ? h('p', { class: 'sf-note big sf-confirm-why', role: 'status', 'data-k': 'acc-' + key + '-why' }, why) : null];
   }
+  // Language is the person's, not the board's: the editor, and what boards print (days,
+  // months, the short words). Kept in this browser; on maclaine.se it also picks the page.
+  langField(cls) {
+    const seg = ([id, label]) => h('button', { class: 'sf-seg', 'aria-pressed': String(id === this.lang), lang: id, 'data-k': 'lang-' + id, onclick: () => this.app.setLang(id) }, label);
+    return h('section', { class: 'sf-field' + (cls ? ' ' + cls : '') }, h('h3', { class: 'sf-eyebrow' }, this.t.lang),
+      h('div', { class: 'sf-row' }, [['en', 'English'], ['sv', 'Svenska']].map(seg)), h('span', { class: 'sf-hint' }, this.t.langHint));
+  }
   accountLevel() {
     const t = this.t, a = this.app.account, privacy = h('a', { href: this.privacyHref(), 'data-k': 'acc-privacy' }, t.accPrivacy);
+    if (!a.available) return h('div', { class: 'sf-level' }, this.langField());
     if (!a.signedIn()) return h('div', { class: 'sf-level' },
       a.status === 'signedout'
         ? h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accSignedOutBody(a.unsyncedCount())))
         : h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accGuestBody), h('p', { class: 'sf-note big' }, t.accSignInBody)),
       h('div', null, h('button', { class: 'sf-btn primary big', 'data-k': 'acc-signin', onclick: () => a.signIn() }, t.signInGoogle)),
+      this.langField('ruled'),
       h('p', { class: 'sf-note' }, privacy));
     const status = this.accountStatus();
     return h('div', { class: 'sf-level' },
@@ -722,7 +729,8 @@ export class Editor {
       h('div', { class: 'sf-row' },
         h('button', { class: 'sf-btn', 'data-k': 'acc-export', onclick: () => a.exportAll() }, t.exportAll),
         this.confirmBtn('signout', t.signOut, a.unsyncedCount() ? t.signOutAnyway : t.signOutAgain, a.unsyncedCount() ? t.confirmSignOutUnsynced(a.unsyncedCount()) : t.confirmSignOut, () => a.signOut())),
-      h('div', { class: 'sf-row ruled' }, this.confirmBtn('delete', t.deleteAccount, t.deleteAgain, t.confirmDelete, () => a.deleteAccount(), 'muted')),
+      this.langField('ruled'),
+      h('div', { class: 'sf-row ruled' }, this.confirmBtn('delete', t.deleteAccount, t.deleteAgain, t.confirmDelete, () => a.deleteAccount(), 'danger')),
       h('p', { class: 'sf-note' }, privacy));
   }
 
@@ -731,7 +739,7 @@ export class Editor {
   // title, then numbered sections, some with a small board drawn by the renderer.
   helpLevel() {
     const intro = INTRO[this.lang] || INTRO.en, part = x => typeof x === 'string' ? x : x.href === 'privacy' ? h('a', { href: this.privacyHref() }, x.t)
-      : x.k === 'account' && !this.app.account.available ? x.t : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => { if (x.k === 'account') this.prevLv = 'help'; this.go(x.k); } }, x.t);
+      : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => { if (x.k === 'account') this.prevLv = 'help'; this.go(x.k); } }, x.t);
     return h('div', { class: 'sf-level sf-help' },
       h('div', { class: 'sf-start-head' }, h('h2', null, intro.title), h('p', null, intro.lede)),
       (HELP[this.lang] || HELP.en).map((sec, i) => h('section', { class: 'sf-help-sec' },

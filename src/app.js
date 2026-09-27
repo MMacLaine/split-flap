@@ -41,6 +41,13 @@ export class App {
     // A page that has a twin in the other language (the maclaine.se copies) switches
     // language by navigating; the standalone page switches in place.
     this.alt = { en: document.querySelector('link[rel=alternate][hreflang=en]'), sv: document.querySelector('link[rel=alternate][hreflang=sv]') };
+    // A language picked before wins over the page it lands on (0.6.1); a first visit keeps
+    // the page's language. The link, query and #board all come along.
+    const picked = getFlag('sf_lang');
+    if (this.alt[docLang] && picked && picked !== docLang && this.alt[picked]) {
+      const path = new URL(this.alt[picked].href).pathname;
+      if (path !== location.pathname) location.replace(path + location.search + location.hash);
+    }
     this.S = {
       lang: this.alt[docLang] ? docLang : (getFlag('sf_lang') || docLang),
       editing: false, sel: 0, bar: true, cue: getFlag('sf_cue_seen') !== '1',
@@ -367,8 +374,9 @@ export class App {
     if (lang === this.S.lang) return;
     const link = this.alt[lang];
     // Same origin, same query (keeps ?kiosk=1): only the path swaps language.
-    if (link) { const path = new URL(link.href).pathname; if (path !== location.pathname) { location.href = path + location.search; return; } }
-    setFlag('sf_lang', lang); this.S.lang = lang; this.refresh();
+    setFlag('sf_lang', lang);
+    if (link) { const path = new URL(link.href).pathname; if (path !== location.pathname) { location.href = path + location.search + location.hash; return; } }
+    this.S.lang = lang; this.refresh();
   }
 
   // ---------- rendering ----------
@@ -448,10 +456,7 @@ export class App {
           this.account.signedIn() ? this.account.user.name : this.account.status === 'signedout'
             ? [h('span', { class: 'sf-wide' }, t.signInToSync), h('span', { class: 'sf-narrow' }, t.signIn, h('span', { class: 'sf-bar-fail', 'aria-hidden': 'true' }, ' !'))] : t.signIn,
           this.account.status === 'failed' || this.account.refusedBoards().length ? h('span', { class: 'sf-bar-fail', 'aria-label': t.syncFailedMark, role: 'img' }, ' !') : null) : null,
-        h('span', { class: 'sf-sep' }),
-        h('div', { role: 'group', 'aria-label': t.lang, style: 'display:flex' },
-          h('button', { class: 'sf-lang', 'aria-pressed': String(S.lang === 'en'), lang: 'en', onclick: () => this.setLang('en') }, 'EN'),
-          h('button', { class: 'sf-lang', 'aria-pressed': String(S.lang === 'sv'), lang: 'sv', onclick: () => this.setLang('sv') }, 'SV'))));
+        ));
       kids.push(wrap);
       this.barWrap = wrap;
     }

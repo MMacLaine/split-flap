@@ -2,6 +2,14 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.6.1 (2026-09-28): Fixes
+
+Three changes from using 0.6.0, one of them a sync fix.
+
+- A board made while the app could not reach your account, during a server update say, stayed in that browser only, even once the account was back. It goes to your account now, and the app asks the server again when you are back online or after half a minute.
+- Language has moved from the control bar and Board settings to Account, since it is yours and applies to every board. A page keeps its own language the first time you open it, and once you pick one it is remembered.
+- Delete account looked greyed out, as if it did not work. It is red now.
+
 ## v0.6.0 (2026-09-27): Groundwork
 
 Groundwork before wall screens can follow an account. Most of it is behind the scenes, but some of it you will notice.

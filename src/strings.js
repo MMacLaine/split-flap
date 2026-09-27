@@ -39,7 +39,7 @@ export const STR = {
     imported: 'Board opened from a link.', importFail: 'That file is not a board.', linkFail: 'That board link is damaged or incomplete.',
     jsonNote: 'JSON means JavaScript Object Notation: a plain text copy of this board you can keep or move to another browser.',
     chip: name => `Insert ${name} chip`, typeOnBoard: 'Type on the board', duration: 'Duration in seconds',
-    moveUp: 'Move up', moveDown: 'Move down', delPage: 'Delete page', lang: 'Language', controls: 'Board controls', editor: 'Editor',
+    moveUp: 'Move up', moveDown: 'Move down', delPage: 'Delete page', lang: 'Language', langHint: 'For the editor and for what boards print, like days and months. Kept in this browser.', controls: 'Board controls', editor: 'Editor',
     boardLink: 'Board link', fallback: 'No page is scheduled right now, so the board shows the clock.',
     // editor drawer (DESIGN-HANDOVER-editor.md)
     addTime: 'Add another time', removeTime: 'Remove this time', rolls: 'Rolls', rollStart: 'Roll every flap when the board starts', rollHourly: 'Roll again on the hour', pageTransition: 'Transition to this page', boardDefault: name => `Board default (${name})`, showAlone: 'Show alone while this is on', showAloneHint: 'Pages without a time wait until it ends.', winDays: 'Days of the week', winDate: 'A date', everyYear: 'Every year',
@@ -120,7 +120,7 @@ export const STR = {
     imported: 'Tavlan öppnades från en länk.', importFail: 'Filen är inte en tavla.', linkFail: 'Tavellänken är trasig eller ofullständig.',
     jsonNote: 'JSON betyder JavaScript Object Notation: en textkopia av tavlan som du kan spara eller flytta till en annan webbläsare.',
     chip: name => `Infoga ${name} färgbricka`, typeOnBoard: 'Skriv på tavlan', duration: 'Tid i sekunder',
-    moveUp: 'Flytta upp', moveDown: 'Flytta ned', delPage: 'Ta bort sida', lang: 'Språk', controls: 'Tavlans kontroller', editor: 'Redigerare',
+    moveUp: 'Flytta upp', moveDown: 'Flytta ned', delPage: 'Ta bort sida', lang: 'Språk', langHint: 'För redigeraren och för det tavlorna skriver, som dagar och månader. Sparas i den här webbläsaren.', controls: 'Tavlans kontroller', editor: 'Redigerare',
     boardLink: 'Tavellänk', fallback: 'Ingen sida är schemalagd just nu, så tavlan visar klockan.',
     addTime: 'Lägg till en tid till', removeTime: 'Ta bort den här tiden', rolls: 'Rullningar', rollStart: 'Rulla alla blad när tavlan startar', rollHourly: 'Rulla igen varje hel timme', pageTransition: 'Övergång till den här sidan', boardDefault: name => `Tavlans (${name.toLowerCase()})`, showAlone: 'Visa ensam medan den är på', showAloneHint: 'Sidor utan tid väntar tills den är slut.', winDays: 'Veckodagar', winDate: 'Ett datum', everyYear: 'Varje år',
     monthShort: ['jan', 'feb', 'mars', 'apr', 'maj', 'juni', 'juli', 'aug', 'sep', 'okt', 'nov', 'dec'],

@@ -29,7 +29,7 @@ export const HELP = {
       'Quiet hours in Board settings dim or blank the whole board overnight.'
     ] },
     { h: 'The board itself', p: [
-      ['Grid size, theme, transition, sound, language and the board location are all in ', { k: 'settings', t: 'Board settings' }, ', at the foot of the page list.'],
+      ['Grid size, theme, transition, sound and the board location are all in ', { k: 'settings', t: 'Board settings' }, ', at the foot of the page list. Language is under ', { k: 'account', t: 'Account' }, '.'],
       'The board location is used for sunrise and sunset, and for weather zones that have no city of their own.'
     ] },
     { h: 'Putting it on a wall', p: [
@@ -62,7 +62,7 @@ export const HELP = {
       'Tysta timmar i Tavlans inställningar dämpar eller släcker hela tavlan på natten.'
     ] },
     { h: 'Själva tavlan', p: [
-      ['Storlek på rutnätet, tema, övergång, ljud, språk och tavlans plats finns i ', { k: 'settings', t: 'Tavlans inställningar' }, ', längst ned i sidlistan.'],
+      ['Storlek på rutnätet, tema, övergång, ljud och tavlans plats finns i ', { k: 'settings', t: 'Tavlans inställningar' }, ', längst ned i sidlistan. Språk finns under ', { k: 'account', t: 'Konto' }, '.'],
       'Tavlans plats används för soluppgång och solnedgång, och för väderzoner som inte har en egen stad.'
     ] },
     { h: 'Sätta upp den på en vägg', p: [

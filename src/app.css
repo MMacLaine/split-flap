@@ -11,6 +11,7 @@
 .sf {
   --bg: #13151A; --bg-2: #1A1D24; --surface: #1C1F27; --text: #EDE6D6; --muted: #868991; --pale: #A3A8B0;
   --accent: #C8974A; --accent-soft: rgba(200,151,74,0.12); --accent-line: rgba(200,151,74,0.38);
+  --danger: #E07A66; --danger-soft: rgba(224,122,102,0.12); --danger-line: rgba(224,122,102,0.45);
   --border: rgba(237,230,214,0.08); --border-2: rgba(237,230,214,0.15);
   --mono: 'DM Mono', ui-monospace, monospace; --sans: 'Plus Jakarta Sans', system-ui, sans-serif; --serif: 'Cormorant Garamond', ui-serif, Georgia, serif;
   min-height: 100vh; min-height: 100dvh; background: var(--bg); color: var(--text); display: flex; flex-direction: row;
@@ -20,6 +21,7 @@
 html[data-chrome="light"] .sf {
   --bg: #F4F0E7; --bg-2: #EBE6DB; --surface: #FBF8F2; --text: #1B1D22; --muted: #686B72; --pale: #4F535A;
   --accent: #8C6222; --accent-soft: rgba(140,98,34,0.10); --accent-line: rgba(140,98,34,0.35);
+  --danger: #B0412C; --danger-soft: rgba(176,65,44,0.08); --danger-line: rgba(176,65,44,0.40);
   --border: rgba(27,29,34,0.09); --border-2: rgba(27,29,34,0.16);
 }
 html, body { margin: 0; background: #13151A; }
@@ -152,6 +154,9 @@ html, body { margin: 0; background: #13151A; }
 .sf-btn { height: 40px; }
 .sf-btn.big { height: 44px; padding: 0 16px; font-size: 14px; align-self: flex-start; }
 .sf-btn.muted, .sf-small-btn.muted { color: var(--muted); }
+/* Delete account: plainly a working button, and plainly one that removes things */
+.sf-btn.danger { color: var(--danger); border-color: var(--danger-line); }
+.sf-btn.danger:hover, .sf-btn.danger:focus-visible { background: var(--danger-soft); }
 .sf-small-btn { height: 36px; padding: 0 10px; border-radius: 8px; }
 .sf-link-btn.inline { padding: 0; font-size: inherit; }
 .sf-icon { width: 36px; height: 36px; flex: none; border: 0; background: none; color: var(--muted); font-size: 16px; }
@@ -329,8 +334,6 @@ html, body { margin: 0; background: #13151A; }
 .sf-bar-board span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sf-bar-board span:last-child { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .sf-sep { width: 1px; height: 20px; background: var(--border-2); margin: 0 4px; }
-.sf-lang { height: 36px; padding: 0 8px; border: 0; background: none; font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.sf-lang[aria-pressed="true"] { color: var(--accent); }
 
 .sf-pop { border-radius: 12px; background: var(--surface); border: 1px solid var(--border-2); animation: sf-pop 180ms ease-out; box-sizing: border-box; }
 .sf-share { width: min(380px, 100%); padding: 16px; display: grid; grid-template-columns: 132px minmax(0,1fr); gap: 14px; }
