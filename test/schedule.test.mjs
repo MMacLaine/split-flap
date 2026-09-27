@@ -159,3 +159,11 @@ test('coloured squares place chips in the composer, and only there', async () =>
   assert.deepEqual(composerInput('🟫'), { cells: [' '], invalid: ['🟫'] });              // brown has no chip
   assert.deepEqual(textToCells('🟥'), [' ']);                                           // free text: never a chip
 });
+
+test('rolls are kept when switched on and dropped otherwise', () => {
+  const pick = roll => sanitizeBoard(Object.assign(board([{}]), { roll })).roll;
+  assert.deepEqual(pick({ start: true, hourly: false }), { start: true, hourly: false });
+  assert.deepEqual(pick({ start: 'yes', hourly: true }), { start: false, hourly: true });
+  assert.equal(pick({ start: false, hourly: false }), undefined);
+  assert.equal(pick('fast'), undefined);
+});
