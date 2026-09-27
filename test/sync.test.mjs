@@ -2,7 +2,7 @@
 // whose on a shared computer. Pure functions, no server.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState, refused, unrefuse, unsynced, strays } from '../src/sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState, refused, unrefuse, unsynced, strays, settled } from '../src/sync.js';
 
 let n = 0; const newId = () => 'copy' + (++n);
 const B = (id, name = id) => ({ id, name, pages: [] });
@@ -134,6 +134,12 @@ test('a board made while the account could not be reached is the account\'s, gue
   const s = st({ a: { rev: 1, dirty: false, owner: 'u1' } });
   assert.deepEqual(strays([B('a'), B('made-offline'), B('offered'), B('declined')], s, ['offered', 'declined']), ['made-offline']);
   assert.deepEqual(strays([B('x')], emptyState()), []);                  // no account in this browser: a guest
+});
+
+test('the first sign-in confirmation ends even when a kept board is deleted before it reaches the server', () => {
+  const s = st({ a: { rev: 3, dirty: false, owner: 'u1' }, b: { rev: 0, dirty: true, owner: 'u1', deleted: true }, d: { rev: 0, dirty: true, owner: 'u1' } });
+  assert.deepEqual(settled(s, ['a', 'b', 'c', 'd']), { done: ['a'], open: ['d'] });   // b deleted, c forgotten after its delete, d on its way
+  assert.deepEqual(settled(pushed(s, 'd', 1), ['a', 'b', 'c', 'd']), { done: ['a', 'd'], open: [] });
 });
 
 test('a board deleted before its first push is forgotten, so the status can settle', () => {

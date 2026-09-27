@@ -3,6 +3,24 @@
 
 export const CHANGELOG = [
   {
+    v: '0.6.4', date: '2026-09-28',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'Two fixes from the review of 0.6.3, one of them to boards being lost as a guest.',
+      sv: 'Två rättningar från granskningen av 0.6.3, varav en för tavlor som kunde försvinna för en gäst.'
+    },
+    items: {
+      en: [
+        'With Split-Flap open in two tabs, a change in one tab could save its older list of boards over the other, so a board made in the other tab was lost. Signed in it came back from your account, but as a guest it was gone. Now each tab picks up what the other saved before it saves again.',
+        'After your first sign-in, if you deleted one of the boards you had kept before it reached the server, the message saying how many are in your account never came. It comes now, and counts only the boards that arrived.'
+      ],
+      sv: [
+        'Med Split-Flap öppet i två flikar kunde en ändring i den ena fliken spara dess äldre lista med tavlor över den andra, så att en tavla som gjorts i den andra fliken försvann. Inloggad kom den tillbaka från ditt konto, men som gäst var den borta. Nu tar varje flik in det den andra har sparat innan den sparar igen.',
+        'Om du efter första inloggningen raderade en av tavlorna du behöll innan den hade nått servern, kom aldrig meddelandet om hur många som finns i ditt konto. Det kommer nu, och räknar bara tavlorna som kom fram.'
+      ]
+    }
+  },
+  {
     v: '0.6.3', date: '2026-09-28',
     tag: { en: 'Accounts', sv: 'Konton' },
     desc: {

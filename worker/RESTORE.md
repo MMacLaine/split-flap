@@ -53,3 +53,13 @@ On a throwaway database, `split-flap-rehearsal` (EU jurisdiction), which was del
 - two rows written, the bookmark noted, one row deleted and another added
 - restored to the bookmark: the two first rows back, the later one gone
 - looking up a bookmark by timestamp failed on that database with code 7500, and worked on the live one for an hour back
+
+## A guest's boards from before their first sign-in
+
+When a guest signs in for the first time, the app keeps a copy of the boards it offers to the account under `sf_guest_backup` in that browser's storage, until the server has every board they kept. It is a last resort, not something the app offers to undo. If a first sign-in ever goes wrong, the boards can be read back in that browser:
+
+1. Open maclaine.se/split-flap, then the browser's developer tools, then the Console.
+2. Run `JSON.parse(localStorage.getItem('sf_guest_backup'))`. It shows `at`, the time of the sign-in, and `boards`.
+3. To save one as a file that the app can import: `copy(JSON.stringify(JSON.parse(localStorage.getItem('sf_guest_backup')).boards[0]))`, paste it into a file ending `.json`, and use Import a board in the editor.
+
+If `sf_guest_backup` is empty, the server confirmed every kept board and the copy was removed.
