@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "test": "TZ=Europe/Stockholm node --test test/*.test.mjs",
-    "serve": "python3 -m http.server 8801"
+    "serve": "node _dev/serve.mjs",
+    "e2e": "node test/e2e/two-browsers.mjs"
   }
 }

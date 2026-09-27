@@ -1,7 +1,7 @@
 // The account, in the browser (from 0.5). Talks to the Worker at /split-flap/api and
 // keeps this browser's boards in step with the account, using the rules in sync.js.
 // Local first: the app never waits on any of this. A guest, a kiosk, or a copy served
-// without the Worker (python3 -m http.server) never gets past init(), and the app shows
+// without the Worker (npm run serve) never gets past init(), and the app shows
 // no account controls at all.
 
 import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsynced, offerable, signOut, switchUser, emptyState } from './sync.js';

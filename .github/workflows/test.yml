@@ -1,0 +1,36 @@
+# The app's tests and the Worker's, on every push and pull request. The Worker's API tests
+# run against wrangler dev with a local D1, so no Cloudflare login or secret is needed.
+name: test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: App tests
+        run: npm test
+      - name: Worker dependencies
+        working-directory: worker
+        run: npm ci
+      - name: Local D1
+        working-directory: worker
+        run: npx wrangler d1 migrations apply split-flap --local --env dev
+      - name: Start the Worker
+        working-directory: worker
+        run: |
+          npx wrangler dev --env dev --port 8787 --var DEV_TEST:1 --var BETTER_AUTH_SECRET:ci-only-not-a-secret-0123456789abcdef --var GOOGLE_CLIENT_SECRET:ci-only > ../wrangler.log 2>&1 &
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:8787/split-flap/api/me && exit 0; sleep 1; done
+          cat ../wrangler.log; exit 1
+      - name: Worker tests
+        working-directory: worker
+        run: npm test
+      - name: Worker log on failure
+        if: failure()
+        run: cat wrangler.log || true
