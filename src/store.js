@@ -78,7 +78,7 @@ function sanitizeZone(z) {
   } else if (ch === 'url') {
     // https only: a page on https cannot read http anyway, and it keeps javascript: and data: out.
     const u = str(o.url, 500).trim(); out.url = /^https:\/\/[^\s]+$/.test(u) ? u : '';
-    out.every = pick(String(o.every), ['1', '5', '15', '60'], '5'); out.tpl = str(o.tpl, 200, '{{text}}');
+    out.every = pick(String(o.every), ['1', '5', '15', '60'], '5'); out.tpl = str(o.tpl, 200);
     out.path = str(o.path, 100).replace(/[^\w.]/g, ''); out.max = int(o.max, 1, 12, 4); out.header = str(o.header, 60);
   }
   return { ch, o: out };
