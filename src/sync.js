@@ -29,7 +29,7 @@ function copyOf(board, suffix, newId) {
 //   a copy with a new id, pushed as new. No clock decides; nothing is lost.
 // Returns { boards, state, push } where push is the ids to send, with the rev to send
 // them against in state.
-export function merge(local, remote, state, user, { suffix = ' (other device)', newId } = {}) {
+export function merge(local, remote, state, user, { suffix = ' (copy)', newId } = {}) {
   const st = { user, boards: Object.assign({}, state.boards) };
   const byId = new Map(remote.map(r => [r.id, r]));
   const out = [], push = [];

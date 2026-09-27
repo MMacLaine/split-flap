@@ -367,6 +367,8 @@ html, body { margin: 0; background: #13151A; }
 .sf-about footer > span { max-width: 640px; text-wrap: pretty; }
 
 .sf.kiosk .sf-about, .sf.editing .sf-about { display: none; }
+.sf.sf-page { display: block; }
+.sf-about-kicker a { color: inherit; border: 0; }
 html.sf-kiosk, html.sf-kiosk body { overflow: hidden; }
 /* ?bg=transparent: the board and its frame on nothing, for OBS and other overlays */
 html.sf-transparent, html.sf-transparent body, html.sf-transparent .sf, html.sf-transparent .sf-main, html.sf-transparent .sf-stage { background: transparent !important; }

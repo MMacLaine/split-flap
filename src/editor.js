@@ -690,7 +690,8 @@ export class Editor {
   // The guide, laid out like the Start panel and the steps below the board: a serif
   // title, then numbered sections, some with a small board drawn by the renderer.
   helpLevel() {
-    const intro = INTRO[this.lang] || INTRO.en, part = x => typeof x === 'string' ? x : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => this.go(x.k) }, x.t);
+    const intro = INTRO[this.lang] || INTRO.en, part = x => typeof x === 'string' ? x : x.href === 'privacy' ? h('a', { href: this.privacyHref() }, x.t)
+      : x.k === 'account' && !this.app.account.available ? x.t : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => { if (x.k === 'account') this.prevLv = 'help'; this.go(x.k); } }, x.t);
     return h('div', { class: 'sf-level sf-help' },
       h('div', { class: 'sf-start-head' }, h('h2', null, intro.title), h('p', null, intro.lede)),
       (HELP[this.lang] || HELP.en).map((sec, i) => h('section', { class: 'sf-help-sec' },
