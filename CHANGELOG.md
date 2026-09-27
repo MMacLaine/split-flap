@@ -2,6 +2,22 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.3 (2026-09-27): Planning the week, part one
+
+This one is about when pages show. There is also a heart flap and a few things for wall screens.
+
+- A page can have several times now, for example weekday mornings and Saturday mid-morning, without a second copy of the page.
+- A time can be a date instead of days of the week, once or every year, so a birthday page shows on the day.
+- Show alone gives a page its time to itself. While it is on, pages without a time of their own wait, which is what the morning train times needed.
+- A page can pick its own transition, so one page can come in as a curtain while the rest use the board’s.
+- There is a heart flap, like the one on the Vestaboard Note. A heart typed on a phone lands on it.
+- Each flap is panned by its column, so with headphones or two speakers a wave moves across the room.
+- Every flap can roll once when the board starts, like a Solari board powering up, and again on the hour if you want. Both are under Board settings.
+- Adding ?bg=transparent to the link draws the board on nothing, for OBS and other overlays.
+- A wall screen checks for a new version once an hour and reloads in quiet hours or at 04:00. A screen still on 0.2 needs one reload by hand to pick this up.
+- A menu line or SL destination that is too long now loses its last word, and a long single word is cut at the letter as before. The Café menu fits its board as well.
+- The picker shows two tiles a row on a 6 × 22 board. It had dropped to one, which made it a long scroll.
+
 ## v0.2 (2026-09-27): New editor
 
 A new editor, eight new channels and a guide. Boards made in 0.1 open as they were.

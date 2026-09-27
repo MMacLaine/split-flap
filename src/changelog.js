@@ -3,6 +3,42 @@
 
 export const CHANGELOG = [
   {
+    v: '0.3', date: '2026-09-27',
+    tag: { en: 'Planning the week, part one', sv: 'Planera veckan, del ett' },
+    desc: {
+      en: 'This one is about when pages show. There is also a heart flap and a few things for wall screens.',
+      sv: 'Den här handlar om när sidor visas. Det finns också ett hjärtblad och några saker för väggskärmar.'
+    },
+    items: {
+      en: [
+        'A page can have several times now, for example weekday mornings and Saturday mid-morning, without a second copy of the page.',
+        'A time can be a date instead of days of the week, once or every year, so a birthday page shows on the day.',
+        'Show alone gives a page its time to itself. While it is on, pages without a time of their own wait, which is what the morning train times needed.',
+        'A page can pick its own transition, so one page can come in as a curtain while the rest use the board’s.',
+        'There is a heart flap, like the one on the Vestaboard Note. A heart typed on a phone lands on it.',
+        'Each flap is panned by its column, so with headphones or two speakers a wave moves across the room.',
+        'Every flap can roll once when the board starts, like a Solari board powering up, and again on the hour if you want. Both are under Board settings.',
+        'Adding ?bg=transparent to the link draws the board on nothing, for OBS and other overlays.',
+        'A wall screen checks for a new version once an hour and reloads in quiet hours or at 04:00. A screen still on 0.2 needs one reload by hand to pick this up.',
+        'A menu line or SL destination that is too long now loses its last word, and a long single word is cut at the letter as before. The Café menu fits its board as well.',
+        'The picker shows two tiles a row on a 6 × 22 board. It had dropped to one, which made it a long scroll.'
+      ],
+      sv: [
+        'En sida kan ha flera tider nu, till exempel vardagsmorgnar och lördag förmiddag, utan en kopia av sidan.',
+        'En tid kan vara ett datum i stället för veckodagar, en gång eller varje år, så att en födelsedagssida visas på dagen.',
+        'Visa ensam ger en sida sin tid för sig själv. Medan den pågår väntar sidor utan egen tid, vilket var vad morgonens tågtider behövde.',
+        'En sida kan välja sin egen övergång, så att en sida kommer in som en ridå medan resten använder tavlans.',
+        'Det finns ett hjärtblad, som det på Vestaboard Note. Ett hjärta skrivet på en mobil hamnar på det.',
+        'Varje blad panoreras efter sin kolumn, så med hörlurar eller två högtalare rör sig en våg genom rummet.',
+        'Alla blad kan rulla ett varv när tavlan startar, som en Solari-tavla som slås på, och igen varje hel timme om du vill. Båda finns under Tavlans inställningar.',
+        'Lägger du till ?bg=transparent i länken ritas tavlan utan bakgrund, för OBS och andra överlägg.',
+        'En väggskärm letar efter en ny version en gång i timmen och laddar om under tysta timmar eller klockan 04:00. En skärm som fortfarande kör 0.2 behöver laddas om för hand en gång för att få det här.',
+        'En menyrad eller SL-destination som är för lång tappar nu sitt sista ord, och ett långt enskilt ord kapas vid bokstaven som förut. Kaféets meny ryms på sin tavla också.',
+        'Väljaren visar två rutor per rad på en 6 × 22-tavla. Den hade fallit tillbaka till en, vilket gav en lång lista att scrolla.'
+      ]
+    }
+  },
+  {
     v: '0.2', date: '2026-09-27',
     tag: { en: 'New editor', sv: 'Ny redigerare' },
     desc: {

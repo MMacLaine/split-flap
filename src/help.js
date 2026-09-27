@@ -24,8 +24,8 @@ export const HELP = {
       'Undo and redo are there, and Ctrl or Cmd and Z works too. A message you change is kept under Earlier messages in this browser.'
     ] },
     { h: 'When pages show', fig: 'week', p: [
-      'Show for sets how long a page stays up before the next one. Tick Only on some days and times to give a page a window, for example weekdays from 06:30 to 07:30.',
-      'A page without a window can show at any time. So if you want the train times alone in the morning, give the other pages windows too. When no page is allowed, the board shows the clock.',
+      'Show for sets how long a page stays up before the next one. Tick Only on some days and times to give a page a time, for example weekdays from 06:30 to 07:30. A page can have several times, and a time can be a date instead of days, once or every year, for a birthday.',
+      'A page without a time can show whenever. Tick Show alone on a page with a time, and while that time is on only pages with a time of their own can show. That is how the train times get the morning to themselves. When no page is allowed, the board shows the clock.',
       'Quiet hours in Board settings dim or blank the whole board overnight.'
     ] },
     { h: 'The board itself', p: [
@@ -56,8 +56,8 @@ export const HELP = {
       'Ångra och gör om finns, och Ctrl eller Cmd och Z fungerar också. Ett meddelande du ändrar sparas under Tidigare meddelanden i den här webbläsaren.'
     ] },
     { h: 'När sidor visas', fig: 'week', p: [
-      'Visa i anger hur länge en sida står kvar innan nästa. Kryssa i Bara vissa dagar och tider för att ge sidan ett fönster, till exempel vardagar 06:30 till 07:30.',
-      'En sida utan fönster kan visas när som helst. Vill du ha tågtiderna ensamma på morgonen behöver de andra sidorna också fönster. När ingen sida får visas visar tavlan klockan.',
+      'Visa i anger hur länge en sida står kvar innan nästa. Kryssa i Bara vissa dagar och tider för att ge sidan en tid, till exempel vardagar 06:30 till 07:30. En sida kan ha flera tider, och en tid kan vara ett datum i stället för dagar, en gång eller varje år, för en födelsedag.',
+      'En sida utan tid kan visas när som helst. Kryssa i Visa ensam på en sida med en tid, så får bara sidor med en egen tid visas medan den tiden pågår. Så får tågtiderna morgonen för sig själva. När ingen sida får visas visar tavlan klockan.',
       'Tysta timmar i Tavlans inställningar dämpar eller släcker hela tavlan på natten.'
     ] },
     { h: 'Själva tavlan', p: [

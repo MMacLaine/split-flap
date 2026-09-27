@@ -672,7 +672,7 @@ export class Editor {
     })));
     if (kind === 'message') return h('figure', { class: 'sf-help-fig small' }, this.thumb('help-msg', 4, 15, () => grid(4, 15, ['', sv ? 'FIKA KL 15' : 'FIKA AT 3', 'roygbv', '']), T));
     if (kind === 'week') return h('figure', { class: 'sf-help-fig small' }, this.thumb('help-week', 3, 15, () => grid(3, 15, [sv ? 'MÅN TILL FRE' : 'MON TO FRI', '06:30 07:30', 'bbyyyyyybb']), T),
-      h('figcaption', null, sv ? 'En sida med ett fönster visas bara då.' : 'A page with a window shows only then.'));
+      h('figcaption', null, sv ? 'En sida med en tid visas bara då.' : 'A page with a time shows only then.'));
     return null;
   }
 
