@@ -2,6 +2,13 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.6.2 (2026-09-28): Fix
+
+A sync bug that could delete boards from your account. It deleted most of mine, and it is fixed here.
+
+- If a browser was missing some of your account boards, because another tab had saved an older list for example, the next change you made there deleted those boards from your account. Now a board only leaves your account when you delete it, and a board missing from a browser comes back from the account instead.
+- Delete in the list of boards looked greyed out, like Delete account did. It is red now too.
+
 ## v0.6.1 (2026-09-28): Fixes
 
 Three changes from using 0.6.0, one of them a sync fix.

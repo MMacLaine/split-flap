@@ -3,6 +3,24 @@
 
 export const CHANGELOG = [
   {
+    v: '0.6.2', date: '2026-09-28',
+    tag: { en: 'Fix', sv: 'Rättning' },
+    desc: {
+      en: 'A sync bug that could delete boards from your account. It deleted most of mine, and it is fixed here.',
+      sv: 'En synkbugg som kunde radera tavlor ur ditt konto. Den raderade de flesta av mina, och den är rättad här.'
+    },
+    items: {
+      en: [
+        'If a browser was missing some of your account boards, because another tab had saved an older list for example, the next change you made there deleted those boards from your account. Now a board only leaves your account when you delete it, and a board missing from a browser comes back from the account instead.',
+        'Delete in the list of boards looked greyed out, like Delete account did. It is red now too.'
+      ],
+      sv: [
+        'Om en webbläsare saknade några av dina kontotavlor, till exempel för att en annan flik hade sparat en äldre lista, raderade nästa ändring du gjorde där de tavlorna ur ditt konto. Nu lämnar en tavla ditt konto bara när du raderar den, och en tavla som saknas i en webbläsare kommer tillbaka från kontot i stället.',
+        'Radera i listan över tavlor såg gråmarkerad ut, precis som Radera kontot gjorde. Den är också röd nu.'
+      ]
+    }
+  },
+  {
     v: '0.6.1', date: '2026-09-28',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {
