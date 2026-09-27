@@ -119,7 +119,8 @@ export function sanitizeBoard(b) {
     const zones = (Array.isArray(p && p.zones) ? p.zones : []).slice(0, need).map(sanitizeZone);
     while (zones.length < need) zones.push({ ch: 'message', o: {} });
     const wins = sanitizeWins(p);
-    return { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10), wins, win: legacyWin(wins), zones };
+    return { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10), wins, win: legacyWin(wins),
+      ...(p.alone === true && wins.length ? { alone: true } : {}), zones };
   });
   if (!pages.length) return null;
   return {

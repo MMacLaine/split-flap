@@ -49,11 +49,15 @@ export function inQuiet(quiet, now) {
 
 // Playlist step. Returns the page index to show (or -1 when no page is allowed right
 // now, and the caller falls back to the clock) and when that page started.
+// Show alone: while a page marked alone is in one of its windows, only pages with a
+// window open right now can show; pages without windows wait until it closes.
 export function nextPage(pages, idx, start, now) {
   const n = pages.length;
   if (!n) return { idx: -1, start: now };
   const cur = idx >= 0 && idx < n ? pages[idx] : null;
-  const ok = p => inWindows(pageWins(p), now);
+  const open = p => { const w = pageWins(p); return w.length > 0 && inWindows(w, now); };
+  const alone = pages.some(p => p.alone && open(p));
+  const ok = p => alone ? open(p) : inWindows(pageWins(p), now);
   const expired = !cur || now - start >= Math.max(3, +cur.dur || 10) * 1000 || !ok(cur);
   if (!expired) return { idx, start };
   for (let i = 1; i <= n; i++) {
