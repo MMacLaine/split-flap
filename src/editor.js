@@ -49,6 +49,10 @@ export class Editor {
     this.app.S.cz = -1;
     this.app.render(); this.app.tick(true);
     const body = this.app.drawer && this.app.drawer.querySelector('.sf-panel-body'); if (body) body.scrollTop = 0;
+    // Keyboard and screen reader users land on the new level's title. Going back keeps focus
+    // where it was if that is still in the drawer (the Back button, say).
+    const d = this.app.drawer, title = d && d.querySelector('.sf-panel-title');
+    if (title && (!back || !d.contains(document.activeElement))) title.focus({ preventScroll: true });
   }
   backTarget() {
     const lv = this.E.lv;
@@ -136,7 +140,7 @@ export class Editor {
     }[plv];
     return h('header', { class: 'sf-panel-head' },
       back ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, backLabel)) : null,
-      h('div', { class: 'sf-panel-title' }, h('span', { class: 'sf-eyebrow' }, kicker), plv === 'playlist' ? this.boardName() : h('strong', null, title)),
+      h('div', { class: 'sf-panel-title', role: 'heading', 'aria-level': '2', tabindex: '-1' }, h('span', { class: 'sf-eyebrow' }, kicker), plv === 'playlist' ? this.boardName() : h('strong', null, title)),
       h('button', { class: 'sf-btn primary caps', 'data-k': 'done', 'aria-keyshortcuts': 'E', onclick: () => this.app.toggleEdit() }, t.done));
   }
   zoneName(k) { const p = this.page(); return p ? (this.t.zoneNames[p.layout] || [])[k] || '' : ''; }
@@ -693,7 +697,7 @@ export class Editor {
       if (!armed) { this.E.confirm = key; this.app.render(); return; }
       this.E.confirm = null; await run(); this.app.render();
     } }, armed ? again : label),
-    armed ? h('p', { class: 'sf-note big sf-confirm-why', 'data-k': 'acc-' + key + '-why' }, why) : null];
+    armed ? h('p', { class: 'sf-note big sf-confirm-why', role: 'status', 'data-k': 'acc-' + key + '-why' }, why) : null];
   }
   accountLevel() {
     const t = this.t, a = this.app.account, privacy = h('a', { href: this.privacyHref(), 'data-k': 'acc-privacy' }, t.accPrivacy);
