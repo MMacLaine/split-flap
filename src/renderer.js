@@ -81,6 +81,20 @@ export const STAGGER = {
   curtain: (r, c) => r * 140 + c * 6
 };
 
+// A cell is heading to dest (the end of its queue, else what it is animating to, else
+// what it shows) and now wants the same letter faint or lit (the letter clock). No drum
+// path is built: a queued flip lands in the new state, a running flip, fade or settle
+// ends in it, and a still flap fades in place from start. Returns false when the letter
+// itself changes, so the caller builds a normal path.
+export function retargetFaint(cell, want, start) {
+  const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
+  if (want === dest || baseChar(want) !== baseChar(dest)) return false;
+  if (cell.q.length) cell.q[cell.q.length - 1] = want;
+  else if (cell.a) cell.a.to = want;
+  else { cell.sp = null; cell.a = { kind: 'fade', from: cell.cur, to: want, start, dur: FOLD.dimFade }; }
+  return true;
+}
+
 export function thetaAt(t) { return Math.PI * Math.pow(Math.min(1, Math.max(0, t)), FOLD.exp); }
 
 function rr(ctx, x, y, w, h, r) {
@@ -362,10 +376,8 @@ export class Board {
         if (opt.instant) { cell.cur = want; cell.q = []; cell.a = null; continue; }
         const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
         if (want === dest) continue;
-        // Only faint to lit or back: the letter fades in place, it does not turn the drum.
-        if (baseChar(want) === baseChar(dest) && !cell.a) {
-          cell.q = []; cell.sp = null; cell.a = { kind: 'fade', from: cell.cur, to: want, start: now + st(r, c) * 0.5, dur: FOLD.dimFade }; any = true; continue;
-        }
+        // Only faint to lit or back: never a turn of the drum (see retargetFaint).
+        if (retargetFaint(cell, want, now + st(r, c) * 0.5)) { any = true; continue; }
         cell.q = this.o.reduced ? [want] : this._path(dest, want, sp.maxSteps); cell.sp = null;
         if (!cell.a) cell.due = now + st(r, c);
         any = true;

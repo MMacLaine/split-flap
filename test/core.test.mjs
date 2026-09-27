@@ -224,3 +224,24 @@ test('volume is clamped to 0..100 and defaults to 70', () => {
   assert.equal(mk(-3), 0);
   assert.equal(mk('35'), 35);
 });
+
+// ---------- faint flaps (renderer queue logic, no canvas needed) ----------
+test('faint to lit never turns the drum, busy or still', async () => {
+  const { retargetFaint } = await import('../src/renderer.js');
+  const still = { cur: 'C', q: [], a: null };
+  assert.equal(retargetFaint(still, '~C', 5), true);
+  assert.deepEqual([still.q.length, still.a.kind, still.a.from, still.a.to], [0, 'fade', 'C', '~C']);
+  const queued = { cur: 'A', q: ['B', 'C'], a: null };               // waiting for its stagger
+  assert.equal(retargetFaint(queued, '~C', 5), true);
+  assert.deepEqual(queued.q, ['B', '~C']);                           // still flips, lands faint
+  const flipping = { cur: 'B', q: [], a: { kind: 'flip', from: 'B', to: 'C', final: true } };
+  assert.equal(retargetFaint(flipping, '~C', 5), true);
+  assert.deepEqual([flipping.q.length, flipping.a.to], [0, '~C']);
+  const settling = { cur: 'C', q: [], a: { kind: 'settle', from: 'C', to: 'C' } };
+  assert.equal(retargetFaint(settling, '~C', 5), true);
+  assert.deepEqual([settling.q.length, settling.a.to], [0, '~C']);
+  const real = { cur: 'B', q: [], a: { kind: 'flip', from: 'B', to: 'C' } };
+  assert.equal(retargetFaint(real, 'D', 5), false);                  // a new letter: a normal path
+  assert.equal(retargetFaint({ cur: 'C', q: [], a: null }, 'C', 5), false);
+});
+
