@@ -129,6 +129,8 @@ html, body { margin: 0; background: #13151A; }
 .sf-row.nowrap .sf-input { flex: 1; }
 .sf-grow { flex: 1; }
 .sf-indent { display: flex; flex-direction: column; gap: 10px; padding-left: 14px; border-left: 1px solid var(--border-2); }
+.sf-win { display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-2); }
+.sf-win .sf-time { background: var(--surface); }
 .sf-seg { min-height: 40px; height: auto; padding: 0 12px; font-family: var(--sans); font-size: 13px; }
 .sf-btn { height: 40px; }
 .sf-btn.big { height: 44px; padding: 0 16px; font-size: 14px; align-self: flex-start; }

@@ -5,7 +5,7 @@
 
 import { newId } from './content.js';
 
-const page = (name, layout, dur, zones, win = null) => ({ id: newId('p'), name, layout, dur, win, zones });
+const page = (name, layout, dur, zones, win = null) => ({ id: newId('p'), name, layout, dur, wins: win ? [win] : [], zones });
 const z = (ch, o = {}) => ({ ch, o });
 const base = (name, extra) => Object.assign({
   id: newId('b'), name, size: '6x22', rows: 6, cols: 22, theme: 'black', transition: 'classic', speed: 'fast',
