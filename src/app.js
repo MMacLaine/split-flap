@@ -15,6 +15,7 @@ import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
+import { Account } from './account.js';
 import { h, clone } from './dom.js';
 import { VERSION, versionIn, shouldReload } from './changelog.js';
 
@@ -59,6 +60,7 @@ export class App {
     this.firstRun = !boards.length && getFlag('sf_started') !== '1';
     this.freshId = boards.length ? null : this.boards[0].id;
     this.editor = new Editor(this);
+    this.account = new Account(this);
     // ?template=home (the SL map links here): open that template's board, creating it
     // once. The parameter is removed so a reload does not make another.
     const tpl = params.get('template');
@@ -81,6 +83,8 @@ export class App {
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
       this.iv = setInterval(() => this.tick(), 500);
+      // Accounts: only where the Worker answers, never on a wall screen.
+      if (!this.kioskStrict) this.account.init().then(() => { if (this.account.offer.length) { Object.assign(this.S, { editing: true }); this.editor.go('account'); this.refresh(); } });
       // A wall screen can run for weeks, so it looks for a new release once an hour. A
       // reload that reached its version clears the note of it.
       if (getFlag('sf_reload_for') === VERSION) setFlag('sf_reload_for', '');
@@ -95,7 +99,21 @@ export class App {
   // Under 1024 px the editor stacks: the board on top, one drawer level below it.
   isMobile() { return innerWidth < 1024; }
   set(patch, render = true) { Object.assign(this.S, patch); if (render) this.render(); }
-  save() { saveBoards(this.boards, this.active); }
+  save() { saveBoards(this.boards, this.active); if (this.account) this.account.changed(); }
+  // The whole list at once (a sync pull, signing out), keeping the board on screen when it
+  // is still there. Not counted as an edit to push. An empty list becomes a blank board.
+  replaceBoards(list) {
+    const curId = this.cur() && this.cur().id;
+    this.account.replacing = true;
+    this.boards = list && list.length ? list : [fromTemplate('blank', this.S.lang, this.live.data.home)];
+    const i = this.boards.findIndex(b => b.id === curId);
+    if (i < 0) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
+    this.active = i >= 0 ? i : 0;
+    this.save(); this.account.replacing = false;
+    this.refresh();
+  }
+  // The account's status changed: the drawer shows it, so rebuild it when open.
+  paintAccount() { if (this.S.editing) this.render(); }
   upd(fn, quiet) {
     const b = clone(this.cur()); fn(b); this.boards[this.active] = b; this.save();
     if (b.id === this.freshId) this.freshId = null;

@@ -44,7 +44,7 @@ export class Editor {
 
   // ---------- navigation ----------
   go(lv, extra, back) {
-    this.composer.leave();
+    this.composer.leave(); this.E.confirm = null;
     Object.assign(this.E, { lv, fx: back ? 'back' : 'in', navKey: this.E.navKey + 1, hover: null, search: '' }, extra || {});
     this.app.S.cz = -1;
     this.app.render(); this.app.tick(true);
@@ -52,7 +52,7 @@ export class Editor {
   }
   backTarget() {
     const lv = this.E.lv;
-    if (lv === 'log' || lv === 'help') return this.prevLv || 'playlist';
+    if (lv === 'log' || lv === 'help' || lv === 'account') return this.prevLv || 'playlist';
     return this.phone() ? { page: 'playlist', content: 'page', settings: 'playlist', start: 'playlist' }[lv] : { content: 'page', settings: 'playlist', start: 'playlist' }[lv];
   }
   back() { const b = this.backTarget(); if (b) this.go(b, {}, true); else this.app.toggleEdit(); }
@@ -114,10 +114,10 @@ export class Editor {
   // ---------- the drawer ----------
   render() {
     this.specs = new Map();
-    const t = this.t, lv = this.E.lv, plv = this.panelLv(), rail = !this.phone() && lv !== 'start' && lv !== 'log' && lv !== 'help';
+    const t = this.t, lv = this.E.lv, plv = this.panelLv(), rail = !this.phone() && lv !== 'start' && lv !== 'log' && lv !== 'help' && lv !== 'account';
     const anim = this.E.navKey !== this.lastNav ? (this.E.fx === 'back' ? ' sf-nav-back' : ' sf-nav-in') : '';
     this.lastNav = this.E.navKey;
-    const body = { playlist: () => this.playlistLevel(), page: () => this.pageLevel(), content: () => this.contentLevel(), settings: () => this.settingsLevel(), start: () => this.startLevel(), log: () => this.logLevel(), help: () => this.helpLevel() }[plv]();
+    const body = { playlist: () => this.playlistLevel(), page: () => this.pageLevel(), content: () => this.contentLevel(), settings: () => this.settingsLevel(), start: () => this.startLevel(), log: () => this.logLevel(), help: () => this.helpLevel(), account: () => this.accountLevel() }[plv]();
     return h('aside', { class: 'sf-drawer' + (rail ? ' with-rail' : ''), 'aria-label': t.editor },
       rail ? this.rail() : null,
       h('section', { class: 'sf-panel-col' }, this.head(plv), h('div', { class: 'sf-panel-body' + anim, 'data-lv': plv }, body)));
@@ -132,7 +132,7 @@ export class Editor {
       playlist: [t.playlist, b.name],
       page: [t.pageOf(this.app.selIdx() + 1, b.pages.length), p ? p.name || t.page : ''],
       content: [`${p ? p.name || t.page : ''} · ${this.zoneName(this.zi())}`, this.E.picking || !tile ? t.chooseContent : this.L(tile.name)],
-      settings: [b.name, t.boardSettings], start: [t.boardsTemplates, t.startTitle], log: [`v${VERSION}`, t.versionLog], help: ['Split-Flap', t.help]
+      settings: [b.name, t.boardSettings], start: [t.boardsTemplates, t.startTitle], log: [`v${VERSION}`, t.versionLog], help: ['Split-Flap', t.help], account: ['Split-Flap', t.account]
     }[plv];
     return h('header', { class: 'sf-panel-head' },
       back ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, backLabel)) : null,
@@ -165,12 +165,14 @@ export class Editor {
       row('open-settings', t.boardSettings, `${this.app.sizeLabel(b)} · ${THEMES[b.theme].label}`, 'settings'),
       row('open-start', t.boardsTemplates, `${t.boardsCount(this.app.boards.length)} · ${t.templatesCount(TEMPLATES.length)}`, 'start'),
       h('button', { class: 'sf-sec' + (this.E.lv === 'help' ? ' on' : ''), 'data-k': 'open-help', onclick: () => { this.prevLv = this.E.lv; this.go('help'); } },
-        h('span', null, h('strong', null, t.help), h('span', null, t.helpSub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')));
+        h('span', null, h('strong', null, t.help), h('span', null, t.helpSub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')),
+      this.app.account.available ? h('button', { class: 'sf-sec' + (this.E.lv === 'account' ? ' on' : ''), 'data-k': 'open-account', onclick: () => { this.prevLv = this.E.lv; this.go('account'); } },
+        h('span', null, h('strong', null, t.account), h('span', null, this.accountSub())), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')) : null);
   }
   rail() {
     const t = this.t, b = this.app.cur();
     return h('nav', { class: 'sf-rail', 'aria-label': t.playlist },
-      h('div', { class: 'sf-rail-head' }, h('span', { class: 'sf-eyebrow' }, t.playlist), h('strong', null, b.name)),
+      h('div', { class: 'sf-rail-head' }, h('span', { class: 'sf-eyebrow' }, t.playlist, this.app.account.status === 'failed' ? h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark }, ' !') : null), h('strong', null, b.name)),
       h('ol', { class: 'sf-pls compact' }, this.pageItems(true), h('li', null, h('button', { class: 'sf-add', 'data-k': 'add-page', onclick: () => this.addPage() }, '+ ' + t.addPage))),
       h('div', { class: 'sf-rail-foot' }, this.secondary(true),
         h('button', { class: 'sf-version', 'data-k': 'version', onclick: () => { this.prevLv = this.E.lv; this.go('log'); } }, `v${VERSION}`, h('span', { 'aria-hidden': 'true' }, ' · '), t.versionLog)));
@@ -618,6 +620,7 @@ export class Editor {
     const file = h('input', { type: 'file', accept: 'application/json,.json', style: 'display:none', onchange: e => app.importFile(e) });
     return h('div', { class: 'sf-level' },
       h('div', { class: 'sf-start-head' }, h('h2', null, t.startTitle), h('p', null, t.startBody)),
+      app.account.available && !app.account.signedIn() ? h('div', { class: 'sf-guest' }, h('span', null, t.startGuest), h('button', { class: 'sf-btn', 'data-k': 'start-signin', onclick: () => app.account.signIn() }, t.signInGoogle)) : null,
       tplGrid,
       first ? h('button', { class: 'sf-btn big', 'data-k': 'skip', onclick: () => { app.markStarted(); this.go(this.phone() ? 'playlist' : 'page'); } }, t.skip) : null,
       h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.yourBoards),
@@ -640,6 +643,47 @@ export class Editor {
     const k = id + this.lang;
     if (!this.tplCache.has(k)) this.tplCache.set(k, fromTemplate(id, this.lang, this.app.live.data.home));
     return this.tplCache.get(k);
+  }
+
+  // ---------- account ----------
+  accountSub() {
+    const a = this.app.account, t = this.t;
+    if (!a.signedIn()) return t.accGuestSub;
+    return `${a.user.name} · ${a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting}`;
+  }
+  privacyHref() {
+    const alt = this.app.alt;
+    return alt.en || alt.sv ? (this.lang === 'sv' ? '/split-flap/privacy' : '/en/split-flap/privacy') : './privacy.html';
+  }
+  // Sign out and delete account ask twice: the first press says what will happen.
+  confirmBtn(key, label, ask, run, cls) {
+    const t = this.t, armed = this.E.confirm === key;
+    return h('button', { class: 'sf-btn ' + (cls || ''), 'data-k': 'acc-' + key, onclick: async () => {
+      if (!armed) { this.E.confirm = key; this.app.render(); return; }
+      this.E.confirm = null; await run(); this.app.render();
+    } }, armed ? ask : label);
+  }
+  accountLevel() {
+    const t = this.t, a = this.app.account, privacy = h('a', { href: this.privacyHref(), 'data-k': 'acc-privacy' }, t.accPrivacy);
+    if (!a.signedIn()) return h('div', { class: 'sf-level' },
+      h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accGuestBody), h('p', { class: 'sf-note big' }, t.accSignInBody)),
+      h('div', null, h('button', { class: 'sf-btn primary big', 'data-k': 'acc-signin', onclick: () => a.signIn() }, t.signInGoogle)),
+      h('p', { class: 'sf-note' }, privacy));
+    const status = a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting;
+    return h('div', { class: 'sf-level' },
+      a.offer.length ? h('section', { class: 'sf-field sf-offer' },
+        h('strong', null, t.offerTitle(a.offer.length)), h('span', { class: 'sf-hint' }, t.offerBody(a.offer.length)),
+        h('div', { class: 'sf-row' },
+          h('button', { class: 'sf-btn primary', 'data-k': 'offer-keep', onclick: () => a.answerOffer(true) }, t.offerKeep),
+          h('button', { class: 'sf-btn', 'data-k': 'offer-leave', onclick: () => a.answerOffer(false) }, t.offerLeave))) : null,
+      h('section', { class: 'sf-field' },
+        h('strong', { class: 'sf-acc-name' }, a.user.name), h('span', { class: 'sf-hint' }, a.user.email),
+        h('span', { class: 'sf-acc-status' + (a.status === 'failed' ? ' fail' : ''), role: 'status' }, status)),
+      h('div', { class: 'sf-row' },
+        h('button', { class: 'sf-btn', 'data-k': 'acc-export', onclick: () => a.exportAll() }, t.exportAll),
+        this.confirmBtn('signout', t.signOut, t.confirmSignOut, () => a.signOut())),
+      h('div', { class: 'sf-row ruled' }, this.confirmBtn('delete', t.deleteAccount, t.confirmDelete, () => a.deleteAccount(), 'muted')),
+      h('p', { class: 'sf-note' }, privacy));
   }
 
   // ---------- help ----------
