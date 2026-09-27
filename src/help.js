@@ -4,8 +4,8 @@
 // of key caps. Kept short, one idea per paragraph.
 
 export const INTRO = {
-  en: { title: 'How it works', lede: 'A short guide to making a board and putting it on a wall. Everything here can be changed later, and nothing leaves this browser unless you share it.' },
-  sv: { title: 'Så fungerar det', lede: 'En kort guide till att göra en tavla och sätta upp den på en vägg. Allt här går att ändra senare, och inget lämnar webbläsaren om du inte delar det.' }
+  en: { title: 'How it works', lede: 'A short guide to making a board and putting it on a wall. Everything here can be changed later. Without an account nothing leaves this browser unless you share it, and with one your boards are kept with your account.' },
+  sv: { title: 'Så fungerar det', lede: 'En kort guide till att göra en tavla och sätta upp den på en vägg. Allt här går att ändra senare. Utan konto lämnar inget webbläsaren om du inte delar det, och med ett konto sparas dina tavlor med kontot.' }
 };
 
 export const HELP = {

@@ -12,11 +12,13 @@ export const CHANGELOG = [
     items: {
       en: [
         'With Split-Flap open in two tabs, a change in one tab could save its older list of boards over the other, so a board made in the other tab was lost. Signed in it came back from your account, but as a guest it was gone. Now each tab picks up what the other saved before it saves again.',
-        'After your first sign-in, if you deleted one of the boards you had kept before it reached the server, the message saying how many are in your account never came. It comes now, and counts only the boards that arrived.'
+        'After your first sign-in, if you deleted one of the boards you had kept before it reached the server, the message saying how many are in your account never came. It comes now, and counts only the boards that arrived.',
+        'Delete page is red like the other delete buttons, and Help no longer says nothing leaves the browser, which has not been true with an account since 0.5.'
       ],
       sv: [
         'Med Split-Flap öppet i två flikar kunde en ändring i den ena fliken spara dess äldre lista med tavlor över den andra, så att en tavla som gjorts i den andra fliken försvann. Inloggad kom den tillbaka från ditt konto, men som gäst var den borta. Nu tar varje flik in det den andra har sparat innan den sparar igen.',
-        'Om du efter första inloggningen raderade en av tavlorna du behöll innan den hade nått servern, kom aldrig meddelandet om hur många som finns i ditt konto. Det kommer nu, och räknar bara tavlorna som kom fram.'
+        'Om du efter första inloggningen raderade en av tavlorna du behöll innan den hade nått servern, kom aldrig meddelandet om hur många som finns i ditt konto. Det kommer nu, och räknar bara tavlorna som kom fram.',
+        'Ta bort sida är röd som de andra raderingsknapparna, och Hjälp säger inte längre att inget lämnar webbläsaren, vilket inte har stämt med ett konto sedan 0.5.'
       ]
     }
   },

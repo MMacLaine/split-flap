@@ -272,7 +272,7 @@ export class Editor {
       h('div', { class: 'sf-row ruled' },
         h('button', { class: 'sf-btn', 'data-k': 'dup-page', onclick: () => this.dupPage() }, t.dupPage),
         h('button', { class: 'sf-btn', 'data-k': 'save-image', onclick: () => this.app.saveImage() }, t.saveImage),
-        h('button', { class: 'sf-btn muted', 'data-k': 'del-page', disabled: b.pages.length < 2, onclick: () => this.delPage() }, t.delPage)));
+        h('button', { class: 'sf-btn danger', 'data-k': 'del-page', disabled: b.pages.length < 2, onclick: () => this.delPage() }, t.delPage)));
   }
   // A page's time windows: the tick is the way in, then one card per window.
   windowsEl(p) {
