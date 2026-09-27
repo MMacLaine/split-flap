@@ -40,8 +40,12 @@ export class App {
       share: false, switcher: false, caret: 0, cz: -1, notice: '', isFull: false,
       pageIdx: 0, pageStart: Date.now(), shareUrl: '', shareSvg: null, copied: false
     };
-    this.kioskStrict = params.get('kiosk') === '1';
+    // ?bg=transparent draws the board on nothing, for OBS and other overlays. It is a
+    // view setting only, never stored, and implies kiosk mode (no bar, no cue).
+    this.transparent = params.get('bg') === 'transparent';
+    this.kioskStrict = params.get('kiosk') === '1' || this.transparent;
     if (this.kioskStrict) document.documentElement.classList.add('sf-kiosk');
+    if (this.transparent) document.documentElement.classList.add('sf-transparent');
 
     this.live = new Live(() => this.tick(true));
     this.readHome();
@@ -66,7 +70,7 @@ export class App {
       saveBoards(this.boards, this.active);
     }
 
-    this.board = new Board(this.canvas, Object.assign(this.boardOpts(), {
+    this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent,
       onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode()) sound.play(f, b.soundStyle, pan); }
     }));
     this.chromeTheme();
