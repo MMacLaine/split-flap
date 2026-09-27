@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=Schibsted+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<script src="./flap-renderer.js"></script>
+<script src="./board-content.js"></script>
+<style>
+:root{--bg:#13151A;--bg-2:#1A1D24;--surface:#1C1F27;--text:#EDE6D6;--muted:#868991;--pale:#A3A8B0;--accent:#C8974A;--accent-soft:rgba(200,151,74,0.12);--accent-line:rgba(200,151,74,0.38);--border:rgba(237,230,214,0.08);--border-2:rgba(237,230,214,0.15)}
+[data-chrome="light"]{--bg:#F4F0E7;--bg-2:#EBE6DB;--surface:#FBF8F2;--text:#1B1D22;--muted:#686B72;--pale:#4F535A;--accent:#8C6222;--accent-soft:rgba(140,98,34,0.10);--accent-line:rgba(140,98,34,0.35);--border:rgba(27,29,34,0.09);--border-2:rgba(27,29,34,0.16)}
+html,body{margin:0;background:#13151A}
+body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-line)}
+a:hover{color:var(--text);border-bottom-color:var(--text)}
+button,input,select{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@keyframes sf-drawer-in{from{transform:translateX(-16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes sf-pop{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<div data-chrome="{{ chrome }}" style="min-height:100vh; background:var(--bg); color:var(--text); display:flex; flex-direction:{{ dir }}">
+
+  <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+    <aside aria-label="Editor" style="order:{{ drawerOrder }}; width:{{ drawerW }}; flex:none; height:{{ drawerH }}; overflow:auto; box-sizing:border-box; background:var(--surface); border-right:1px solid var(--border); animation:sf-drawer-in 260ms cubic-bezier(.2,.8,.2,1)">
+      <div style="position:sticky; top:0; z-index:2; background:var(--surface); border-bottom:1px solid var(--border); padding:14px 20px 0 20px; display:flex; flex-direction:column; gap:12px">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div style="display:flex; flex-direction:column; gap:2px; flex:1; min-width:0">
+            <span style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.editing }}</span>
+            <span style="font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ boardName }}</span>
+          </div>
+          <button onClick="{{ toggleEdit }}" style="height:36px; padding:0 16px; border-radius:8px; border:1px solid var(--accent-line); background:var(--accent-soft); color:var(--accent); font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer">{{ t.done }}</button>
+        </div>
+        <div role="tablist" style="display:flex; gap:20px">
+          <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+            <button role="tab" aria-selected="{{ tb.sel }}" onClick="{{ tb.onClick }}" style="height:38px; padding:0; border:0; background:none; border-bottom:2px solid {{ tb.line }}; color:{{ tb.color }}; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer">{{ tb.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ tabPages }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:20px; display:flex; flex-direction:column; gap:28px">
+          <section style="display:flex; flex-direction:column; gap:10px">
+            <div style="display:flex; align-items:baseline; gap:12px">
+              <h3 style="margin:0; font-family:'DM Mono',monospace; font-weight:400; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); flex:1">{{ t.playlist }}</h3>
+              <button onClick="{{ addPage }}" style="border:0; background:none; padding:4px 0; color:var(--accent); font-size:13px; font-weight:500; cursor:pointer">+ {{ t.addPage }}</button>
+            </div>
+            <ol style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px">
+              <sc-for list="{{ pagesList }}" as="p" hint-placeholder-count="5">
+                <li style="display:grid; grid-template-columns:24px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 10px 10px 12px; border-radius:8px; background:{{ p.bg }}; border:1px solid {{ p.border }}">
+                  <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--muted)">{{ p.num }}</span>
+                  <button onClick="{{ p.onSel }}" style="border:0; background:none; padding:0; text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:2px; min-width:0">
+                    <span style="font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ p.name }}</span>
+                    <span style="font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ p.summary }}</span>
+                  </button>
+                  <div style="display:flex; align-items:center; gap:2px">
+                    <label style="display:flex; align-items:center; gap:2px; font-family:'DM Mono',monospace; font-size:12px; color:var(--pale)">
+                      <input type="number" min="3" max="600" value="{{ p.dur }}" onChange="{{ p.onDur }}" aria-label="Duration in seconds" style="width:42px; height:28px; box-sizing:border-box; padding:0 4px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2); font-family:'DM Mono',monospace; font-size:12px; text-align:right">
+                      <span>s</span>
+                    </label>
+                    <button onClick="{{ p.onUp }}" aria-label="Move up" style="width:28px; height:28px; border:0; background:none; color:var(--pale); cursor:pointer; font-family:'DM Mono',monospace">↑</button>
+                    <button onClick="{{ p.onDown }}" aria-label="Move down" style="width:28px; height:28px; border:0; background:none; color:var(--pale); cursor:pointer; font-family:'DM Mono',monospace">↓</button>
+                    <button onClick="{{ p.onDel }}" aria-label="Delete page" style="width:28px; height:28px; border:0; background:none; color:var(--muted); cursor:pointer; font-family:'DM Mono',monospace">×</button>
+                  </div>
+                </li>
+              </sc-for>
+            </ol>
+          </section>
+
+          <sc-if value="{{ hasPage }}" hint-placeholder-val="{{ true }}">
+            <section style="display:flex; flex-direction:column; gap:18px; border-top:1px solid var(--border); padding-top:22px">
+              <label style="display:flex; flex-direction:column; gap:6px">
+                <span style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.name }}</span>
+                <input value="{{ pe.name }}" onChange="{{ pe.onName }}" style="height:38px; padding:0 12px; border-radius:8px; border:1px solid var(--border-2); background:var(--bg-2); font-size:14px">
+              </label>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <span style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.layout }}</span>
+                <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px">
+                  <sc-for list="{{ layouts }}" as="ly" hint-placeholder-count="4">
+                    <button onClick="{{ ly.onPick }}" aria-pressed="{{ ly.sel }}" style="display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:8px; border-radius:8px; border:1px solid {{ ly.border }}; background:{{ ly.bg }}; cursor:pointer; text-align:left">
+                      <span style="display:grid; width:100%; aspect-ratio:2.4; gap:2px; grid-template-columns:{{ ly.cols }}; grid-template-rows:{{ ly.rows }}">
+                        <sc-for list="{{ ly.parts }}" as="pt" hint-placeholder-count="2">
+                          <span style="background:{{ pt.bg }}; border-radius:2px; grid-column:{{ pt.col }}; grid-row:{{ pt.row }}"></span>
+                        </sc-for>
+                      </span>
+                      <span style="font-size:11px; line-height:1.25; color:{{ ly.color }}">{{ ly.label }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <sc-for list="{{ zones }}" as="z" hint-placeholder-count="1">
+                <div style="display:flex; flex-direction:column; gap:12px; padding:14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-2)">
+                  <div style="display:flex; align-items:center; gap:10px">
+                    <span style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--pale); flex:1">{{ z.label }}</span>
+                    <select value="{{ z.channel }}" onChange="{{ z.onChannel }}" aria-label="Channel" style="height:32px; padding:0 8px; border-radius:6px; border:1px solid var(--border-2); background:var(--surface); font-size:13px">
+                      <sc-for list="{{ channels }}" as="ch" hint-placeholder-count="6"><option value="{{ ch.id }}">{{ ch.label }}</option></sc-for>
+                    </select>
+                  </div>
+
+                  <sc-if value="{{ z.isComposer }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; flex-direction:column; gap:10px">
+                      <div style="position:relative">
+                        <div onClick="{{ z.focus }}" style="display:grid; grid-template-columns:{{ z.comp.cols }}; gap:2px; padding:6px; border-radius:6px; background:{{ z.comp.housing }}; cursor:text">
+                          <sc-for list="{{ z.comp.cells }}" as="cl" hint-placeholder-count="44">
+                            <span onMouseDown="{{ cl.onPick }}" style="aspect-ratio:0.68; display:flex; align-items:center; justify-content:center; border-radius:2px; background:{{ cl.bg }}; color:{{ cl.color }}; box-shadow:{{ cl.ring }}; font-family:'DM Mono',monospace; font-weight:500; font-size:{{ z.comp.fs }}; line-height:1">{{ cl.ch }}</span>
+                          </sc-for>
+                        </div>
+                        <input ref="{{ z.inputRef }}" value="" onChange="{{ z.onType }}" onKeyDown="{{ z.onKey }}" aria-label="Type on the board" autocomplete="off" autocapitalize="characters" spellcheck="false" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; border:0; padding:0; cursor:text; pointer-events:none">
+                      </div>
+                      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px">
+                        <sc-for list="{{ z.comp.chips }}" as="cp" hint-placeholder-count="9">
+                          <button onClick="{{ cp.onClick }}" aria-label="{{ cp.label }}" title="{{ cp.label }}" style="width:22px; height:30px; border-radius:3px; border:1px solid var(--border-2); background:{{ cp.bg }}; cursor:pointer; padding:0"></button>
+                        </sc-for>
+                        <span style="flex:1"></span>
+                        <button onClick="{{ z.comp.onCenter }}" style="height:30px; padding:0 10px; border-radius:6px; border:1px solid var(--border-2); background:none; font-size:12px; cursor:pointer">{{ t.center }}</button>
+                        <button onClick="{{ z.comp.onClear }}" style="height:30px; padding:0 10px; border-radius:6px; border:1px solid var(--border-2); background:none; font-size:12px; cursor:pointer">{{ t.clear }}</button>
+                      </div>
+                      <div style="display:flex; gap:12px; align-items:baseline; font-size:12px; min-height:18px">
+                        <span style="font-family:'DM Mono',monospace; color:var(--muted); white-space:nowrap">{{ z.comp.used }}</span>
+                        <span role="status" style="color:var(--accent); text-wrap:pretty">{{ notice }}</span>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ z.isTickerText }}" hint-placeholder-val="{{ false }}">
+                    <label style="display:flex; flex-direction:column; gap:6px">
+                      <span style="font-size:12px; color:var(--muted)">{{ t.text }}</span>
+                      <input value="{{ z.text }}" onChange="{{ z.onText }}" style="height:36px; padding:0 10px; border-radius:6px; border:1px solid var(--border-2); background:var(--surface); font-family:'DM Mono',monospace; font-size:13px; text-transform:uppercase">
+                    </label>
+                  </sc-if>
+
+                  <sc-if value="{{ z.isClock }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <span style="font-size:12px; color:var(--muted); flex:1">{{ t.format }}</span>
+                      <div style="display:flex; gap:2px; padding:2px; border-radius:8px; border:1px solid var(--border-2)">
+                        <sc-for list="{{ z.fmts }}" as="s" hint-placeholder-count="2">
+                          <button onClick="{{ s.onClick }}" style="height:28px; padding:0 12px; border:0; border-radius:6px; background:{{ s.bg }}; color:{{ s.color }}; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer">{{ s.label }}</button>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ z.isCountdown }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px">
+                      <label style="display:flex; flex-direction:column; gap:6px"><span style="font-size:12px; color:var(--muted)">{{ t.label }}</span><input value="{{ z.cdLabel }}" onChange="{{ z.onCdLabel }}" style="height:36px; padding:0 10px; border-radius:6px; border:1px solid var(--border-2); background:var(--surface); font-family:'DM Mono',monospace; font-size:13px; text-transform:uppercase; min-width:0"></label>
+                      <label style="display:flex; flex-direction:column; gap:6px"><span style="font-size:12px; color:var(--muted)">{{ t.date }}</span><input type="date" value="{{ z.cdDate }}" onChange="{{ z.onCdDate }}" style="height:36px; padding:0 10px; border-radius:6px; border:1px solid var(--border-2); background:var(--surface); font-size:13px; min-width:0"></label>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ z.isSearch }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex; flex-direction:column; gap:6px">
+                      <span style="font-size:12px; color:var(--muted)">{{ z.searchLabel }}</span>
+                      <input type="search" value="{{ z.q }}" onChange="{{ z.onQ }}" onFocus="{{ z.onQFocus }}" placeholder="{{ z.current }}" style="height:36px; padding:0 10px; border-radius:6px; border:1px solid var(--border-2); background:var(--surface); font-size:14px">
+                      <div style="display:flex; flex-direction:column; border-radius:6px; overflow:hidden; border:1px solid {{ z.sugBorder }}">
+                        <sc-for list="{{ z.sugs }}" as="sg" hint-placeholder-count="0">
+                          <button onClick="{{ sg.onPick }}" style="display:flex; justify-content:flex-start; gap:8px; height:36px; align-items:center; padding:0 10px; border:0; border-bottom:1px solid var(--border); background:var(--surface); text-align:left; font-size:13px; cursor:pointer"><span style="flex:1">{{ sg.name }}</span><span style="font-family:'DM Mono',monospace; font-size:11px; color:var(--accent)">{{ sg.mark }}</span></button>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ z.isQuote }}" hint-placeholder-val="{{ false }}">
+                    <p style="margin:0; font-size:13px; color:var(--muted); text-wrap:pretty">{{ t.quoteNote }}</p>
+                  </sc-if>
+                </div>
+              </sc-for>
+
+              <div style="display:flex; flex-direction:column; gap:10px">
+                <label style="display:flex; align-items:center; gap:10px; font-size:13px; cursor:pointer">
+                  <input type="checkbox" checked="{{ pe.winOn }}" onChange="{{ pe.onWin }}" style="width:16px; height:16px; accent-color:var(--accent)">
+                  <span>{{ t.window }}</span>
+                </label>
+                <sc-if value="{{ pe.winOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex; gap:10px; align-items:center; font-family:'DM Mono',monospace; font-size:13px">
+                    <input type="time" value="{{ pe.winFrom }}" onChange="{{ pe.onWinFrom }}" style="height:34px; padding:0 8px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2)">
+                    <span style="color:var(--muted)">{{ t.to }}</span>
+                    <input type="time" value="{{ pe.winTo }}" onChange="{{ pe.onWinTo }}" style="height:34px; padding:0 8px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2)">
+                  </div>
+                </sc-if>
+              </div>
+            </section>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabBoard }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:20px; display:flex; flex-direction:column; gap:26px">
+          <section style="display:flex; flex-direction:column; gap:10px">
+            <h3 style="margin:0; font-family:'DM Mono',monospace; font-weight:400; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.size }}</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:6px">
+              <sc-for list="{{ sizes }}" as="s" hint-placeholder-count="4">
+                <button onClick="{{ s.onClick }}" style="height:34px; padding:0 12px; border-radius:8px; border:1px solid {{ s.border }}; background:{{ s.bg }}; color:{{ s.color }}; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer">{{ s.label }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ isCustom }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; gap:10px">
+                <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted)">{{ t.rows }}<input type="number" min="1" max="24" value="{{ rows }}" onChange="{{ onRows }}" style="width:80px; height:34px; padding:0 8px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2); color:var(--text); font-family:'DM Mono',monospace"></label>
+                <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted)">{{ t.cols }}<input type="number" min="4" max="60" value="{{ cols }}" onChange="{{ onCols }}" style="width:80px; height:34px; padding:0 8px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2); color:var(--text); font-family:'DM Mono',monospace"></label>
+              </div>
+            </sc-if>
+          </section>
+          <section style="display:flex; flex-direction:column; gap:10px">
+            <h3 style="margin:0; font-family:'DM Mono',monospace; font-weight:400; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.theme }}</h3>
+            <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px">
+              <sc-for list="{{ themes }}" as="th" hint-placeholder-count="3">
+                <button onClick="{{ th.onClick }}" aria-pressed="{{ th.sel }}" style="display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:8px; border-radius:8px; border:1px solid {{ th.border }}; background:{{ th.bgSel }}; cursor:pointer; text-align:left">
+                  <span style="display:flex; gap:3px; padding:6px; border-radius:4px; background:{{ th.frame }}; width:100%; box-sizing:border-box">
+                    <span style="flex:1; aspect-ratio:0.68; border-radius:2px; background:{{ th.face }}; color:{{ th.glyph }}; font-family:{{ th.font }}; font-weight:600; font-size:15px; display:flex; align-items:center; justify-content:center">A</span>
+                    <span style="flex:1; aspect-ratio:0.68; border-radius:2px; background:{{ th.face }}; color:{{ th.glyph }}; font-family:{{ th.font }}; font-weight:600; font-size:15px; display:flex; align-items:center; justify-content:center">Ö</span>
+                    <span style="flex:1; aspect-ratio:0.68; border-radius:2px; background:#D5352B"></span>
+                  </span>
+                  <span style="font-size:12px; line-height:1.25; color:{{ th.color }}">{{ th.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </section>
+          <section style="display:flex; flex-direction:column; gap:10px">
+            <h3 style="margin:0; font-family:'DM Mono',monospace; font-weight:400; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.transition }}</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:6px">
+              <sc-for list="{{ transitions }}" as="s" hint-placeholder-count="4">
+                <button onClick="{{ s.onClick }}" style="height:34px; padding:0 12px; border-radius:8px; border:1px solid {{ s.border }}; background:{{ s.bg }}; color:{{ s.color }}; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer">{{ s.label }}</button>
+              </sc-for>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center">
+              <span style="font-size:12px; color:var(--muted); width:72px">{{ t.speed }}</span>
+              <sc-for list="{{ speeds }}" as="s" hint-placeholder-count="2">
+                <button onClick="{{ s.onClick }}" style="height:34px; padding:0 12px; border-radius:8px; border:1px solid {{ s.border }}; background:{{ s.bg }}; color:{{ s.color }}; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer">{{ s.label }}</button>
+              </sc-for>
+            </div>
+          </section>
+          <section style="display:flex; flex-direction:column; gap:10px">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer">
+              <input type="checkbox" checked="{{ quietOn }}" onChange="{{ onQuiet }}" style="width:16px; height:16px; accent-color:var(--accent)">
+              <span style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.quiet }}</span>
+            </label>
+            <sc-if value="{{ quietOn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; font-family:'DM Mono',monospace; font-size:13px">
+                <input type="time" value="{{ quietFrom }}" onChange="{{ onQuietFrom }}" style="height:34px; padding:0 8px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2)">
+                <span style="color:var(--muted)">{{ t.to }}</span>
+                <input type="time" value="{{ quietTo }}" onChange="{{ onQuietTo }}" style="height:34px; padding:0 8px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2)">
+                <sc-for list="{{ quietModes }}" as="s" hint-placeholder-count="2">
+                  <button onClick="{{ s.onClick }}" style="height:34px; padding:0 12px; border-radius:8px; border:1px solid {{ s.border }}; background:{{ s.bg }}; color:{{ s.color }}; font-size:12px; cursor:pointer">{{ s.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </section>
+          <section>
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer">
+              <input type="checkbox" checked="{{ soundOn }}" onChange="{{ toggleSound }}" style="width:16px; height:16px; accent-color:var(--accent)">
+              <span style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.sound }}</span>
+            </label>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabBoards }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:20px; display:flex; flex-direction:column; gap:22px">
+          <label style="display:flex; flex-direction:column; gap:6px">
+            <span style="font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted)">{{ t.name }}</span>
+            <input value="{{ boardName }}" onChange="{{ onBoardName }}" style="height:38px; padding:0 12px; border-radius:8px; border:1px solid var(--border-2); background:var(--bg-2); font-size:14px">
+            <span style="font-size:12px; color:var(--muted)">{{ t.saved }}</span>
+          </label>
+          <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px">
+            <sc-for list="{{ boardsList }}" as="bd" hint-placeholder-count="1">
+              <li><button onClick="{{ bd.onPick }}" style="width:100%; display:flex; gap:10px; align-items:center; height:42px; padding:0 12px; border-radius:8px; border:1px solid {{ bd.border }}; background:{{ bd.bg }}; text-align:left; cursor:pointer"><span style="flex:1; font-size:14px">{{ bd.name }}</span><span style="font-family:'DM Mono',monospace; font-size:11px; color:var(--muted)">{{ bd.meta }}</span></button></li>
+            </sc-for>
+          </ul>
+          <div style="display:flex; flex-wrap:wrap; gap:8px">
+            <button onClick="{{ newBoard }}" style="height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--accent-line); background:var(--accent-soft); color:var(--accent); font-size:13px; cursor:pointer">{{ t.newBoard }}</button>
+            <button onClick="{{ duplicate }}" style="height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--border-2); background:none; font-size:13px; cursor:pointer">{{ t.duplicate }}</button>
+            <button onClick="{{ exportJson }}" style="height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--border-2); background:none; font-size:13px; cursor:pointer">{{ t.exportJ }}</button>
+            <button onClick="{{ importClick }}" style="height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--border-2); background:none; font-size:13px; cursor:pointer">{{ t.importJ }}</button>
+            <button onClick="{{ deleteBoard }}" disabled="{{ cantDelete }}" style="height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--border-2); background:none; color:var(--muted); font-size:13px; cursor:pointer">{{ t.del }}</button>
+            <input ref="{{ fileRef }}" type="file" accept="application/json,.json" onChange="{{ onImport }}" style="display:none">
+          </div>
+          <p style="margin:0; font-size:12px; color:var(--muted); text-wrap:pretty">JSON means JavaScript Object Notation: a plain text copy of this board you can keep or move to another browser.</p>
+        </div>
+      </sc-if>
+    </aside>
+  </sc-if>
+
+  <main style="order:{{ stageOrder }}; flex:1; min-width:0; display:flex; flex-direction:column">
+    <div data-screen-label="Board" style="position:{{ stagePos }}; top:0; z-index:3; height:{{ stageH }}; background:{{ backdrop }}; cursor:{{ cursor }}; overflow:hidden">
+      <div style="position:absolute; inset:0; opacity:{{ boardOpacity }}; transition:opacity 1.6s ease">
+        <canvas ref="{{ canvasRef }}" aria-hidden="true" style="display:block; width:100%; height:100%"></canvas>
+      </div>
+
+      <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="position:absolute; left:16px; bottom:14px; display:flex; align-items:center; gap:8px; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:0.06em; color:{{ indicatorInk }}">
+          <span style="width:6px; height:6px; border-radius:50%; border:1px solid currentColor; box-sizing:border-box"></span>
+          <span>{{ t.offline }}</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showBar }}" hint-placeholder-val="{{ true }}">
+        <div onMouseEnter="{{ barEnter }}" onMouseLeave="{{ barLeave }}" style="position:absolute; left:16px; bottom:16px; right:16px; display:flex; flex-direction:column; align-items:flex-start; gap:8px; opacity:{{ barOpacity }}; transform:{{ barTransform }}; transition:{{ barTransition }}; pointer-events:{{ barPointer }}">
+
+          <sc-if value="{{ shareOpen }}" hint-placeholder-val="{{ false }}">
+            <div role="dialog" aria-label="{{ t.share }}" style="width:min(340px, 100%); box-sizing:border-box; padding:16px; border-radius:12px; background:var(--surface); border:1px solid var(--border-2); display:grid; grid-template-columns:96px minmax(0,1fr); gap:14px; animation:sf-pop 180ms ease-out">
+              <div style="width:96px; height:96px; border-radius:6px; background:repeating-linear-gradient(135deg, var(--bg-2) 0 6px, var(--surface) 6px 12px); border:1px solid var(--border-2); display:flex; align-items:flex-end; padding:6px; box-sizing:border-box; font-family:'DM Mono',monospace; font-size:9px; color:var(--muted)">QR code</div>
+              <div style="display:flex; flex-direction:column; gap:6px; min-width:0">
+                <span style="font-size:14px; font-weight:600; text-wrap:pretty">{{ t.shareTitle }}</span>
+                <span style="font-size:12px; color:var(--muted); text-wrap:pretty">{{ t.shareBody }}</span>
+              </div>
+              <div style="grid-column:1 / -1; display:flex; gap:8px">
+                <input readonly="" value="{{ shareUrl }}" aria-label="Board link" style="flex:1; min-width:0; height:34px; padding:0 10px; border-radius:6px; border:1px solid var(--border-2); background:var(--bg-2); font-family:'DM Mono',monospace; font-size:12px">
+                <button onClick="{{ copyShare }}" style="height:34px; padding:0 12px; border-radius:6px; border:1px solid var(--accent-line); background:var(--accent-soft); color:var(--accent); font-size:12px; cursor:pointer; white-space:nowrap">{{ copyLabel }}</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ switcherOpen }}" hint-placeholder-val="{{ false }}">
+            <div role="menu" style="width:260px; padding:6px; border-radius:12px; background:var(--surface); border:1px solid var(--border-2); display:flex; flex-direction:column; gap:2px; animation:sf-pop 180ms ease-out">
+              <sc-for list="{{ boardsList }}" as="bd" hint-placeholder-count="1">
+                <button role="menuitem" onClick="{{ bd.onPick }}" style="display:flex; align-items:center; gap:10px; height:38px; padding:0 10px; border:0; border-radius:8px; background:{{ bd.bg }}; text-align:left; cursor:pointer"><span style="flex:1; font-size:13px">{{ bd.name }}</span><span style="font-family:'DM Mono',monospace; font-size:11px; color:var(--muted)">{{ bd.meta }}</span></button>
+              </sc-for>
+              <button role="menuitem" onClick="{{ newBoard }}" style="height:38px; padding:0 10px; border:0; border-top:1px solid var(--border); background:none; text-align:left; color:var(--accent); font-size:13px; cursor:pointer">+ {{ t.newBoard }}</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ cueShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 12px 10px 14px; border-radius:10px; background:var(--surface); border:1px solid var(--accent-line); max-width:100%; box-sizing:border-box">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--accent); flex:none"></span>
+              <span style="font-size:13px; text-wrap:pretty">{{ t.cue }}</span>
+              <button onClick="{{ dismissCue }}" style="border:0; background:none; padding:4px; color:var(--muted); font-size:12px; cursor:pointer; white-space:nowrap">{{ t.gotIt }}</button>
+            </div>
+          </sc-if>
+
+          <nav aria-label="Board controls" style="display:flex; flex-wrap:wrap; align-items:center; gap:2px; padding:4px; border-radius:12px; background:var(--surface); border:1px solid var(--border-2); max-width:100%; box-sizing:border-box">
+            <button onClick="{{ toggleEdit }}" aria-keyshortcuts="E" style="height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--accent-line); background:var(--accent-soft); color:var(--accent); font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer">{{ t.edit }}</button>
+            <button onClick="{{ toggleSwitcher }}" aria-haspopup="menu" aria-expanded="{{ switcherOpen }}" style="height:36px; padding:0 12px; border-radius:8px; border:0; background:{{ switcherBg }}; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px; flex:none; max-width:200px"><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ boardName }}</span><span style="font-family:'DM Mono',monospace; font-size:10px; color:var(--muted)">▾</span></button>
+            <span style="width:1px; height:20px; background:var(--border-2); margin:0 4px"></span>
+            <button onClick="{{ toggleFull }}" aria-keyshortcuts="F" style="height:36px; padding:0 12px; border-radius:8px; border:0; background:none; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer">{{ fullLabel }}</button>
+            <button onClick="{{ toggleSound }}" aria-pressed="{{ soundOn }}" aria-keyshortcuts="S" style="height:36px; padding:0 12px; border-radius:8px; border:0; background:none; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:6px"><span>{{ t.sound }}</span><span style="color:{{ soundInk }}">{{ soundState }}</span></button>
+            <button onClick="{{ toggleShare }}" aria-expanded="{{ shareOpen }}" style="height:36px; padding:0 12px; border-radius:8px; border:0; background:{{ shareBg }}; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer">{{ t.share }}</button>
+            <span style="width:1px; height:20px; background:var(--border-2); margin:0 4px"></span>
+            <div role="group" aria-label="Language" style="display:flex; gap:0">
+              <button onClick="{{ setEn }}" aria-pressed="{{ isEn }}" style="height:36px; padding:0 8px; border:0; background:none; font-family:'DM Mono',monospace; font-size:12px; color:{{ enInk }}; cursor:pointer">EN</button>
+              <button onClick="{{ setSv }}" aria-pressed="{{ isSv }}" style="height:36px; padding:0 8px; border:0; background:none; font-family:'DM Mono',monospace; font-size:12px; color:{{ svInk }}; cursor:pointer">SV</button>
+            </div>
+          </nav>
+        </div>
+      </sc-if>
+    </div>
+
+    <div aria-live="polite" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:pre">{{ ariaText }}</div>
+
+    <sc-if value="{{ showBelow }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="About" style="background:var(--bg); color:var(--text); border-top:1px solid var(--border)">
+        <div style="max-width:1080px; padding:96px 32px 64px 32px; box-sizing:border-box; display:flex; flex-direction:column; gap:88px">
+
+          <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap:32px 64px; align-items:start">
+            <div style="display:flex; flex-direction:column; gap:18px">
+              <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent)">Split-Flap</span>
+              <h1 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(40px, 6vw, 64px); line-height:1.02; letter-spacing:-0.01em; text-wrap:balance">A departure board for the screen you already have.</h1>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px; padding-top:8px; font-size:16px; line-height:1.65; color:var(--pale)">
+              <p style="margin:0; text-wrap:pretty">Split-Flap turns a spare monitor into a mechanical style message board. Pages rotate through your own messages, the time, departures from Storstockholms Lokaltrafik (SL), the weather and countdowns, each letter flipping into place like a railway board.</p>
+              <p style="margin:0; text-wrap:pretty">It is free and needs no account. Everything you set up stays in this browser, and a board link carries it to another screen.</p>
+            </div>
+          </section>
+
+          <section style="display:flex; flex-direction:column; gap:28px">
+            <h2 style="margin:0; font-family:'DM Mono',monospace; font-weight:400; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted)">Put it on a monitor</h2>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap:40px">
+              <div style="display:flex; flex-direction:column; gap:12px; border-top:1px solid var(--border-2); padding-top:18px">
+                <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--accent)">01</span>
+                <h3 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:28px">Raspberry Pi</h3>
+                <ol style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:8px; font-size:14px; line-height:1.6; color:var(--pale)">
+                  <li>Install Raspberry Pi OS with desktop and connect the monitor.</li>
+                  <li>Compose your board on your phone, then open the board link on the Pi.</li>
+                  <li>Add <code style="font-family:'DM Mono',monospace; font-size:13px; color:var(--text)">?kiosk=1</code> to the link and set Chromium to open it at start up.</li>
+                </ol>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px; border-top:1px solid var(--border-2); padding-top:18px">
+                <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--accent)">02</span>
+                <h3 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:28px">Casting a tab</h3>
+                <ol style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:8px; font-size:14px; line-height:1.6; color:var(--pale)">
+                  <li>Open the board in Chrome on a computer on the same network as the television.</li>
+                  <li>Choose Cast from the browser menu and pick the tab.</li>
+                  <li>Press Fullscreen. Keep the computer awake while it casts.</li>
+                </ol>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px; border-top:1px solid var(--border-2); padding-top:18px">
+                <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--accent)">03</span>
+                <h3 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:600; font-size:28px">An old laptop</h3>
+                <ol style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:8px; font-size:14px; line-height:1.6; color:var(--pale)">
+                  <li>Turn off sleep and the screen saver in the power settings.</li>
+                  <li>Open the board link and press F for fullscreen.</li>
+                  <li>Set quiet hours so the screen dims overnight.</li>
+                </ol>
+              </div>
+            </div>
+          </section>
+
+          <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap:32px 64px; align-items:start">
+            <h2 style="margin:0; font-family:'DM Mono',monospace; font-weight:400; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted)">Questions</h2>
+            <dl style="margin:0; display:flex; flex-direction:column; gap:0">
+              <div style="padding:18px 0; border-top:1px solid var(--border-2); display:flex; flex-direction:column; gap:6px"><dt style="font-weight:600; font-size:15px">Is it really free?</dt><dd style="margin:0; font-size:14px; line-height:1.6; color:var(--pale); text-wrap:pretty">Yes. There are no accounts, no adverts and nothing to install.</dd></div>
+              <div style="padding:18px 0; border-top:1px solid var(--border-2); display:flex; flex-direction:column; gap:6px"><dt style="font-weight:600; font-size:15px">Where is my board stored?</dt><dd style="margin:0; font-size:14px; line-height:1.6; color:var(--pale); text-wrap:pretty">In this browser only. Clearing site data removes it, so export a copy if it matters to you.</dd></div>
+              <div style="padding:18px 0; border-top:1px solid var(--border-2); display:flex; flex-direction:column; gap:6px"><dt style="font-weight:600; font-size:15px">How do I move a board to the wall screen?</dt><dd style="margin:0; font-size:14px; line-height:1.6; color:var(--pale); text-wrap:pretty">Press Share and open the link, or scan the QR (Quick Response) code, on the other screen. The link holds the whole board.</dd></div>
+              <div style="padding:18px 0; border-top:1px solid var(--border-2); display:flex; flex-direction:column; gap:6px"><dt style="font-weight:600; font-size:15px">Why did a character turn blank?</dt><dd style="margin:0; font-size:14px; line-height:1.6; color:var(--pale); text-wrap:pretty">The flaps carry capital letters, Å Ä Ö, numbers and common punctuation. Anything else shows as a blank flap, just like a real board.</dd></div>
+              <div style="padding:18px 0; border-top:1px solid var(--border-2); border-bottom:1px solid var(--border-2); display:flex; flex-direction:column; gap:6px"><dt style="font-weight:600; font-size:15px">What happens when the internet drops?</dt><dd style="margin:0; font-size:14px; line-height:1.6; color:var(--pale); text-wrap:pretty">Messages and the clock keep running. Departures and weather hold their last values and a small note in the corner says how old they are.</dd></div>
+            </dl>
+          </section>
+
+          <footer style="display:flex; flex-wrap:wrap; gap:12px 32px; align-items:baseline; padding-top:24px; border-top:1px solid var(--border); font-size:13px; line-height:1.6; color:var(--muted)">
+            <span style="max-width:640px; text-wrap:pretty">Departures from SL through Trafiklab. Weather from <a href="https://open-meteo.com">Open-Meteo</a>, licensed CC BY 4.0 (Creative Commons Attribution 4.0).</span>
+            <a href="https://maclaine.se">maclaine.se</a>
+          </footer>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;chrome&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark'|'light'&quot;,&quot;section&quot;:&quot;Chrome&quot;},&quot;preview&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;quiet-blank&quot;,&quot;quiet-dim&quot;,&quot;offline&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;States&quot;},&quot;kiosk&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;},&quot;firstVisit&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;}}">
+class Component extends DCLogic {
+  state = { lang: 'en', editing: false, tab: 'pages', sel: 0, bar: true, cue: false, share: false, switcher: false, boards: null, active: 0,
+    caret: 0, cz: -1, notice: '', vw: 1280, vh: 800, isFull: false, pageIdx: 0, pageStart: 0, now: Date.now(), search: null, copied: false };
+  canvasRef = React.createRef(); fileRef = React.createRef(); inputs = {};
+
+  componentDidMount() {
+    let boards = null, active = 0;
+    try { boards = JSON.parse(localStorage.getItem('sf_boards')); active = +localStorage.getItem('sf_active') || 0; } catch (e) {}
+    const cue = localStorage.getItem('sf_cue_seen') !== '1';
+    this.urlKiosk = /[?&]kiosk=1/.test(location.search);
+    this.setState({ boards: boards && boards.length ? boards : null, active: boards && boards[active] ? active : 0, cue, vw: innerWidth, vh: innerHeight, pageStart: Date.now() });
+    this.onMove = () => this.wake(); addEventListener('mousemove', this.onMove); addEventListener('touchstart', this.onMove, { passive: true });
+    this.onKeyG = e => this.globalKey(e); addEventListener('keydown', this.onKeyG);
+    this.onResize = () => this.setState({ vw: innerWidth, vh: innerHeight }); addEventListener('resize', this.onResize);
+    this.onFs = () => this.setState({ isFull: !!document.fullscreenElement }); document.addEventListener('fullscreenchange', this.onFs);
+    this.iv = setInterval(() => this.tickPlaylist(), 500);
+    this.wake(cue ? 12000 : 3000);
+    this.waitLib();
+  }
+  componentWillUnmount() {
+    clearInterval(this.iv); clearTimeout(this.hideT); clearTimeout(this.libT);
+    removeEventListener('mousemove', this.onMove); removeEventListener('touchstart', this.onMove); removeEventListener('keydown', this.onKeyG);
+    removeEventListener('resize', this.onResize); document.removeEventListener('fullscreenchange', this.onFs);
+    if (this.board) this.board.destroy();
+  }
+  waitLib() {
+    if (!(window.SplitFlap && window.SFContent)) { this.libT = setTimeout(() => this.waitLib(), 40); return; }
+    if (!this.state.boards) { this.setState({ boards: [SFContent.defaultBoard()] }); this.libT = setTimeout(() => this.waitLib(), 20); return; }
+    if (!this.canvasRef.current) { this.libT = setTimeout(() => this.waitLib(), 40); return; }
+    this.board = new SplitFlap.Board(this.canvasRef.current, Object.assign(this.boardOpts(), { onFlip: f => this.click(f) }));
+    this.pushGrid();
+  }
+  componentDidUpdate(pp, ps) {
+    if (this.state.boards && ps.boards !== this.state.boards) { try { localStorage.setItem('sf_boards', JSON.stringify(this.state.boards)); } catch (e) {} }
+    if (ps.active !== this.state.active) { try { localStorage.setItem('sf_active', String(this.state.active)); } catch (e) {} }
+    if (!this.board) return;
+    this.board.setOptions(this.boardOpts());
+    this.pushGrid();
+  }
+
+  cur() { return this.state.boards ? this.state.boards[this.state.active] || this.state.boards[0] : null; }
+  isMobile() { return this.state.vw < 760; }
+  dims() {
+    const b = this.cur(); if (!b) return { rows: 6, cols: 22 };
+    if (b.size === 'fill') { const el = this.canvasRef.current, r = el ? el.getBoundingClientRect() : { width: this.state.vw, height: this.state.vh }; return SplitFlap.fillGrid(r.width || 1, r.height || 1); }
+    if (b.size === 'custom') return { rows: Math.max(1, Math.min(24, +b.rows || 6)), cols: Math.max(4, Math.min(60, +b.cols || 22)) };
+    const [r, c] = b.size.split('x').map(Number); return { rows: r, cols: c };
+  }
+  boardOpts() { const b = this.cur(), d = this.dims(); return { rows: d.rows, cols: d.cols, theme: b.theme, transition: b.transition, speed: b.speed }; }
+  inQuiet(b) { return b.quiet && b.quiet.on && !SFContent.inWindow({ on: true, from: b.quiet.to, to: b.quiet.from }, Date.now()); }
+  quietMode() {
+    const p = this.props.preview || 'live', b = this.cur();
+    if (p === 'quiet-blank') return 'blank'; if (p === 'quiet-dim') return 'dim';
+    if (b && !this.state.editing && this.inQuiet(b)) return b.quiet.mode;
+    return null;
+  }
+  grid() {
+    const b = this.cur(), d = this.dims();
+    if (!b || !window.SFContent) return null;
+    if (this.quietMode() === 'blank') return SFContent.blank(d.rows, d.cols);
+    const pages = b.pages; if (!pages.length) return SFContent.blank(d.rows, d.cols);
+    const page = this.state.editing ? pages[Math.min(this.state.sel, pages.length - 1)] : pages[this.state.pageIdx % pages.length];
+    return SFContent.compose(page, d.rows, d.cols, Date.now(), this.state.lang);
+  }
+  pushGrid() { const g = this.grid(); if (g && this.board) this.board.setGrid(g); }
+  tickPlaylist() {
+    const b = this.cur(); if (!b || !window.SFContent) return;
+    const now = Date.now(); let { pageIdx, pageStart } = this.state; const pages = b.pages;
+    if (!this.state.editing && pages.length) {
+      const pg = pages[pageIdx % pages.length];
+      if (now - pageStart >= (pg.dur || 10) * 1000 || !SFContent.inWindow(pg.win, now)) {
+        for (let i = 1; i <= pages.length; i++) { const j = (pageIdx + i) % pages.length; if (SFContent.inWindow(pages[j].win, now)) { pageIdx = j; break; } }
+        pageStart = now;
+      }
+    }
+    this.setState({ now, pageIdx, pageStart });
+  }
+  wake(ms) {
+    if (!this.state.bar) this.setState({ bar: true });
+    clearTimeout(this.hideT);
+    this.hideT = setTimeout(() => {
+      if (this.state.share || this.state.switcher || this.overBar) return this.wake();
+      this.setState({ bar: false });
+    }, ms || 3000);
+  }
+  globalKey(e) {
+    const tag = (e.target && e.target.tagName) || '';
+    if (e.key === 'Escape') { if (this.state.share || this.state.switcher) this.setState({ share: false, switcher: false }); else if (this.state.editing) this.toggleEdit(); return; }
+    if (/INPUT|TEXTAREA|SELECT/.test(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
+    this.wake();
+    const k = e.key.toLowerCase();
+    if (k === 'e') this.toggleEdit(); else if (k === 'f') this.toggleFull(); else if (k === 's') this.toggleSound();
+  }
+  click(final) {
+    const b = this.cur(); if (!b || !b.sound) return;
+    const t = performance.now(); if (t - (this.lastClick || 0) < 16) return; this.lastClick = t;
+    try {
+      const ac = this.ac || (this.ac = new (window.AudioContext || window.webkitAudioContext)());
+      if (!this.noise) { const len = Math.floor(ac.sampleRate * 0.012); this.noise = ac.createBuffer(1, len, ac.sampleRate); const d = this.noise.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+      const s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
+      f.type = 'highpass'; f.frequency.value = 1800; g.gain.value = final ? 0.09 : 0.035;
+      s.buffer = this.noise; s.connect(f); f.connect(g); g.connect(ac.destination); s.start();
+    } catch (e) {}
+  }
+  toggleEdit = () => {
+    const editing = !this.state.editing;
+    if (editing) this.dismissCue();
+    this.setState({ editing, share: false, switcher: false, sel: editing ? (this.state.pageIdx % Math.max(1, this.cur().pages.length)) : this.state.sel, pageStart: Date.now() });
+    if (!editing) this.wake();
+  };
+  toggleFull = () => { if (document.fullscreenElement) document.exitFullscreen(); else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); };
+  toggleSound = () => this.upd(b => { b.sound = !b.sound; });
+  dismissCue = () => { try { localStorage.setItem('sf_cue_seen', '1'); } catch (e) {} this.setState({ cue: false }); };
+
+  upd(fn) {
+    this.setState(s => {
+      const boards = s.boards.slice(), b = JSON.parse(JSON.stringify(boards[s.active]));
+      fn(b); boards[s.active] = b; return { boards };
+    });
+  }
+  updPage(fn) { this.upd(b => { const p = b.pages[this.state.sel]; if (p) fn(p, b); }); }
+  flash(msg) { clearTimeout(this.noticeT); this.setState({ notice: msg }); this.noticeT = setTimeout(() => this.setState({ notice: '' }), 3200); }
+  seg(items, cur, pick) {
+    return items.map(([id, label]) => {
+      const on = id === cur;
+      return { label, onClick: () => pick(id), bg: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--text)', border: on ? 'var(--accent-line)' : 'var(--border-2)' };
+    });
+  }
+
+  composer(zi, z, zone, t, b) {
+    const T = SplitFlap.THEMES[b.theme], h = z.h, w = z.w, cells = SFContent.toCells(zone.o || {}, h, w), n = h * w;
+    const caret = this.state.cz === zi ? this.state.caret : -1;
+    const write = (fn) => this.updPage(p => { const zz = p.zones[zi]; const c = SFContent.toCells(zz.o || {}, h, w); fn(c); zz.o = { cells: c }; });
+    const setCaret = (i) => this.setState({ cz: zi, caret: Math.max(0, Math.min(n, i)) });
+    const place = (chars) => {
+      let pos = this.state.cz === zi ? this.state.caret : 0, full = false, bad = null;
+      const list = [];
+      chars.forEach(ch => { if (pos >= n) { full = true; return; } list.push([pos, ch]); pos++; });
+      write(c => list.forEach(([i, ch]) => { c[Math.floor(i / w)][i % w] = ch; }));
+      setCaret(pos);
+      if (full || pos >= n) this.flash(t.full);
+    };
+    const drawerW = this.isMobile() ? this.state.vw - 40 - 30 : 440 - 40 - 30;
+    const used = cells.flat().filter(c => c !== ' ').length;
+    return {
+      cols: `repeat(${w}, minmax(0,1fr))`, housing: T.housing,
+      fs: Math.max(7, Math.min(18, Math.floor((drawerW / w) * 0.62))) + 'px',
+      used: `${used} / ${n} ${t.flaps}`,
+      cells: cells.flat().map((ch, i) => {
+        const chip = ch === 'f' ? T.filled : SplitFlap.CHIPS[ch];
+        return { ch: chip ? '' : ch, bg: chip || T.face, color: T.glyph, ring: i === caret || (caret === n && i === n - 1 && false) ? '0 0 0 2px var(--accent)' : 'none',
+          onPick: (e) => { e.preventDefault(); setCaret(i); const el = this.inputs[zi]; if (el) el.focus(); } };
+      }),
+      chips: SplitFlap.CHIP_KEYS.map(k => ({ bg: k === 'f' ? T.filled : SplitFlap.CHIPS[k], label: 'Insert ' + ({ r: 'red', o: 'orange', y: 'yellow', g: 'green', b: 'blue', v: 'violet', w: 'white', k: 'black', f: 'filled' })[k] + ' chip',
+        onClick: () => { place([k]); const el = this.inputs[zi]; if (el) el.focus(); } })),
+      onClear: () => { write(c => c.forEach(r => r.fill(' '))); setCaret(0); },
+      onCenter: () => write(c => c.forEach((r, ri) => { const s = r.join('').trim(); const a = [...s]; const off = Math.floor((w - a.length) / 2); c[ri] = Array(w).fill(' '); a.forEach((ch, j) => { c[ri][off + j] = ch; }); })),
+      onType: (e) => {
+        const v = e.target.value; e.target.value = ''; if (!v) return;
+        const out = [];
+        [...v].forEach(ch => { const r = SplitFlap.cleanChar(ch); if (!r.valid) this.flash(`\u201C${ch}\u201D ${t.blankNote}`); out.push(r.ch); });
+        place(out);
+      },
+      onKey: (e) => {
+        const pos = this.state.cz === zi ? this.state.caret : 0;
+        const k = e.key;
+        if (k === 'Backspace') { e.preventDefault(); const i = pos - 1; if (i >= 0) { write(c => { c[Math.floor(i / w)][i % w] = ' '; }); setCaret(i); } }
+        else if (k === 'Delete') { e.preventDefault(); if (pos < n) write(c => { c[Math.floor(pos / w)][pos % w] = ' '; }); }
+        else if (k === 'ArrowLeft') { e.preventDefault(); setCaret(pos - 1); }
+        else if (k === 'ArrowRight') { e.preventDefault(); setCaret(pos + 1); }
+        else if (k === 'ArrowUp') { e.preventDefault(); setCaret(pos - w); }
+        else if (k === 'ArrowDown') { e.preventDefault(); setCaret(pos + w); }
+        else if (k === 'Enter') { e.preventDefault(); const nx = (Math.floor(pos / w) + 1) * w; if (nx >= n) this.flash(t.full); else setCaret(nx); }
+        else if (k === 'Escape') { e.currentTarget.blur(); }
+      }
+    };
+  }
+
+  renderVals() {
+    const s = this.state, lang = s.lang, ready = !!(window.SFContent && window.SplitFlap && s.boards);
+    const STR = window.SFContent ? SFContent.STR : { en: {}, sv: {} }, t = STR[lang] || {};
+    const chrome = this.props.chrome || 'dark';
+    const mobile = this.isMobile(), kioskStrict = !!(this.props.kiosk || this.urlKiosk), kiosk = kioskStrict || s.isFull;
+    const b = ready ? this.cur() : null;
+    const T = b ? SplitFlap.THEMES[b.theme] : { backdrop: ['#141518', '#0A0A0C'] };
+    const qm = b ? this.quietMode() : null;
+    const light = b && b.theme === 'white';
+    const base = {
+      chrome, t, editing: s.editing, dir: s.editing && mobile ? 'column' : 'row',
+      drawerOrder: s.editing && mobile ? 2 : 0, stageOrder: 1,
+      drawerW: mobile ? '100%' : '440px', drawerH: mobile ? 'auto' : '100vh',
+      stagePos: s.editing && mobile ? 'sticky' : 'relative', stageH: s.editing && mobile ? '36vh' : '100vh',
+      backdrop: T.backdrop[1], cursor: !s.bar && !s.editing ? 'none' : 'default',
+      boardOpacity: qm === 'dim' ? 0.22 : 1, canvasRef: this.canvasRef, fileRef: this.fileRef,
+      offline: (this.props.preview || 'live') === 'offline', indicatorInk: light ? 'rgba(24,24,27,0.55)' : 'rgba(237,230,214,0.45)',
+      showBar: !s.editing && !kioskStrict, barOpacity: s.bar ? 1 : 0, barTransform: s.bar ? 'none' : 'translateY(8px)',
+      barTransition: s.bar ? 'opacity 180ms ease-out, transform 180ms ease-out' : 'opacity 420ms ease-in, transform 420ms ease-in',
+      barPointer: s.bar ? 'auto' : 'none',
+      barEnter: () => { this.overBar = true; }, barLeave: () => { this.overBar = false; this.wake(); },
+      showBelow: !kiosk && !s.editing,
+      cueShow: s.cue && (this.props.firstVisit !== false) && !s.editing,
+      dismissCue: this.dismissCue, toggleEdit: this.toggleEdit, toggleFull: this.toggleFull, toggleSound: this.toggleSound,
+      fullLabel: s.isFull ? t.exitFs : t.fullscreen,
+      shareOpen: s.share, switcherOpen: s.switcher,
+      toggleShare: () => this.setState({ share: !s.share, switcher: false }),
+      toggleSwitcher: () => this.setState({ switcher: !s.switcher, share: false }),
+      shareBg: s.share ? 'var(--bg-2)' : 'transparent', switcherBg: s.switcher ? 'var(--bg-2)' : 'transparent',
+      isEn: lang === 'en', isSv: lang === 'sv', enInk: lang === 'en' ? 'var(--accent)' : 'var(--muted)', svInk: lang === 'sv' ? 'var(--accent)' : 'var(--muted)',
+      setEn: () => this.setState({ lang: 'en' }), setSv: () => this.setState({ lang: 'sv' }),
+      notice: s.notice, copyLabel: s.copied ? t.copied : t.copy
+    };
+    if (!b) return Object.assign(base, { boardName: '', soundOn: false, soundState: '', tabs: [], pagesList: [], layouts: [], zones: [], channels: [], sizes: [], themes: [], transitions: [], speeds: [], quietModes: [], boardsList: [], pe: {}, ariaText: '' });
+
+    const d = this.dims(), g = this.grid();
+    const ariaText = g ? g.map(r => r.map(c => (SplitFlap.CHIPS[c] || c === 'f') ? ' ' : c).join('').trim()).filter(Boolean).join('\n') : '';
+    let shareUrl = 'maclaine.se/split-flap#b=';
+    try { shareUrl += btoa(unescape(encodeURIComponent(JSON.stringify({ n: b.name, t: b.theme, s: b.size })))).slice(0, 24); } catch (e) {}
+    const chName = id => (SFContent.CHANNELS.find(c => c.id === id) || {})[lang] || id;
+    const sel = Math.min(s.sel, b.pages.length - 1), page = b.pages[sel];
+
+    const tabs = [['pages', t.pages], ['board', t.board], ['boards', t.boards]].map(([id, label]) => ({ label, sel: s.tab === id, onClick: () => this.setState({ tab: id }), line: s.tab === id ? 'var(--accent)' : 'transparent', color: s.tab === id ? 'var(--text)' : 'var(--muted)' }));
+
+    const pagesList = b.pages.map((p, i) => ({
+      num: String(i + 1).padStart(2, '0'), name: p.name,
+      summary: p.zones.map(z => chName(z.ch)).join(' + ') + (p.win && p.win.on ? `  ${p.win.from} to ${p.win.to}` : ''),
+      dur: p.dur, bg: i === sel ? 'var(--bg-2)' : 'transparent', border: i === sel ? 'var(--border-2)' : 'transparent',
+      onSel: () => this.setState({ sel: i, cz: -1 }),
+      onDur: e => { const v = Math.max(3, +e.target.value || 10); this.upd(bb => { bb.pages[i].dur = v; }); },
+      onUp: () => { if (i > 0) { this.upd(bb => { const [x] = bb.pages.splice(i, 1); bb.pages.splice(i - 1, 0, x); }); if (sel === i) this.setState({ sel: i - 1 }); } },
+      onDown: () => { if (i < b.pages.length - 1) { this.upd(bb => { const [x] = bb.pages.splice(i, 1); bb.pages.splice(i + 1, 0, x); }); if (sel === i) this.setState({ sel: i + 1 }); } },
+      onDel: () => { if (b.pages.length > 1) { this.upd(bb => { bb.pages.splice(i, 1); }); this.setState({ sel: Math.max(0, sel - (i <= sel ? 1 : 0)) }); } }
+    }));
+    const addPage = () => { this.upd(bb => { bb.pages.push({ id: 'p' + Date.now().toString(36), name: lang === 'sv' ? 'Ny sida' : 'New page', layout: 'full', dur: 10, win: null, zones: [{ ch: 'message', o: { cells: null } }] }); }); this.setState({ sel: b.pages.length, cz: 0, caret: 0 }); };
+
+    const LP = {
+      full: { cols: '1fr', rows: '1fr', parts: [['1', '1', 1]] },
+      header: { cols: '1fr', rows: '1fr 2.4fr', parts: [['1', '1', 0], ['1', '2', 1]] },
+      split: { cols: '1fr 1fr', rows: '1fr', parts: [['1', '1', 1], ['2', '1', 0]] },
+      ticker: { cols: '1fr', rows: '2.4fr 1fr', parts: [['1', '1', 1], ['1', '2', 0]] }
+    };
+    const layouts = SFContent.LAYOUTS.map(l => {
+      const on = page && page.layout === l.id, lp = LP[l.id];
+      return { label: l[lang], sel: on, cols: lp.cols, rows: lp.rows,
+        parts: lp.parts.map(([col, row, strong]) => ({ col, row, bg: on ? (strong ? 'var(--accent)' : 'var(--accent-line)') : (strong ? 'var(--pale)' : 'var(--border-2)') })),
+        border: on ? 'var(--accent-line)' : 'var(--border-2)', bg: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--pale)',
+        onPick: () => this.updPage(p => {
+          const need = l.id === 'full' ? 1 : 2; p.layout = l.id;
+          while (p.zones.length < need) p.zones.push({ ch: l.id === 'ticker' ? 'message' : 'clock', o: l.id === 'ticker' ? { text: 'YOUR TICKER TEXT' } : {} });
+          p.zones.length = need;
+        }) };
+    });
+
+    const zoneDefs = page ? SFContent.zonesFor(page.layout, d.rows, d.cols) : [];
+    const lay = page ? SFContent.LAYOUTS.find(l => l.id === page.layout) : null;
+    const zones = page ? zoneDefs.map((z, zi) => {
+      const zone = page.zones[zi] || { ch: 'message', o: {} }, o = zone.o || {}, ticker = page.layout === 'ticker' && zi === 1;
+      const setO = fn => this.updPage(p => { p.zones[zi].o = Object.assign({}, p.zones[zi].o); fn(p.zones[zi].o); });
+      const isSl = zone.ch === 'sl', isWx = zone.ch === 'weather';
+      const q = s.search && s.search.zi === zi ? s.search.text : '';
+      const pool = isSl ? SFContent.STATIONS : SFContent.CITIES, current = isSl ? (o.station || 'Odenplan') : (o.city || 'Stockholm');
+      const sugs = (isSl || isWx) && s.search && s.search.zi === zi ? pool.filter(n => n.toLowerCase().includes(q.toLowerCase())).slice(0, 5).map(name => ({
+        name, mark: name === current ? '●' : '', onPick: () => { setO(oo => { if (isSl) oo.station = name; else oo.city = name; }); this.setState({ search: null }); } })) : [];
+      return {
+        label: lay.zones[lang][zi] + `  ${z.h} × ${z.w}`, channel: zone.ch,
+        onChannel: e => { const v = e.target.value; this.updPage(p => { p.zones[zi] = { ch: v, o: v === 'message' ? (ticker ? { text: 'YOUR TICKER TEXT' } : {}) : v === 'countdown' ? { label: 'MIDSOMMAR', date: '2027-06-25' } : {} }; }); },
+        isComposer: zone.ch === 'message' && !ticker, isTickerText: zone.ch === 'message' && ticker,
+        isClock: zone.ch === 'clock', isCountdown: zone.ch === 'countdown', isSearch: isSl || isWx, isQuote: zone.ch === 'quote',
+        comp: zone.ch === 'message' && !ticker ? this.composer(zi, z, zone, t, b) : { cells: [], chips: [] },
+        inputRef: el => { this.inputs[zi] = el; },
+        focus: () => { const el = this.inputs[zi]; if (el) el.focus(); if (s.cz !== zi) this.setState({ cz: zi, caret: 0 }); },
+        text: o.text || '', onText: e => { const v = e.target.value; setO(oo => { oo.text = v; }); },
+        fmts: this.seg([['24', '24 h'], ['12', '12 h']], o.fmt || '24', v => setO(oo => { oo.fmt = v; })),
+        cdLabel: o.label || '', onCdLabel: e => { const v = e.target.value; setO(oo => { oo.label = v; }); },
+        cdDate: o.date || '', onCdDate: e => { const v = e.target.value; setO(oo => { oo.date = v; }); },
+        searchLabel: isSl ? t.station : t.city, current, q,
+        onQ: e => this.setState({ search: { zi, text: e.target.value } }), onQFocus: () => this.setState({ search: { zi, text: '' } }),
+        sugs, sugBorder: sugs.length ? 'var(--border-2)' : 'transparent'
+      };
+    }) : [];
+
+    const pe = page ? {
+      name: page.name, onName: e => { const v = e.target.value; this.updPage(p => { p.name = v; }); },
+      winOn: !!(page.win && page.win.on), onWin: e => { const on = e.target.checked; this.updPage(p => { p.win = Object.assign({ from: '07:00', to: '09:00' }, p.win, { on }); }); },
+      winFrom: (page.win && page.win.from) || '07:00', winTo: (page.win && page.win.to) || '09:00',
+      onWinFrom: e => { const v = e.target.value; this.updPage(p => { p.win.from = v; }); }, onWinTo: e => { const v = e.target.value; this.updPage(p => { p.win.to = v; }); }
+    } : {};
+
+    const boardsList = s.boards.map((bd, i) => ({ name: bd.name, meta: (bd.size === 'fill' ? t.fill : bd.size === 'custom' ? `${bd.rows} × ${bd.cols}` : bd.size.replace('x', ' × ')),
+      bg: i === s.active ? 'var(--bg-2)' : 'transparent', border: i === s.active ? 'var(--border-2)' : 'transparent',
+      onPick: () => this.setState({ active: i, sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }) }));
+
+    return Object.assign(base, {
+      boardName: b.name, soundOn: !!b.sound, soundState: b.sound ? t.on : t.off, soundInk: b.sound ? 'var(--accent)' : 'var(--muted)',
+      shareUrl, ariaText, tabs, tabPages: s.tab === 'pages', tabBoard: s.tab === 'board', tabBoards: s.tab === 'boards',
+      copyShare: () => { try { navigator.clipboard.writeText('https://' + shareUrl); } catch (e) {} this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1600); },
+      pagesList, addPage, hasPage: !!page, pe, layouts, zones,
+      channels: SFContent.CHANNELS.map(c => ({ id: c.id, label: c[lang] })),
+      sizes: this.seg([['6x22', '6 × 22'], ['3x15', '3 × 15'], ['fill', t.fill], ['custom', t.custom]], b.size, v => this.upd(bb => { if (v === 'custom' && bb.size !== 'custom') { const dd = this.dims(); bb.rows = dd.rows; bb.cols = dd.cols; } bb.size = v; })),
+      isCustom: b.size === 'custom', rows: b.rows, cols: b.cols,
+      onRows: e => { const v = +e.target.value; this.upd(bb => { bb.rows = v; }); }, onCols: e => { const v = +e.target.value; this.upd(bb => { bb.cols = v; }); },
+      themes: Object.values(SplitFlap.THEMES).map(th => ({ label: th.label, sel: b.theme === th.id, face: th.face, glyph: th.glyph, frame: th.housing, font: th.font,
+        border: b.theme === th.id ? 'var(--accent-line)' : 'var(--border-2)', bgSel: b.theme === th.id ? 'var(--accent-soft)' : 'transparent', color: b.theme === th.id ? 'var(--accent)' : 'var(--pale)',
+        onClick: () => this.upd(bb => { bb.theme = th.id; }) })),
+      transitions: this.seg([['classic', 'Classic'], ['wave', 'Wave'], ['drift', 'Drift'], ['curtain', 'Curtain']], b.transition, v => this.upd(bb => { bb.transition = v; })),
+      speeds: this.seg([['gentle', lang === 'sv' ? 'Lugn' : 'Gentle'], ['fast', lang === 'sv' ? 'Snabb' : 'Fast']], b.speed, v => this.upd(bb => { bb.speed = v; })),
+      quietOn: !!b.quiet.on, quietFrom: b.quiet.from, quietTo: b.quiet.to,
+      onQuiet: e => { const v = e.target.checked; this.upd(bb => { bb.quiet.on = v; }); },
+      onQuietFrom: e => { const v = e.target.value; this.upd(bb => { bb.quiet.from = v; }); }, onQuietTo: e => { const v = e.target.value; this.upd(bb => { bb.quiet.to = v; }); },
+      quietModes: this.seg([['blank', t.quietBlank], ['dim', t.quietDim]], b.quiet.mode, v => this.upd(bb => { bb.quiet.mode = v; })),
+      onBoardName: e => { const v = e.target.value; this.upd(bb => { bb.name = v; }); },
+      boardsList,
+      newBoard: () => { const nb = SFContent.defaultBoard(lang === 'sv' ? 'Ny tavla' : 'New board'); nb.pages = [{ id: 'p1', name: lang === 'sv' ? 'Sida 1' : 'Page 1', layout: 'full', dur: 10, win: null, zones: [{ ch: 'message', o: { lines: ['', '', lang === 'sv' ? 'SKRIV HÄR' : 'TYPE HERE'] } }] }]; this.setState({ boards: s.boards.concat([nb]), active: s.boards.length, sel: 0, pageIdx: 0, switcher: false, editing: true, tab: 'pages' }); },
+      duplicate: () => { const nb = JSON.parse(JSON.stringify(b)); nb.id = 'b' + Date.now().toString(36); nb.name = b.name + (lang === 'sv' ? ' kopia' : ' copy'); this.setState({ boards: s.boards.concat([nb]), active: s.boards.length }); },
+      exportJson: () => { const blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (b.name || 'board').replace(/\s+/g, '_') + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); },
+      importClick: () => { if (this.fileRef.current) this.fileRef.current.click(); },
+      onImport: e => { const f = e.target.files && e.target.files[0]; if (!f) return; f.text().then(txt => { try { const nb = JSON.parse(txt); if (nb && nb.pages) this.setState(st => ({ boards: st.boards.concat([nb]), active: st.boards.length })); } catch (err) {} }); e.target.value = ''; },
+      deleteBoard: () => { if (s.boards.length < 2) return; const boards = s.boards.filter((_, i) => i !== s.active); this.setState({ boards, active: 0, sel: 0 }); },
+      cantDelete: s.boards.length < 2
+    });
+  }
+}
+</script>
+</body>
+</html>

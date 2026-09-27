@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- sf:head -->
+<title>Split-Flap Board: a free departure board for any screen</title>
+<meta name="description" content="Turn a spare monitor into a split-flap message board. Messages, clock, SL departures, weather and countdowns, flipping into place like a railway board. Free, no account.">
+<link rel="icon" href="./icons/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="./manifest.webmanifest">
+<!-- /sf:head -->
+<meta name="theme-color" content="#0A0A0C">
+<link rel="preload" href="./fonts/dm-mono-500.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="./src/app.css">
+<script>
+  // Chrome theme before first paint, same rule as maclaine.se: saved choice, else the OS.
+  (function () { var t = null; try { t = localStorage.getItem('theme'); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.dataset.chrome = t; })();
+</script>
+<script type="module" src="./src/main.js"></script>
+</head>
+<body>
+<div class="sf" id="sf" data-sw="./sw.js">
+  <main class="sf-main">
+    <div class="sf-stage" data-screen-label="Board">
+      <div class="sf-canvas-wrap"><canvas aria-hidden="true"></canvas></div>
+    </div>
+    <div class="sf-vh" aria-live="polite"></div>
+    <!-- sf:about -->
+    <section class="sf-about" data-screen-label="About">
+      <div class="sf-about-in">
+        <div class="sf-about-two">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="sf-about-kicker">Split-Flap</span>
+            <h1>A departure board for the screen you already have.</h1>
+          </div>
+          <div class="sf-about-lede">
+            <p>Split-Flap turns a spare monitor into a mechanical style message board. Pages rotate through your own messages, the time, departures from Storstockholms Lokaltrafik (SL), the weather and countdowns, each letter flipping into place like a railway board.</p>
+            <p>It is free and needs no account. Everything you set up stays in this browser, and a board link carries it to another screen.</p>
+          </div>
+        </div>
+
+        <section style="display:flex;flex-direction:column;gap:28px">
+          <h2>Put it on a monitor</h2>
+          <div class="sf-steps">
+            <div class="sf-step">
+              <span>01</span>
+              <h3>Raspberry Pi</h3>
+              <ol>
+                <li>Install Raspberry Pi OS with desktop and connect the monitor.</li>
+                <li>Compose your board on your phone, then open the board link on the Pi.</li>
+                <li>Add <code>?kiosk=1</code> to the link and set Chromium to open it at start up.</li>
+              </ol>
+            </div>
+            <div class="sf-step">
+              <span>02</span>
+              <h3>Casting a tab</h3>
+              <ol>
+                <li>Open the board in Chrome on a computer on the same network as the television.</li>
+                <li>Choose Cast from the browser menu and pick the tab.</li>
+                <li>Press Fullscreen. Keep the computer awake while it casts.</li>
+              </ol>
+            </div>
+            <div class="sf-step">
+              <span>03</span>
+              <h3>An old laptop</h3>
+              <ol>
+                <li>Turn off sleep and the screen saver in the power settings.</li>
+                <li>Open the board link and press F for fullscreen.</li>
+                <li>Set quiet hours so the screen dims overnight.</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section class="sf-about-two">
+          <h2>Questions</h2>
+          <dl class="sf-faq">
+            <div><dt>Is it really free?</dt><dd>Yes. There are no accounts, no adverts and nothing to install.</dd></div>
+            <div><dt>How is this different from a Vestaboard?</dt><dd>A Vestaboard is a real mechanical board and costs thousands. This draws the same kind of board on a screen you already own, with the flaps, the fold and the clatter, for nothing.</dd></div>
+            <div><dt>Where is my board stored?</dt><dd>In this browser only. Clearing site data removes it, so export a copy if it matters to you.</dd></div>
+            <div><dt>How do I move a board to the wall screen?</dt><dd>Press Share and open the link, or scan the QR (Quick Response) code, on the other screen. The link holds the whole board.</dd></div>
+            <div><dt>Why did a character turn blank?</dt><dd>The flaps carry capital letters, Å Ä Ö and a few more Nordic letters, numbers and common punctuation. Anything else shows as a blank flap, just like a real board.</dd></div>
+            <div><dt>What happens when the internet drops?</dt><dd>Messages and the clock keep running. Departures and weather hold their last values and a small note in the corner says how old they are.</dd></div>
+            <div><dt>Can I run my own copy?</dt><dd>Yes. The code is open source on <a href="https://github.com/MMacLaine/split-flap">GitHub</a>, with no build step: any static host will do.</dd></div>
+          </dl>
+        </section>
+
+        <footer>
+          <span>Departures from SL through Trafiklab. Weather from <a href="https://open-meteo.com">Open-Meteo</a>, licensed CC BY 4.0 (Creative Commons Attribution 4.0).</span>
+          <a href="https://maclaine.se">maclaine.se</a>
+        </footer>
+      </div>
+    </section>
+    <!-- /sf:about -->
+  </main>
+</div>
+</body>
+</html>

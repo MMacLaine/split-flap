@@ -1,0 +1,65 @@
+    <section class="sf-about" data-screen-label="About">
+      <div class="sf-about-in">
+        <div class="sf-about-two">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <span class="sf-about-kicker">Split-Flap</span>
+            <h1>En avgångstavla för skärmen du redan har.</h1>
+          </div>
+          <div class="sf-about-lede">
+            <p>Split-Flap gör en ledig skärm till en mekanisk meddelandetavla, en fällbladstavla som på gamla tågstationer. Sidorna roterar mellan dina egna meddelanden, klockan, avgångar från Storstockholms Lokaltrafik (SL), vädret och nedräkningar, och varje bokstav flippar på plats.</p>
+            <p>Den är gratis och kräver inget konto. Allt du ställer in stannar i den här webbläsaren, och en tavellänk tar med det till en annan skärm.</p>
+          </div>
+        </div>
+
+        <section style="display:flex;flex-direction:column;gap:28px">
+          <h2>Sätt den på en skärm</h2>
+          <div class="sf-steps">
+            <div class="sf-step">
+              <span>01</span>
+              <h3>Raspberry Pi</h3>
+              <ol>
+                <li>Installera Raspberry Pi OS med skrivbord och koppla in skärmen.</li>
+                <li>Bygg tavlan på mobilen och öppna tavellänken på din Pi.</li>
+                <li>Lägg till <code>?kiosk=1</code> i länken och låt Chromium öppna den vid start.</li>
+              </ol>
+            </div>
+            <div class="sf-step">
+              <span>02</span>
+              <h3>Casta en flik</h3>
+              <ol>
+                <li>Öppna tavlan i Chrome på en dator i samma nätverk som tv:n.</li>
+                <li>Välj Casta i webbläsarens meny och välj fliken.</li>
+                <li>Tryck Helskärm. Låt datorn vara vaken medan den castar.</li>
+              </ol>
+            </div>
+            <div class="sf-step">
+              <span>03</span>
+              <h3>En gammal laptop</h3>
+              <ol>
+                <li>Stäng av viloläge och skärmsläckare i energiinställningarna.</li>
+                <li>Öppna tavellänken och tryck F för helskärm.</li>
+                <li>Ställ in tysta timmar så dämpas skärmen på natten.</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section class="sf-about-two">
+          <h2>Frågor</h2>
+          <dl class="sf-faq">
+            <div><dt>Är den verkligen gratis?</dt><dd>Ja. Inga konton, ingen reklam och inget att installera.</dd></div>
+            <div><dt>Vad skiljer den från en Vestaboard?</dt><dd>En Vestaboard är en riktig mekanisk tavla och kostar tiotusentals kronor. Den här ritar samma sorts tavla på en skärm du redan äger, med fällbladen, vikningen och smattret, helt gratis.</dd></div>
+            <div><dt>Var sparas min tavla?</dt><dd>Bara i den här webbläsaren. Rensar du webbplatsdata försvinner den, så exportera en kopia om den är viktig för dig.</dd></div>
+            <div><dt>Hur flyttar jag en tavla till väggskärmen?</dt><dd>Tryck Dela och öppna länken, eller skanna QR-koden (Quick Response), på den andra skärmen. Länken innehåller hela tavlan.</dd></div>
+            <div><dt>Varför blev ett tecken tomt?</dt><dd>Bladen har versaler, Å Ä Ö och några fler nordiska bokstäver, siffror och vanliga skiljetecken. Allt annat visas som ett tomt blad, precis som på en riktig tavla.</dd></div>
+            <div><dt>Vad händer om internet försvinner?</dt><dd>Meddelanden och klockan fortsätter. Avgångar och väder behåller sina senaste värden och en liten notis i hörnet visar hur gamla de är.</dd></div>
+            <div><dt>Kan jag köra en egen kopia?</dt><dd>Ja. Koden är öppen på <a href="https://github.com/MMacLaine/split-flap">GitHub</a> och behöver inget byggsteg: vilket statiskt webbhotell som helst fungerar.</dd></div>
+          </dl>
+        </section>
+
+        <footer>
+          <span>Avgångar från SL via Trafiklab. Väder från <a href="https://open-meteo.com">Open-Meteo</a>, licensierat CC BY 4.0 (Creative Commons Erkännande 4.0).</span>
+          <a href="https://maclaine.se">maclaine.se</a>
+        </footer>
+      </div>
+    </section>
