@@ -495,9 +495,19 @@ export class App {
     return h('div', { class: 'sf-pop sf-menu', role: 'menu' },
       this.boards.map((bd, i) => h('div', { class: 'sf-menu-row' },
         h('button', { class: 'sf-menu-item', role: 'menuitem', 'aria-current': String(i === this.active), onclick: () => this.pickBoard(i), ondblclick: () => { this.pickBoard(i); this.renameBoard(); } },
-          h('span', null, bd.name), h('span', null, this.sizeLabel(bd))),
+          h('span', null, bd.name), h('span', null, this.showChanged() && this.changedAt(bd) ? this.changedAt(bd) : this.sizeLabel(bd))),
         i === this.active ? h('button', { class: 'sf-menu-rename', role: 'menuitem', 'data-k': 'menu-rename', title: t.renameBoard, 'aria-label': t.renameBoard, onclick: () => this.renameBoard() }, '✎') : null)),
       h('button', { class: 'sf-menu-new', role: 'menuitem', onclick: () => this.newBoard() }, '+ ' + t.newBoard));
+  }
+  // While a "(copy)" from a sync conflict is here, the menu shows when each account board
+  // last changed on the server instead of its size, so it is clear which copy is newer.
+  // The name may be what changed, so the pair cannot be matched by name.
+  showChanged() { const sfx = this.t.otherDevice; return this.boards.some(o => o.name.endsWith(sfx)); }
+  changedAt(bd) {
+    const e = this.account && this.account.state.boards[bd.id], at = e && e.updated;
+    if (!at) return null;
+    const d = new Date(at), today = d.toDateString() === new Date().toDateString(), loc = this.S.lang === 'sv' ? 'sv-SE' : 'en-GB';
+    return this.t.changedAt(today ? d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString(loc, { day: 'numeric', month: 'short' }));
   }
   sizeLabel(bd) { return bd.size === 'fill' ? this.t.fill : bd.size === 'custom' ? `${bd.rows} × ${bd.cols}` : bd.size.replace('x', ' × '); }
   pickBoard(i) { this.active = i; this.save(); Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }); this.refresh(); }

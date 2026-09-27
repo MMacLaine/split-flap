@@ -76,6 +76,7 @@ export class Account {
       const m = merge(this.app.boards, res.data.boards, this.state, this.user.id, { suffix: this.app.t.otherDevice, newId: () => newId('b') });
       this.state = Object.assign(m.state, { declined: this.state.declined || [] });
       this.offer = [...new Set(this.offer.concat(m.guests))];   // guest boards that had to become copies: offered, not taken
+      for (const r of res.data.boards) if (this.state.boards[r.id] && r.updated) this.state.boards[r.id].updated = r.updated;   // for the board menu
       this.app.replaceBoards(m.boards);
       this.remember();
       await this.push(m.push);
@@ -99,6 +100,7 @@ export class Account {
         : await this.api('PUT', '/boards/' + encodeURIComponent(id), { board, baseRev: e.rev });
       if (res.status === 200) {
         this.state = pushed(this.state, id, res.data.rev);
+        if (this.state.boards[id] && res.data.updated) this.state.boards[id].updated = res.data.updated;
         if (e.deleted && Object.values(this.state.boards).some(x => x.error === 'too_many_boards')) { this.state = unrefuse(this.state, 'too_many_boards'); this.again = true; }   // room for a board the limit held back
         continue;
       }
