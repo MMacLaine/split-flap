@@ -15,7 +15,7 @@ GOOGLE_CLIENT_ID = "753793711246-04l6hi7vegppvdppu8883dlgiap7e03t.apps.googleuse
 [[d1_databases]]
 binding = "DB"
 database_name = "split-flap"
-database_id = "00000000-0000-0000-0000-000000000000"   # replaced after `wrangler d1 create split-flap --jurisdiction eu`
+database_id = "b893a0fb-ab4a-4ecf-8555-1da08155938b"   # created with --jurisdiction eu, 27 September 2026
 migrations_dir = "migrations"
 
 # 60 board writes a minute per account, counted by Cloudflare, not in D1
