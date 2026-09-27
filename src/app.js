@@ -16,7 +16,7 @@ import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
 import { h, clone } from './dom.js';
-import { VERSION, versionIn } from './changelog.js';
+import { VERSION, versionIn, shouldReload } from './changelog.js';
 
 export class App {
   constructor(root) {
@@ -81,7 +81,9 @@ export class App {
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
       this.iv = setInterval(() => this.tick(), 500);
-      // A wall screen can run for weeks, so it looks for a new release once an hour.
+      // A wall screen can run for weeks, so it looks for a new release once an hour. A
+      // reload that reached its version clears the note of it.
+      if (getFlag('sf_reload_for') === VERSION) setFlag('sf_reload_for', '');
       setTimeout(() => this.checkVersion(), 10 * 60e3); setInterval(() => this.checkVersion(), 36e5);
       this.drift();
     });
@@ -166,12 +168,12 @@ export class App {
     try {
       const r = await fetch(new URL('./changelog.js', import.meta.url), { cache: 'no-cache' });
       const v = r.ok ? versionIn(await r.text()) : null;
-      if (v && v !== VERSION) this.reloadPending = true;
+      if (shouldReload(VERSION, v, getFlag('sf_reload_for'))) this.reloadPending = v;
     } catch { /* offline: try again next hour */ }
   }
   maybeReload(now) {
     if (!this.reloadPending || this.S.editing || this.S.share) return;
-    if (this.quietMode() || new Date(now).getHours() === 4) { this.reloadPending = false; location.reload(); }
+    if (this.quietMode() || new Date(now).getHours() === 4) { setFlag('sf_reload_for', this.reloadPending); this.reloadPending = false; location.reload(); }
   }
   // Rolls: every flap turns once when the board starts (after the first page has
   // settled), and optionally on the hour. Not while editing, in quiet hours or during a
