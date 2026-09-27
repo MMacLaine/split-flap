@@ -17,6 +17,7 @@ import { GROUPS, TILES, tileFor, previewLive, SAMPLE_FEED } from './catalogue.js
 import { sampleImage, mapImage, stamp, HEART } from './photo.js';
 import { Composer } from './composer.js';
 import { CHANGELOG, VERSION } from './changelog.js';
+import { pageWins } from './schedule.js';
 import { HELP, INTRO } from './help.js';
 import * as sound from './sound.js';
 
@@ -144,8 +145,8 @@ export class Editor {
   pageItems(compact) {
     const t = this.t, b = this.app.cur(), d = this.app.dims(), sel = this.app.selIdx(), plv = this.panelLv();
     return b.pages.map((p, i) => {
-      const cur = i === sel && (plv === 'page' || plv === 'content'), win = p.win && p.win.on;
-      const badge = win ? `${p.win.days && p.win.days.length && p.win.days.length < 7 ? p.win.days.map(x => t.dayShort[x]).join(' ') + ' ' : ''}${p.win.from} ${t.to} ${p.win.to}` : null;
+      const cur = i === sel && (plv === 'page' || plv === 'content'), wins = pageWins(p);
+      const badge = wins.length ? this.winLabel(wins[0]) + (wins.length > 1 ? ` +${wins.length - 1}` : '') : null;
       return h('li', { class: 'sf-pl' + (cur ? ' current' : '') + (this.E.drag === i ? ' drag' : ''), 'data-pl': i },
         h('button', { class: 'sf-pl-open', 'aria-current': cur ? 'page' : null, 'data-k': 'page-' + i, onclick: () => this.openPage(i) },
           this.thumb('pg-' + p.id, d.rows, d.cols, this.pageGrid(p, b), b.theme),
@@ -184,7 +185,7 @@ export class Editor {
   }
   addPage() {
     const t = this.t, b = this.app.cur(), n = b.pages.length;
-    this.app.upd(bb => { bb.pages.push({ id: newId('p'), name: `${t.page} ${n + 1}`, layout: 'full', dur: 10, win: null, zones: [{ ch: 'message', o: {} }] }); }, true);
+    this.app.upd(bb => { bb.pages.push({ id: newId('p'), name: `${t.page} ${n + 1}`, layout: 'full', dur: 10, wins: [], zones: [{ ch: 'message', o: {} }] }); }, true);
     this.app.S.sel = n;
     this.go('content', { zone: 0, picking: true, fresh: true });
   }
@@ -247,15 +248,6 @@ export class Editor {
             onclick: () => this.openZone(k), onmouseenter: () => this.hover(k), onmouseleave: () => this.hover(null) },
           h('span', null, tile ? this.L(tile.name) : '+ ' + t.chooseContent)); }));
     }
-    const w = p.win || { on: false, from: '07:00', to: '09:00', days: [] };
-    const setWin = fn => this.app.updPage(pp => { pp.win = Object.assign({ on: false, from: '07:00', to: '09:00', days: [] }, pp.win); fn(pp.win); });
-    const days = w.days && w.days.length ? w.days : [];
-    const dayBtns = [1, 2, 3, 4, 5, 6, 0].map(dn => h('button', { class: 'sf-day', 'aria-pressed': String(!days.length || days.includes(dn)), 'data-k': 'day-' + dn,
-      onclick: () => setWin(ww => {
-        let cur = ww.days && ww.days.length ? ww.days.slice() : [0, 1, 2, 3, 4, 5, 6];
-        cur = cur.includes(dn) ? cur.filter(x => x !== dn) : cur.concat(dn);
-        ww.days = cur.length === 7 || !cur.length ? [] : cur.sort();
-      }) }, t.dayShort[dn]));
     const di = DURS.findIndex(x => x >= p.dur), durStep = dir => this.app.updPage(pp => { const i = DURS.findIndex(x => x >= pp.dur); pp.dur = DURS[Math.max(0, Math.min(DURS.length - 1, (i < 0 ? DURS.length - 1 : i) + dir))]; });
     return h('div', { class: 'sf-level' },
       h('label', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.pageName),
@@ -266,18 +258,47 @@ export class Editor {
       h('div', { class: 'sf-field gap' }, h('span', { class: 'sf-eyebrow' }, t.timing),
         h('div', { class: 'sf-row between' }, h('span', { class: 'sf-label' }, t.showFor),
           this.stepper(`${p.dur} s`, () => durStep(-1), () => durStep(1), 'dur', di <= 0, p.dur >= DURS[DURS.length - 1])),
-        h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!w.on, 'data-k': 'win-on', onchange: e => setWin(ww => { ww.on = e.target.checked; }) }), h('span', null, t.window)),
-        w.on && h('div', { class: 'sf-indent' },
-          h('div', { class: 'sf-days', role: 'group', 'aria-label': t.daysLabel }, dayBtns),
-          h('div', { class: 'sf-row' },
-            h('span', { class: 'sf-label muted' }, t.from),
-            h('input', { type: 'time', class: 'sf-time', value: w.from, 'aria-label': t.from, 'data-k': 'win-from', onchange: e => setWin(ww => { ww.from = e.target.value || '07:00'; }) }),
-            h('span', { class: 'sf-label muted' }, t.to),
-            h('input', { type: 'time', class: 'sf-time', value: w.to, 'aria-label': t.to, 'data-k': 'win-to', onchange: e => setWin(ww => { ww.to = e.target.value || '09:00'; }) })))),
+        this.windowsEl(p)),
       h('div', { class: 'sf-row ruled' },
         h('button', { class: 'sf-btn', 'data-k': 'dup-page', onclick: () => this.dupPage() }, t.dupPage),
         h('button', { class: 'sf-btn', 'data-k': 'save-image', onclick: () => this.app.saveImage() }, t.saveImage),
         h('button', { class: 'sf-btn muted', 'data-k': 'del-page', disabled: b.pages.length < 2, onclick: () => this.delPage() }, t.delPage)));
+  }
+  // A page's time windows: the tick is the way in, then one card per window.
+  windowsEl(p) {
+    const t = this.t, wins = pageWins(p);
+    const setWins = fn => this.app.updPage(pp => { const list = clone(pageWins(pp)); fn(list); pp.wins = list; delete pp.win; if (!list.length) delete pp.alone; });
+    const card = (w, i) => {
+      const days = w.days && w.days.length ? w.days : [];
+      const set = fn => setWins(list => fn(list[i]));
+      const dayBtns = [1, 2, 3, 4, 5, 6, 0].map(dn => h('button', { class: 'sf-day', 'aria-pressed': String(!days.length || days.includes(dn)), 'data-k': `day-${i}-${dn}`,
+        onclick: () => set(ww => {
+          let cur = ww.days && ww.days.length ? ww.days.slice() : [0, 1, 2, 3, 4, 5, 6];
+          cur = cur.includes(dn) ? cur.filter(x => x !== dn) : cur.concat(dn);
+          ww.days = cur.length === 7 || !cur.length ? [] : cur.sort();
+        }) }, t.dayShort[dn]));
+      return h('div', { class: 'sf-win' },
+        h('div', { class: 'sf-days', role: 'group', 'aria-label': t.daysLabel }, dayBtns),
+        h('div', { class: 'sf-row' },
+          h('span', { class: 'sf-label muted' }, t.from),
+          h('input', { type: 'time', class: 'sf-time', value: w.from, 'aria-label': t.from, 'data-k': `win-from-${i}`, onchange: e => set(ww => { ww.from = e.target.value || '07:00'; }) }),
+          h('span', { class: 'sf-label muted' }, t.to),
+          h('input', { type: 'time', class: 'sf-time', value: w.to, 'aria-label': t.to, 'data-k': `win-to-${i}`, onchange: e => set(ww => { ww.to = e.target.value || '09:00'; }) }),
+          h('span', { class: 'sf-grow' }),
+          h('button', { class: 'sf-icon', 'aria-label': t.removeTime, title: t.removeTime, 'data-k': `win-rm-${i}`, onclick: () => setWins(list => { list.splice(i, 1); }) }, '×')));
+    };
+    return [
+      h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: wins.length > 0, 'data-k': 'win-on',
+        onchange: e => setWins(list => { if (e.target.checked) { if (!list.length) list.push(...(this.E.lastWins && this.E.lastWins[p.id] || [{ from: '07:00', to: '09:00', days: [] }])); } else { this.E.lastWins = Object.assign({}, this.E.lastWins, { [p.id]: clone(list) }); list.length = 0; } }) }),
+        h('span', null, t.window)),
+      wins.length ? h('div', { class: 'sf-indent' },
+        wins.map(card),
+        wins.length < 8 ? h('button', { class: 'sf-link-btn', 'data-k': 'win-add', onclick: () => setWins(list => { const last = list[list.length - 1]; list.push({ from: last.from, to: last.to, days: [] }); }) }, '+ ' + t.addTime) : null) : null
+    ];
+  }
+  winLabel(w) {
+    const t = this.t, days = w.days && w.days.length && w.days.length < 7 ? w.days.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(x => t.dayShort[x]).join(' ') + ' ' : '';
+    return `${days}${w.from} ${t.to} ${w.to}`;
   }
   stepper(label, dec, inc, key, noDec, noInc) {
     const t = this.t;

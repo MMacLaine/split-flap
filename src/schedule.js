@@ -7,11 +7,12 @@ export function toMin(s) {
   return (+p[0] || 0) * 60 + (+p[1] || 0);
 }
 
-// win = { on, from: 'HH:MM', to: 'HH:MM', days?: [0..6] } with 0 = Sunday, like Date.getDay().
+// win = { from: 'HH:MM', to: 'HH:MM', days?: [0..6] } with 0 = Sunday, like Date.getDay().
 // A window that crosses midnight (22:00 to 02:00) belongs to the day it starts on, so
-// "Friday 22:00 to 02:00" is still showing at 01:00 on Saturday.
+// "Friday 22:00 to 02:00" is still showing at 01:00 on Saturday. The 0.2 shape carried
+// on: false for a window that was switched off, which counts as always open.
 export function inWindow(win, now) {
-  if (!win || !win.on) return true;
+  if (!win || win.on === false) return true;
   const d = new Date(now), m = d.getHours() * 60 + d.getMinutes();
   const a = toMin(win.from), b = toMin(win.to);
   const days = Array.isArray(win.days) && win.days.length ? win.days : null;
@@ -21,6 +22,17 @@ export function inWindow(win, now) {
   if (m >= a) return dayOk(d.getDay());
   if (m < b) return dayOk((d.getDay() + 6) % 7);         // after midnight: yesterday's window
   return false;
+}
+
+// A page's windows. 0.3 stores a list in wins; a page from 0.2 has one win.
+export function pageWins(p) {
+  if (!p) return [];
+  if (Array.isArray(p.wins)) return p.wins;
+  return p.win && p.win.on ? [p.win] : [];
+}
+// True when the list is empty (the page can show at any time) or any window is open.
+export function inWindows(wins, now) {
+  return !wins || !wins.length || wins.some(w => inWindow(w, now));
 }
 
 export function inQuiet(quiet, now) {
@@ -33,11 +45,12 @@ export function nextPage(pages, idx, start, now) {
   const n = pages.length;
   if (!n) return { idx: -1, start: now };
   const cur = idx >= 0 && idx < n ? pages[idx] : null;
-  const expired = !cur || now - start >= Math.max(3, +cur.dur || 10) * 1000 || !inWindow(cur.win, now);
+  const ok = p => inWindows(pageWins(p), now);
+  const expired = !cur || now - start >= Math.max(3, +cur.dur || 10) * 1000 || !ok(cur);
   if (!expired) return { idx, start };
   for (let i = 1; i <= n; i++) {
     const j = ((idx < 0 ? -1 : idx) + i) % n;
-    if (inWindow(pages[j].win, now)) return { idx: j, start: now };
+    if (ok(pages[j])) return { idx: j, start: now };
   }
   return { idx: -1, start: now };
 }

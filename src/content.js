@@ -498,16 +498,16 @@ function drawChannel(g, ch, o, z, now) {
 
 // What the board shows when no page is allowed right now (every page has a time
 // window and none is open): the clock, so a wall display is never stale.
-export const FALLBACK_PAGE = { id: 'fallback', name: 'Clock', layout: 'full', dur: 60, win: null, zones: [{ ch: 'clock', o: { fmt: '24' } }] };
+export const FALLBACK_PAGE = { id: 'fallback', name: 'Clock', layout: 'full', dur: 60, wins: [], zones: [{ ch: 'clock', o: { fmt: '24' } }] };
 
 export function demoPages(lang) {
   const sv = lang === 'sv';
   return [
-    { id: 'p1', name: sv ? 'Välkommen' : 'Welcome', layout: 'full', dur: 12, win: null, zones: [{ ch: 'message', o: { lines: ['', sv ? 'HEJ FRÅN' : 'HELLO FROM', sv ? 'EN LEDIG SKÄRM' : 'A SPARE MONITOR', '', 'roygbv', ''] } }] },
-    { id: 'p2', name: sv ? 'Morgonpendling' : 'Morning commute', layout: 'header', dur: 14, win: null, zones: [{ ch: 'clock', o: { fmt: '24' } }, { ch: 'sl', o: { site: 9117, name: 'Odenplan', modes: ['METRO', 'TRAIN'], eta: 'min' } }] },
-    { id: 'p3', name: sv ? 'Väder och nedräkning' : 'Weather and countdown', layout: 'split', dur: 12, win: null, zones: [{ ch: 'weather', o: { city: 'Stockholm', lat: 59.33, lon: 18.07 } }, { ch: 'countdown', o: { label: 'MIDSOMMAR', date: '2027-06-25' } }] },
-    { id: 'p4', name: sv ? 'Dagens ord' : 'Quote of the hour', layout: 'ticker', dur: 14, win: null, zones: [{ ch: 'quote', o: {} }, { ch: 'message', o: { text: sv ? 'GRATIS, INGET KONTO. ALLT STANNAR I DIN WEBBLÄSARE.' : 'FREE, NO ACCOUNT. EVERYTHING STAYS IN YOUR BROWSER.' } }] },
-    { id: 'p5', name: sv ? 'Klocka' : 'Clock', layout: 'full', dur: 10, win: null, zones: [{ ch: 'clock', o: { fmt: '24' } }] }
+    { id: 'p1', name: sv ? 'Välkommen' : 'Welcome', layout: 'full', dur: 12, wins: [], zones: [{ ch: 'message', o: { lines: ['', sv ? 'HEJ FRÅN' : 'HELLO FROM', sv ? 'EN LEDIG SKÄRM' : 'A SPARE MONITOR', '', 'roygbv', ''] } }] },
+    { id: 'p2', name: sv ? 'Morgonpendling' : 'Morning commute', layout: 'header', dur: 14, wins: [], zones: [{ ch: 'clock', o: { fmt: '24' } }, { ch: 'sl', o: { site: 9117, name: 'Odenplan', modes: ['METRO', 'TRAIN'], eta: 'min' } }] },
+    { id: 'p3', name: sv ? 'Väder och nedräkning' : 'Weather and countdown', layout: 'split', dur: 12, wins: [], zones: [{ ch: 'weather', o: { city: 'Stockholm', lat: 59.33, lon: 18.07 } }, { ch: 'countdown', o: { label: 'MIDSOMMAR', date: '2027-06-25' } }] },
+    { id: 'p4', name: sv ? 'Dagens ord' : 'Quote of the hour', layout: 'ticker', dur: 14, wins: [], zones: [{ ch: 'quote', o: {} }, { ch: 'message', o: { text: sv ? 'GRATIS, INGET KONTO. ALLT STANNAR I DIN WEBBLÄSARE.' : 'FREE, NO ACCOUNT. EVERYTHING STAYS IN YOUR BROWSER.' } }] },
+    { id: 'p5', name: sv ? 'Klocka' : 'Clock', layout: 'full', dur: 10, wins: [], zones: [{ ch: 'clock', o: { fmt: '24' } }] }
   ];
 }
 

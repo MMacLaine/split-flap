@@ -21,7 +21,7 @@ const pick = (v, list, dflt) => list.includes(v) ? v : dflt;
 const str = (v, max, dflt = '') => typeof v === 'string' ? v.slice(0, max) : dflt;
 const int = (v, lo, hi, dflt) => { const n = Math.round(+v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt; };
 const color = v => v === 'rainbow' || CHIP_KEYS.includes(v) ? v : 'f';
-const time = (v, dflt) => /^\d{2}:\d{2}$/.test(v) ? v : dflt;
+const time = (v, dflt) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : dflt;
 const num = (v, lo, hi) => { const n = +v; return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 const list = (v, n, len) => (Array.isArray(v) ? v : []).slice(0, n).map(x => str(x, len));
 const chipList = v => [...new Set((Array.isArray(v) ? v : []).filter(k => CHIP_KEYS.includes(k)))].slice(0, 9);
@@ -84,11 +84,21 @@ function sanitizeZone(z) {
   return { ch, o: out };
 }
 
+// One time window. Days are Date.getDay() numbers; an empty list is every day.
 function sanitizeWin(w) {
   if (!w || typeof w !== 'object') return null;
-  const days = Array.isArray(w.days) ? [...new Set(w.days.map(d => int(d, 0, 6, -1)).filter(d => d >= 0))] : [];
-  return { on: !!w.on, from: time(w.from, '07:00'), to: time(w.to, '09:00'), days };
+  const days = Array.isArray(w.days) ? [...new Set(w.days.map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort() : [];
+  return { from: time(w.from, '07:00'), to: time(w.to, '09:00'), days };
 }
+// A page's windows: the 0.3 list, else the one 0.2 window if it was switched on.
+const MAX_WINS = 8;
+function sanitizeWins(p) {
+  const src = Array.isArray(p && p.wins) ? p.wins : p && p.win && p.win.on ? [p.win] : [];
+  return src.slice(0, MAX_WINS).map(sanitizeWin).filter(Boolean);
+}
+// A board saved by 0.3 may be opened by a wall screen still running 0.2, which only
+// reads win. So the first window is also written in the old shape for now.
+const legacyWin = wins => wins[0] ? { on: true, from: wins[0].from, to: wins[0].to, days: wins[0].days } : null;
 
 export function sanitizeBoard(b) {
   if (!b || typeof b !== 'object' || !Array.isArray(b.pages)) return null;
@@ -98,7 +108,8 @@ export function sanitizeBoard(b) {
     const layout = pick(p && p.layout, LAYOUTS, 'full'), need = layout === 'full' ? 1 : 2;
     const zones = (Array.isArray(p && p.zones) ? p.zones : []).slice(0, need).map(sanitizeZone);
     while (zones.length < need) zones.push({ ch: 'message', o: {} });
-    return { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10), win: sanitizeWin(p && p.win), zones };
+    const wins = sanitizeWins(p);
+    return { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10), wins, win: legacyWin(wins), zones };
   });
   if (!pages.length) return null;
   return {
@@ -142,8 +153,10 @@ async function pipe(bytes, stream) {
   return new Uint8Array(await out.arrayBuffer());
 }
 
+// Sanitized on the way out as well, so the link carries the same shape as a saved board
+// (and the old-shape win stays in step with the windows).
 export async function encodeBoard(board) {
-  const json = new TextEncoder().encode(JSON.stringify(board));
+  const json = new TextEncoder().encode(JSON.stringify(sanitizeBoard(board) || board));
   return b64url(await pipe(json, new CompressionStream('deflate-raw')));
 }
 // Returns a sanitized board, or null for anything damaged. A payload that inflates
