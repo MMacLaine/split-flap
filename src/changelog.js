@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.5.3', date: '2026-09-27',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'Three small things left over from the 0.5.2 review.',
+      sv: 'Tre små saker som blev kvar efter granskningen av 0.5.2.'
+    },
+    items: {
+      en: [
+        'When your account holds the most boards it can and you delete one, a board that was kept here only goes to the account on its own. Before, it waited until you changed it.',
+        'If the server asks the app to slow down, it tries again after a minute. Before, it waited for your next change.',
+        'On a phone, the bar says Sign in with a ! when your session has run out, so it stays on two rows.'
+      ],
+      sv: [
+        'När ditt konto har så många tavlor det kan ha och du raderar en, går en tavla som bara fanns här till kontot av sig själv. Förut väntade den tills du ändrade den.',
+        'Om servern ber appen att sakta ner försöker den igen efter en minut. Förut väntade den på din nästa ändring.',
+        'På en telefon säger raden Logga in med ett ! när din inloggning har gått ut, så den håller sig på två rader.'
+      ]
+    }
+  },
+  {
     v: '0.5.2', date: '2026-09-27',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

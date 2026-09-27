@@ -2,6 +2,14 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.5.3 (2026-09-27): Fixes
+
+Three small things left over from the 0.5.2 review.
+
+- When your account holds the most boards it can and you delete one, a board that was kept here only goes to the account on its own. Before, it waited until you changed it.
+- If the server asks the app to slow down, it tries again after a minute. Before, it waited for your next change.
+- On a phone, the bar says Sign in with a ! when your session has run out, so it stays on two rows.
+
 ## v0.5.2 (2026-09-27): Fixes
 
 I had the account sync reviewed and it found ways to lose changes. All of them are fixed here, with a few smaller ones.
