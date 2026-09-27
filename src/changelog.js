@@ -89,3 +89,7 @@ export const CHANGELOG = [
 ];
 
 export const VERSION = CHANGELOG[0].v;
+
+// The newest version named in this file's own text, so a wall screen can fetch the file
+// and see whether a newer release is live (see App.checkVersion).
+export const versionIn = text => { const m = /\bv:\s*'([^']+)'/.exec(String(text || '')); return m ? m[1] : null; };
