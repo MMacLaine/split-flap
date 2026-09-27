@@ -4,7 +4,7 @@
 // without the Worker (python3 -m http.server) never gets past init(), and the app shows
 // no account controls at all.
 
-import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState } from './sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, refused, unsynced, offerable, signOut, switchUser, emptyState } from './sync.js';
 import { newId } from './content.js';
 import { getFlag, setFlag } from './store.js';
 
@@ -21,7 +21,7 @@ export class Account {
     this.app = app;
     this.available = false;   // the API answered, so the account controls show
     this.user = null;         // { id, name, email } when signed in
-    this.status = 'idle';     // idle | syncing | waiting | failed
+    this.status = 'idle';     // idle | syncing | waiting | failed | signedout (the session ran out)
     this.offer = [];          // guest boards to offer up on the first sign-in
     this.state = loadState();
     this.seen = new Map();    // board id to its JSON when last known in step
@@ -40,7 +40,11 @@ export class Account {
   async init() {
     let res;
     try { res = await this.api('GET', '/me'); } catch { return; }
-    if (res.status === 401 && res.data && res.data.error) { this.available = true; this.app.render(); return; }
+    if (res.status === 401 && res.data && res.data.error) {
+      this.available = true;
+      if (this.state.user) this.status = 'signedout';   // this browser holds an account's boards: changes keep being marked
+      this.app.render(); return;
+    }
     if (res.status !== 200 || !res.data || !res.data.id) return;
     this.available = true; this.user = res.data;
     const b = this.app.boards;
@@ -67,30 +71,37 @@ export class Account {
     this.running = true; this.status = 'syncing'; this.paint();
     try {
       const res = await this.api('GET', '/boards');
-      if (res.status === 401) { this.user = null; this.status = 'idle'; this.app.render(); return; }
+      if (res.status === 401) { this.lostSession(); return; }
       if (res.status !== 200) throw new Error(res.status);
       const m = merge(this.app.boards, res.data.boards, this.state, this.user.id, { suffix: this.app.t.otherDevice, newId: () => newId('b') });
       this.state = Object.assign(m.state, { declined: this.state.declined || [] });
+      this.offer = [...new Set(this.offer.concat(m.guests))];   // guest boards that had to become copies: offered, not taken
       this.app.replaceBoards(m.boards);
       this.remember();
       await this.push(m.push);
-      this.status = Object.values(this.state.boards).some(e => e.dirty && e.owner === this.user.id) ? 'waiting' : 'idle';
+      if (!this.user) return;                                  // signed out part way
+      this.status = Object.values(this.state.boards).some(e => e.dirty && !e.error && e.owner === this.user.id) ? 'waiting' : 'idle';
     } catch {
-      this.status = 'failed';
+      if (this.user) this.status = 'failed';
     } finally {
       this.running = false; this.saveState(); this.paint();
     }
   }
 
+  // Each board on its own, so one refused board never holds up the rest.
   async push(ids) {
     for (const id of ids) {
+      if (!this.user) return;
       const e = this.state.boards[id]; if (!e || e.owner !== this.user.id) continue;
       const board = this.app.boards.find(x => x.id === id);
       const res = e.deleted || !board
         ? await this.api('DELETE', '/boards/' + encodeURIComponent(id), { baseRev: e.rev })
         : await this.api('PUT', '/boards/' + encodeURIComponent(id), { board, baseRev: e.rev });
-      if (res.status === 200) { this.state = Object.assign(pushed(this.state, id, res.data.rev), { declined: this.state.declined }); continue; }
+      if (res.status === 200) { this.state = pushed(this.state, id, res.data.rev); continue; }
       if (res.status === 409) { this.again = true; continue; }   // changed elsewhere: the next pull sorts it out
+      if (res.status === 413 || res.status === 400) { this.state = refused(this.state, id, (res.data && res.data.error) || 'bad_board'); continue; }   // kept here, not retried until it changes
+      if (res.status === 401) { this.lostSession(); return; }
+      if (res.status === 429) return;                           // too many writes: the next sync carries on
       throw new Error(res.status);
     }
     if (this.again) { this.again = false; this.running = false; setTimeout(() => this.sync(), 50); }
@@ -99,26 +110,39 @@ export class Account {
   // What each board looked like when last in step, so changed() can tell what moved.
   remember() { this.seen = new Map(this.app.boards.map(b => [b.id, JSON.stringify(b)])); }
 
-  // After every save in the app. New boards made while signed in belong to the account
-  // (guest boards from before are only offered); changed ones are marked; removed ones
-  // are marked deleted. The push waits two seconds, so typing is one save, not many.
+  // The session ran out or was revoked. This browser still holds the account's boards,
+  // so changes to them keep being marked, and sync when the same account signs in again.
+  lostSession() { this.user = null; this.status = 'signedout'; this.app.render(); }
+
+  // After every save in the app. Boards of the account this browser syncs with are marked
+  // changed or deleted, signed in or not (a session can run out mid-edit). New boards are
+  // only taken into the account while signed in; guest boards from before are offered.
+  // The push waits two seconds, so typing is one save, not many.
   changed() {
-    if (!this.user || this.replacing) return;
+    const owner = this.user ? this.user.id : this.state.user;
+    if (!owner || this.replacing) return;
     let st = this.state;
     const ids = new Set(this.app.boards.map(b => b.id));
     for (const b of this.app.boards) {
       const known = st.boards[b.id];
       if (!known) {
-        if (this.offer.includes(b.id) || (st.declined || []).includes(b.id)) continue;
-        st = adopt(st, [b.id], this.user.id);
-      } else if (this.seen.get(b.id) !== JSON.stringify(b)) st = markDirty(st, b.id);
+        if (!this.user || this.offer.includes(b.id) || (st.declined || []).includes(b.id)) continue;
+        st = adopt(st, [b.id], owner);
+      } else if (known.owner === owner && this.seen.get(b.id) !== JSON.stringify(b)) st = markDirty(st, b.id);
     }
-    for (const id of Object.keys(st.boards)) if (!ids.has(id) && st.boards[id].owner === this.user.id && !st.boards[id].deleted) st = markDeleted(st, id);
+    for (const id of Object.keys(st.boards)) if (!ids.has(id) && st.boards[id].owner === owner && !st.boards[id].deleted) st = markDeleted(st, id);
     this.state = Object.assign(st, { declined: this.state.declined || [] });
     this.remember(); this.saveState();
+    if (!this.user) { this.paint(); return; }
     this.status = 'waiting'; this.paint();
     clearTimeout(this.timer); this.timer = setTimeout(() => this.sync(), 2000);
   }
+  // Boards the server refused, with why, for the account panel.
+  refusedBoards() {
+    return Object.entries(this.state.boards).filter(([, e]) => e.error && e.owner === this.state.user)
+      .map(([id, e]) => ({ id, error: e.error, name: (this.app.boards.find(b => b.id === id) || {}).name || id }));
+  }
+  unsyncedCount() { return this.state.user ? unsynced(this.state).length : 0; }
 
   // The first sign-in offer: take the guest boards into the account, or leave them here.
   answerOffer(keep) {
@@ -136,11 +160,15 @@ export class Account {
   }
 
   // Signing out takes the account's boards out of this browser, after a last push.
+  // Boards whose changes still have not reached the account stay here as guest boards
+  // (the rule is in sync.js), and the panel said so before the second press.
   async signOut() {
     clearTimeout(this.timer);
-    try { await this.sync(); } catch { /* offline: what is not pushed stays on the server as it was */ }
+    await this.sync();
+    const kept = this.unsyncedCount();
     await this.api('POST', '/auth/sign-out', {}).catch(() => null);
     this.forget();
+    if (kept) this.app.flash(this.app.t.keptAsGuest(kept));
   }
   forget() {
     const r = signOut(this.app.boards, this.state);
