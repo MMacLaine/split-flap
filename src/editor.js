@@ -277,8 +277,15 @@ export class Editor {
           cur = cur.includes(dn) ? cur.filter(x => x !== dn) : cur.concat(dn);
           ww.days = cur.length === 7 || !cur.length ? [] : cur.sort();
         }) }, t.dayShort[dn]));
+      const dated = !!w.date, today = new Date(), iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       return h('div', { class: 'sf-win' },
-        h('div', { class: 'sf-days', role: 'group', 'aria-label': t.daysLabel }, dayBtns),
+        h('div', { class: 'sf-row' },
+          h('button', { class: 'sf-seg', 'aria-pressed': String(!dated), 'data-k': `win-mode-${i}-days`, onclick: () => set(ww => { delete ww.date; delete ww.yearly; }) }, t.winDays),
+          h('button', { class: 'sf-seg', 'aria-pressed': String(dated), 'data-k': `win-mode-${i}-date`, onclick: () => set(ww => { if (!ww.date) { ww.date = iso; ww.days = []; } }) }, t.winDate)),
+        dated ? h('div', { class: 'sf-row' },
+          h('input', { type: 'date', class: 'sf-input', value: w.date, 'aria-label': t.winDate, 'data-k': `win-date-${i}`, onchange: e => { if (e.target.value) set(ww => { ww.date = e.target.value; }); } }),
+          h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!w.yearly, 'data-k': `win-yearly-${i}`, onchange: e => set(ww => { if (e.target.checked) ww.yearly = true; else delete ww.yearly; }) }), h('span', null, t.everyYear)))
+          : h('div', { class: 'sf-days', role: 'group', 'aria-label': t.daysLabel }, dayBtns),
         h('div', { class: 'sf-row' },
           h('span', { class: 'sf-label muted' }, t.from),
           h('input', { type: 'time', class: 'sf-time', value: w.from, 'aria-label': t.from, 'data-k': `win-from-${i}`, onchange: e => set(ww => { ww.from = e.target.value || '07:00'; }) }),
@@ -297,6 +304,10 @@ export class Editor {
     ];
   }
   winLabel(w) {
+    if (w.date) {
+      const [y, m, d] = w.date.split('-').map(Number), when = `${d} ${this.t.monthShort[m - 1]}${w.yearly ? '' : ' ' + y}`;
+      return w.from === w.to ? when : `${when} ${w.from} ${this.t.to} ${w.to}`;
+    }
     const t = this.t, days = w.days && w.days.length && w.days.length < 7 ? w.days.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(x => t.dayShort[x]).join(' ') + ' ' : '';
     return `${days}${w.from} ${t.to} ${w.to}`;
   }

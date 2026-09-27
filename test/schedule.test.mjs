@@ -62,3 +62,44 @@ test('the playlist uses every window of a page', () => {
   assert.equal(nextPage(pages, -1, 0, at(9, 29, 12)).idx, -1);
   assert.equal(inWindow({ from: '06:00', to: '07:00', days: [] }, at(9, 29, 6, 30)), true);   // no on flag needed
 });
+
+test('a yearly date shows on its day every year, a one-off only in its year', () => {
+  const bday = { from: '00:00', to: '00:00', date: '2026-03-14', yearly: true };
+  assert.equal(inWindow(bday, at(3, 14, 12)), true);
+  assert.equal(inWindow(bday, at(3, 14, 12, 0, 2029)), true);
+  assert.equal(inWindow(bday, at(3, 15, 12)), false);
+  const once = { from: '09:00', to: '17:00', date: '2027-03-14' };
+  assert.equal(inWindow(once, at(3, 14, 12, 0, 2027)), true);
+  assert.equal(inWindow(once, at(3, 14, 12, 0, 2028)), false);
+  assert.equal(inWindow(once, at(3, 14, 8, 0, 2027)), false);
+});
+
+test('a date window crossing midnight belongs to the day it starts', () => {
+  const eve = { from: '22:00', to: '02:00', date: '2026-12-24', yearly: true };
+  assert.equal(inWindow(eve, at(12, 24, 23)), true);
+  assert.equal(inWindow(eve, at(12, 25, 1)), true);        // 01:00 on the 25th, still the 24th's window
+  assert.equal(inWindow(eve, at(12, 25, 23)), false);
+  assert.equal(inWindow(eve, at(12, 24, 1)), false);       // the 23rd's night is not the 24th
+});
+
+test('29 February only matches in leap years', () => {
+  const leap = { from: '00:00', to: '00:00', date: '2028-02-29', yearly: true };
+  assert.equal(inWindow(leap, at(2, 29, 12, 0, 2032)), true);
+  assert.equal(inWindow(leap, at(3, 1, 12, 0, 2029)), false);   // not moved to 1 March in 2029
+  assert.equal(inWindow(leap, at(2, 28, 12, 0, 2029)), false);
+});
+
+test('the sanitizer keeps real dates only, and a date replaces the days', () => {
+  const b = sanitizeBoard(board([{ wins: [
+    { from: '08:00', to: '09:00', date: '2026-03-14', yearly: true, days: [1, 2] },
+    { from: '08:00', to: '09:00', date: '2026-04-31' },
+    { from: '08:00', to: '09:00', date: '2026-02-29', yearly: 'yes' },
+    { from: '08:00', to: '09:00', date: '2028-02-29', yearly: 1 }
+  ] }]));
+  const w = b.pages[0].wins;
+  assert.deepEqual(w[0], { from: '08:00', to: '09:00', days: [], date: '2026-03-14', yearly: true });
+  assert.equal(w[1].date, undefined);       // 31 April does not exist
+  assert.equal(w[2].date, undefined);       // 2026 is not a leap year
+  assert.deepEqual(w[3], { from: '08:00', to: '09:00', days: [], date: '2028-02-29' });   // yearly must be true, not truthy
+  assert.equal(sanitizeBoard(board([{ wins: [w[0]] }])).pages[0].win, null);   // no 0.2 shape for a dated window
+});
