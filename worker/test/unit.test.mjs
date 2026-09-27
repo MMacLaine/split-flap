@@ -35,3 +35,10 @@ test('a failed request is logged with its route, status and code, and nothing ab
   } finally { console.warn = quiet; }
   assert.equal(routeName('/export'), '/export');
 });
+
+test('the production route is a top-level key, above every [table] in wrangler.toml', async () => {
+  const { readFileSync } = await import('node:fs');
+  const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8').replace(/#.*$/gm, '');
+  const top = toml.split(/^\[/m)[0];                  // TOML puts every key after a [header] inside that table
+  assert.match(top, /^routes = \[\{ pattern = "maclaine\.se\/split-flap\/api\/\*"/m);
+});
