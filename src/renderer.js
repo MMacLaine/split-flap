@@ -66,7 +66,7 @@ export const FOLD = {
   fast:      { step: 70,  final: 160, settle: 90,  maxSteps: 10 },
   gentle:    { step: 110, final: 260, settle: 120, maxSteps: 14 },
   // Every flap between here and there, like the hardware. Steps are quicker than Fast
-  // so a full turn of the drum (75 flaps) lands in about four seconds.
+  // so a full turn of the drum (74 flaps) lands in about four seconds.
   authentic: { step: 52,  final: 160, settle: 90,  maxSteps: Infinity },
   exp: 1.35,          // fold angle = PI * t^1.35 (gravity: slow release, accelerating fall)
   settleAngle: 0.13,  // rebound after the final flap lands (radians)
@@ -100,7 +100,18 @@ function paintFace(ctx, ch, x, y, w, h, T) {
   } else {
     g.addColorStop(0, T.faceHi); g.addColorStop(0.5, T.face); g.addColorStop(0.5, T.faceB); g.addColorStop(1, T.faceLo);
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
-    if (ch !== ' ') {
+    if (ch === '♥') {
+      // Drawn as a shape: the board faces may not carry the glyph, and a fallback font
+      // would draw an emoji. Cap height tall, in the glyph colour.
+      const ch2 = h * GEOM.capHeight, top = y + h * (GEOM.baseline - GEOM.capHeight), cx = x + w / 2, hw = ch2 * 0.54;
+      ctx.fillStyle = T.glyph; ctx.beginPath();
+      ctx.moveTo(cx, top + ch2);
+      ctx.bezierCurveTo(cx - hw * 0.35, top + ch2 * 0.72, cx - hw, top + ch2 * 0.52, cx - hw, top + ch2 * 0.26);
+      ctx.bezierCurveTo(cx - hw, top - ch2 * 0.02, cx - hw * 0.25, top - ch2 * 0.06, cx, top + ch2 * 0.2);
+      ctx.bezierCurveTo(cx + hw * 0.25, top - ch2 * 0.06, cx + hw, top - ch2 * 0.02, cx + hw, top + ch2 * 0.26);
+      ctx.bezierCurveTo(cx + hw, top + ch2 * 0.52, cx + hw * 0.35, top + ch2 * 0.72, cx, top + ch2);
+      ctx.fill();
+    } else if (ch !== ' ') {
       const fs = h * GEOM.capHeight / T.capRatio;
       ctx.font = `${T.weight} ${fs}px ${T.font}, "DM Mono", ui-monospace, monospace`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = T.glyph;

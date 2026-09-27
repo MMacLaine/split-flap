@@ -16,13 +16,16 @@ export const CHIP_NAMES = {
   sv: { r: 'röd', o: 'orange', y: 'gul', g: 'grön', b: 'blå', v: 'lila', w: 'vit', k: 'svart', f: 'fylld' }
 };
 
-export const DRUM = ' ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖÆØÜÉ0123456789.,:;!?\'"-+/&%#@()=$°' + CHIP_KEYS.join('');
+// The heart came in 0.3 (the Vestaboard Note has one), after the punctuation so the
+// chips stay last. Links store characters, not positions, so older boards are unchanged.
+export const DRUM = ' ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖÆØÜÉ0123456789.,:;!?\'"-+/&%#@()=$°♥' + CHIP_KEYS.join('');
 export const DRUM_IDX = Object.fromEntries([...DRUM].map((c, i) => [c, i]));
 
 // Characters that are not on the drum but have an honest stand-in.
 const FOLD_MAP = {
   'È': 'E', 'Ê': 'E', 'Ë': 'E', 'Á': 'A', 'À': 'A', 'Â': 'A', 'Í': 'I', 'Ì': 'I', 'Ó': 'O', 'Ò': 'O',
   'Ô': 'O', 'Ú': 'U', 'Ù': 'U', 'Ñ': 'N', 'Ç': 'C', 'ß': 'SS',
+  '\u2764': '♥', '\u2661': '♥',   // ❤ and ♡: a phone keyboard's hearts
   '\u2019': "'", '\u2018': "'", '\u201C': '"', '\u201D': '"', '\u2013': '-', '\u2014': '-', '\u00B4': "'", '`': "'"
 };
 
@@ -49,6 +52,7 @@ export function cellChar(ch) {
 export function textToCells(s) {
   const out = [];
   for (const ch of String(s || '')) {
+    if (ch === '\uFE0F') continue;   // emoji presentation selector, sent after ❤ by phones
     const u = ch.toUpperCase();
     const f = FOLD_MAP[u] || FOLD_MAP[ch];
     if (f && f.length > 1) { out.push(...f); continue; }

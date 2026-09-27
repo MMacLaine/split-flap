@@ -140,3 +140,14 @@ test('a page keeps a valid transition of its own and drops a bad one', () => {
   const b = sanitizeBoard(board([{ tr: 'wave' }, { tr: 'explode' }, {}]));
   assert.deepEqual(b.pages.map(p => p.tr), ['wave', undefined, undefined]);
 });
+
+test('hearts from a phone become the heart flap, and 0.2 boards are unchanged', async () => {
+  const { textToCells, cleanChar } = await import('../src/charset.js');
+  assert.deepEqual(textToCells('I ❤️ U'), ['I', ' ', '♥', ' ', 'U']);
+  assert.deepEqual(textToCells('♡♥'), ['♥', '♥']);
+  assert.deepEqual(cleanChar('❤'), { ch: '♥', valid: true });
+  const old = board([{ zones: [{ ch: 'message', o: { cells: [['H', 'E', 'J', 'r', '°']] } }] }]);
+  const once = sanitizeBoard(old), twice = sanitizeBoard(JSON.parse(JSON.stringify(once)));
+  assert.deepEqual(twice, once);
+  assert.deepEqual(once.pages[0].zones[0].o.cells[0].slice(0, 5), ['H', 'E', 'J', 'r', '°']);
+});
