@@ -342,7 +342,7 @@ export class Editor {
       groups);
   }
   pickerGroups(zd, cur) {
-    const t = this.t, q = this.E.search.trim().toLowerCase(), wide = zd.w / Math.max(1, zd.h) > 3.2, ticker = this.isTicker();
+    const t = this.t, q = this.E.search.trim().toLowerCase(), wide = +aspect(zd.h, zd.w) > 3.2, ticker = this.isTicker();
     const match = x => !q || [x.name.en, x.name.sv, x.desc ? x.desc.en : '', x.desc ? x.desc.sv : ''].some(s => s.toLowerCase().includes(q));
     const b = this.app.cur(), now = Date.now(), pl = previewLive(this.app.live.data, now);
     const groups = GROUPS.map(([g, label]) => {
