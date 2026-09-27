@@ -41,7 +41,7 @@ export const STR = {
     moveUp: 'Move up', moveDown: 'Move down', delPage: 'Delete page', lang: 'Language', controls: 'Board controls', editor: 'Editor',
     boardLink: 'Board link', fallback: 'No page is scheduled right now, so the board shows the clock.',
     // editor drawer (DESIGN-HANDOVER-editor.md)
-    addTime: 'Add another time', removeTime: 'Remove this time', showAlone: 'Show alone while this is on', showAloneHint: 'Pages without a time wait until it ends.', winDays: 'Days of the week', winDate: 'A date', everyYear: 'Every year',
+    addTime: 'Add another time', removeTime: 'Remove this time', pageTransition: 'Transition to this page', boardDefault: name => `Board default (${name})`, showAlone: 'Show alone while this is on', showAloneHint: 'Pages without a time wait until it ends.', winDays: 'Days of the week', winDate: 'A date', everyYear: 'Every year',
     monthShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     help: 'Help', helpSub: 'How the board works', gridIs: (r, c) => `The board is ${r} × ${c} flaps.`, changeSize: 'Change the size',
     chooseContent: 'Choose content', pageOf: (i, n) => `Page ${i} / ${n}`, boardSettings: 'Board settings', boardsTemplates: 'Boards and templates',
@@ -104,7 +104,7 @@ export const STR = {
     chip: name => `Infoga ${name} färgbricka`, typeOnBoard: 'Skriv på tavlan', duration: 'Tid i sekunder',
     moveUp: 'Flytta upp', moveDown: 'Flytta ned', delPage: 'Ta bort sida', lang: 'Språk', controls: 'Tavlans kontroller', editor: 'Redigerare',
     boardLink: 'Tavellänk', fallback: 'Ingen sida är schemalagd just nu, så tavlan visar klockan.',
-    addTime: 'Lägg till en tid till', removeTime: 'Ta bort den här tiden', showAlone: 'Visa ensam medan den är på', showAloneHint: 'Sidor utan tid väntar tills den är slut.', winDays: 'Veckodagar', winDate: 'Ett datum', everyYear: 'Varje år',
+    addTime: 'Lägg till en tid till', removeTime: 'Ta bort den här tiden', pageTransition: 'Övergång till den här sidan', boardDefault: name => `Tavlans (${name.toLowerCase()})`, showAlone: 'Visa ensam medan den är på', showAloneHint: 'Sidor utan tid väntar tills den är slut.', winDays: 'Veckodagar', winDate: 'Ett datum', everyYear: 'Varje år',
     monthShort: ['jan', 'feb', 'mars', 'apr', 'maj', 'juni', 'juli', 'aug', 'sep', 'okt', 'nov', 'dec'],
     help: 'Hjälp', helpSub: 'Så fungerar tavlan', gridIs: (r, c) => `Tavlan är ${r} × ${c} flappar.`, changeSize: 'Ändra storleken',
     chooseContent: 'Välj innehåll', pageOf: (i, n) => `Sida ${i} / ${n}`, boardSettings: 'Tavlans inställningar', boardsTemplates: 'Tavlor och mallar',

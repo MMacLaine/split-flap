@@ -106,7 +106,9 @@ export class App {
     if (b.size === 'custom') return { rows: Math.max(1, Math.min(24, +b.rows || 6)), cols: Math.max(4, Math.min(60, +b.cols || 22)) };
     const [r, c] = b.size.split('x').map(Number); return { rows: r, cols: c };
   }
-  boardOpts() { const b = this.cur(), d = this.dims(); return { rows: d.rows, cols: d.cols, theme: b.theme, transition: b.transition, speed: b.speed }; }
+  boardOpts() { const b = this.cur(), d = this.dims(); return { rows: d.rows, cols: d.cols, theme: b.theme, transition: this.transitionNow(), speed: b.speed }; }
+  // The page showing (or being edited) may pick its own transition; else the board's.
+  transitionNow() { const p = this.currentPage(); return (p && p.tr) || this.cur().transition; }
   quietMode() { const b = this.cur(); return !this.S.editing && inQuiet(b.quiet, Date.now()) ? b.quiet.mode : null; }
   currentPage() {
     const b = this.cur();
@@ -136,6 +138,8 @@ export class App {
       this.S.pageIdx = n.idx; this.S.pageStart = n.start;
     }
     const g = this.grid();
+    // a page arrives with its own transition, so it is set before the new grid
+    if (!this.previewing && this.board.o.transition !== this.transitionNow()) this.board.setOptions({ transition: this.transitionNow() });
     if (!this.previewing) this.board.setGrid(g);
     this.paintHighlight();
     if (this.S.editing && now - (this.lastThumbs || 0) > 3000) { this.lastThumbs = now; this.editor.refreshThumbs(); }
@@ -417,7 +421,8 @@ export class App {
     const b = this.cur(), d = this.dims(), t = this.t;
     const card = blank(d.rows, d.cols);
     for (let r = 0; r < d.rows; r++) for (let c = 0; c < d.cols; c++) card[r][c] = RAINBOW[(r + c) % 6];
-    const label = [...`${t.transitions[b.transition]} ${t.speeds[b.speed]}`.toUpperCase()].slice(0, d.cols);
+    const tr = this.transitionNow(); this.board.setOptions({ transition: tr });
+    const label = [...`${t.transitions[tr]} ${t.speeds[b.speed]}`.toUpperCase()].slice(0, d.cols);
     const mid = Math.floor(d.rows / 2), off = Math.floor((d.cols - label.length) / 2);
     for (let c = 0; c < d.cols; c++) card[mid][c] = ' ';
     label.forEach((ch, i) => { card[mid][off + i] = ch; });
