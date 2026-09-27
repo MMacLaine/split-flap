@@ -1,0 +1,12 @@
+{
+  "name": "split-flap",
+  "version": "1.0.0",
+  "description": "A free split-flap message board for any screen. No build step, no dependencies.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "TZ=Europe/Stockholm node --test test/*.test.mjs",
+    "serve": "python3 -m http.server 8801"
+  }
+}

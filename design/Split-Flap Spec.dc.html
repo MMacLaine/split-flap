@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=Schibsted+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<script src="./flap-renderer.js"></script>
+<style>
+html,body{margin:0;background:#13151A;color:#EDE6D6;font-family:"Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#C8974A;text-decoration:none;border-bottom:1px solid rgba(200,151,74,0.38)}
+a:hover{color:#EDE6D6;border-bottom-color:#EDE6D6}
+</style>
+</helmet>
+<div style="max-width:1320px; padding:72px 40px 120px 40px; box-sizing:border-box; display:flex; flex-direction:column; gap:104px">
+
+  <header style="display:flex; flex-direction:column; gap:20px; max-width:820px">
+    <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:#C8974A">Split-Flap · design handoff · 27 September 2026</span>
+    <h1 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:clamp(44px, 6vw, 76px); line-height:1; letter-spacing:-0.01em">Tile, fold, themes and motion.</h1>
+    <p style="margin:0; font-size:16px; line-height:1.65; color:#A3A8B0; text-wrap:pretty">Every image on this sheet is drawn live by <code style="font-family:'DM Mono',monospace; color:#EDE6D6">flap-renderer.js</code>, the same single 2D canvas renderer the board uses. The numbers in the tables are the constants in that file, so the sheet and the product cannot drift. All geometry is a ratio of tile height, written H.</p>
+    <nav style="display:flex; flex-wrap:wrap; gap:8px 20px; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.06em">
+      <a href="#anatomy">01 Anatomy</a><a href="#fold">02 Fold</a><a href="#glyph">03 Glyph</a><a href="#chips">04 Chips</a><a href="#themes">05 Themes</a><a href="#viewports">06 Viewports</a><a href="#motion">07 Motion</a><a href="Split-Flap%20Board.dc.html">Open the board</a>
+    </nav>
+  </header>
+
+  <section id="anatomy" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap:48px 72px; align-items:start">
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#868991">01 · TILE ANATOMY</span>
+      <div style="position:relative; border-radius:10px; overflow:hidden">
+        <canvas data-tile="" data-theme="black" data-from="Å" data-scale="0.8" style="display:block; width:100%; height:520px"></canvas>
+        <div data-guide="0.5" style="position:absolute; height:0; border-top:1px dashed rgba(200,151,74,0.8)"></div>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:22px; padding-top:30px">
+      <h2 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:40px; line-height:1.05">Physical honesty comes from five layers, drawn in order.</h2>
+      <ol style="margin:0; padding:0; list-style:none; display:flex; flex-direction:column; font-size:14px; line-height:1.55; color:#A3A8B0">
+        <li style="display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:12px; padding:12px 0; border-top:1px solid rgba(237,230,214,0.12)"><span style="font-family:'DM Mono',monospace; color:#C8974A">1</span><span><b style="color:#EDE6D6; font-weight:600">Housing bed.</b> Flat fill behind the grid. Gap between flaps is 0.11H across and 0.17H down; the taller gap holds the flap stack.</span><span style="font-family:'DM Mono',monospace; font-size:12px">gapX 0.11 · gapY 0.17</span></li>
+        <li style="display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:12px; padding:12px 0; border-top:1px solid rgba(237,230,214,0.12)"><span style="font-family:'DM Mono',monospace; color:#C8974A">2</span><span><b style="color:#EDE6D6; font-weight:600">Next flaps peeking.</b> Two edge lines under each flap, the second at 55% opacity and narrower, so the stack reads as depth. Hinge pins sit in the side gaps at 0.5H.</span><span style="font-family:'DM Mono',monospace; font-size:12px">+0.010H · +0.030H</span></li>
+        <li style="display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:12px; padding:12px 0; border-top:1px solid rgba(237,230,214,0.12)"><span style="font-family:'DM Mono',monospace; color:#C8974A">3</span><span><b style="color:#EDE6D6; font-weight:600">Flap face.</b> Width 0.68H, corner radius 0.05H. One vertical gradient with a hard stop at the split: top half faceHi to face, bottom half faceB to faceLo.</span><span style="font-family:'DM Mono',monospace; font-size:12px">w 0.68 · r 0.05</span></li>
+        <li style="display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:12px; padding:12px 0; border-top:1px solid rgba(237,230,214,0.12)"><span style="font-family:'DM Mono',monospace; color:#C8974A">4</span><span><b style="color:#EDE6D6; font-weight:600">Glyph.</b> Filled text, pre-rendered in the atlas. The split line cuts through the middle of the capitals.</span><span style="font-family:'DM Mono',monospace; font-size:12px">cap 0.46 · base 0.73</span></li>
+        <li style="display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:12px; padding:12px 0; border-top:1px solid rgba(237,230,214,0.12); border-bottom:1px solid rgba(237,230,214,0.12)"><span style="font-family:'DM Mono',monospace; color:#C8974A">5</span><span><b style="color:#EDE6D6; font-weight:600">Hinge.</b> Occlusion gradients 0.08H above and 0.06H below the split, a crease of 0.022H (never under 1 device pixel), a 0.010H lip highlight under it, and pin notches cut 0.035W into each side edge.</span><span style="font-family:'DM Mono',monospace; font-size:12px">crease 0.022 · lip 0.010</span></li>
+      </ol>
+      <p style="margin:0; font-size:13px; line-height:1.6; color:#868991; text-wrap:pretty">No reflections, glare or gloss. Tile height is rounded to an even number of device pixels so the hinge lands on a pixel boundary and the crease stays crisp.</p>
+    </div>
+  </section>
+
+  <section id="fold" style="display:flex; flex-direction:column; gap:28px">
+    <div style="display:flex; flex-direction:column; gap:12px; max-width:820px">
+      <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#868991">02 · THE FOLD, A TO B</span>
+      <h2 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:40px; line-height:1.05">A vertical scale of each half, plus three flat overlays.</h2>
+      <p style="margin:0; font-size:15px; line-height:1.65; color:#A3A8B0; text-wrap:pretty">Fold angle θ runs from 0 to π. While θ is under π/2 the old top half scales toward the hinge by cos θ and darkens as it tilts away from an overhead light. Past π/2 the new bottom half grows down from the hinge by −cos θ and brightens slightly, because it faces up. Each falling half casts a flat shadow on the face it is about to cover.</p>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px">
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-tile="" data-theme="black" data-from="A" data-to="B" data-theta="0" style="display:block; width:100%; aspect-ratio:0.8; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">0° · t 0.00</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-tile="" data-theme="black" data-from="A" data-to="B" data-theta="0.7854" style="display:block; width:100%; aspect-ratio:0.8; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">45° · t 0.36</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-tile="" data-theme="black" data-from="A" data-to="B" data-theta="1.5708" style="display:block; width:100%; aspect-ratio:0.8; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#C8974A">90° edge on · t 0.60</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-tile="" data-theme="black" data-from="A" data-to="B" data-theta="2.3562" style="display:block; width:100%; aspect-ratio:0.8; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">135° · t 0.81</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-tile="" data-theme="black" data-from="A" data-to="B" data-theta="3.1416" style="display:block; width:100%; aspect-ratio:0.8; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">180° landed · t 1.00</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-tile="" data-theme="black" data-from="B" data-to="B" data-theta="3.0116" style="display:block; width:100%; aspect-ratio:0.8; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">rebound peak · 173°</figcaption></figure>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="border-collapse:collapse; min-width:760px; width:100%; font-family:'DM Mono',monospace; font-size:12px; line-height:1.5; color:#A3A8B0">
+        <thead><tr style="text-align:left; color:#868991"><th style="padding:10px 16px 10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Frame</th><th style="padding:10px 16px 10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Falling half height</th><th style="padding:10px 16px 10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Overlay on falling half</th><th style="padding:10px 16px 10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Cast shadow on face beneath</th><th style="padding:10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Black theme values</th></tr></thead>
+        <tbody>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">0%, θ 0</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">0.5H (top, flat)</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">none</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">none</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">atlas blit only</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">θ &lt; 90°</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">0.5H · cos θ, bottom edge pinned to hinge</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">black · fallDark · sin θ</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">black · cast · cos θ over revealed top</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">at 45°: 0.354H · α 0.39 · α 0.25</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#C8974A">50%, θ 90°</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">1 device px</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">edge line 0.012H in theme edge colour, α (sin θ − 0.85) / 0.15</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">none</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">edge #4A4A4F at α 1.0</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">θ &gt; 90°</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">0.5H · −cos θ, top edge pinned to hinge</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">white · riseLight · sin θ</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">gradient 0.12H tall under the flap edge, black · cast · sin θ to 0</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">at 135°: 0.354H · α 0.07 · α 0.25</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">100%, θ 180°</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">0.5H (bottom, flat)</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">none</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">none</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">then rebound: θ = π − 0.13 · sin(πs)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin:0; font-size:13px; line-height:1.6; color:#868991; max-width:820px; text-wrap:pretty">Per theme: fallDark 0.55 / 0.30 / 0.50, riseLight 0.10 / 0.18 / 0.10, cast 0.35 / 0.22 / 0.35 for Black / White / Solari. Draw order per dirty cell: blit background slice, clip to the flap rounded rect, blit next top half, blit previous bottom half, overlays, scaled half, edge line, crease. About six draw calls per animating cell.</p>
+  </section>
+
+  <section id="glyph" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap:48px 72px; align-items:start">
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#868991">03 · GLYPH</span>
+      <div style="position:relative; border-radius:10px; overflow:hidden">
+        <canvas data-tile="" data-theme="black" data-from="Ä" data-scale="0.82" style="display:block; width:100%; height:440px"></canvas>
+        <div data-guide="0.10" style="position:absolute; height:0; border-top:1px solid rgba(200,151,74,0.9)"></div>
+        <div data-guide="0.27" style="position:absolute; height:0; border-top:1px dashed rgba(200,151,74,0.7)"></div>
+        <div data-guide="0.73" style="position:absolute; height:0; border-top:1px dashed rgba(200,151,74,0.7)"></div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:4px">
+        <canvas data-tile="" data-theme="black" data-from="Å" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+        <canvas data-tile="" data-theme="black" data-from="Ö" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+        <canvas data-tile="" data-theme="black" data-from="W" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+        <canvas data-tile="" data-theme="black" data-from="8" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+        <canvas data-tile="" data-theme="solari" data-from="Å" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+        <canvas data-tile="" data-theme="solari" data-from="Ö" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+        <canvas data-tile="" data-theme="solari" data-from="W" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+        <canvas data-tile="" data-theme="solari" data-from="°" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:22px; padding-top:30px">
+      <h2 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:40px; line-height:1.05">Capitals centred on the hinge. Rings and dots stay inside the flap.</h2>
+      <p style="margin:0; font-size:15px; line-height:1.65; color:#A3A8B0; text-wrap:pretty">Cap height 0.46H with the baseline at 0.73H puts the cap top at 0.27H, so the split falls at the exact middle of every capital. Font size is cap height divided by the face's cap ratio. The Å ring and Ä Ö dots top out near 0.10H (solid line), leaving a clear margin to the flap edge.</p>
+      <div style="display:flex; flex-direction:column; font-size:14px; line-height:1.55; color:#A3A8B0">
+        <div style="display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; padding:12px 0; border-top:1px solid rgba(237,230,214,0.12)"><span><b style="color:#EDE6D6; font-weight:600">DM Mono 500</b> for Black and White. Already self-hosted in /fonts/. SIL Open Font License 1.1.</span><span style="font-family:'DM Mono',monospace; font-size:12px">capRatio 0.70 · size 0.657H</span></div>
+        <div style="display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; padding:12px 0; border-top:1px solid rgba(237,230,214,0.12); border-bottom:1px solid rgba(237,230,214,0.12)"><span><b style="color:#EDE6D6; font-weight:600">Schibsted Grotesk 700</b> for Solari, the heavier grotesk of an airport hall. Self-host a Latin subset with Å Ä Ö and °. SIL Open Font License 1.1.</span><span style="font-family:'DM Mono',monospace; font-size:12px">capRatio 0.72 · size 0.639H</span></div>
+      </div>
+      <p style="margin:0; font-size:13px; line-height:1.6; color:#868991; text-wrap:pretty">Drum order, 70 positions: space, A to Z, Å Ä Ö, 0 to 9, . , : ; ! ? ' " - + / &amp; % # @ ( ) = °, then the nine colour chips. Common accents fold to their base letter (É to E, Ü to U, Ø to Ö, Æ to Ä). Anything else becomes a blank flap. Build the atlas after <code style="font-family:'DM Mono',monospace">document.fonts.ready</code>, and again on any tile size change.</p>
+    </div>
+  </section>
+
+  <section id="chips" style="display:flex; flex-direction:column; gap:24px">
+    <div style="display:flex; flex-direction:column; gap:12px; max-width:820px">
+      <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#868991">04 · COLOUR CHIPS</span>
+      <h2 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:40px; line-height:1.05">Nine flaps with no glyph.</h2>
+      <p style="margin:0; font-size:15px; line-height:1.65; color:#A3A8B0; text-wrap:pretty">Chips keep the same crease, occlusion and notches, with a softer overlay: white 7% at the top, black 4% under the split to 14% at the bottom. Filled takes the theme's glyph colour. Chip colours are shared across themes.</p>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <div style="display:grid; grid-template-columns:90px repeat(9, minmax(0,1fr)); gap:4px; align-items:center">
+        <span style="font-family:'DM Mono',monospace; font-size:11px; color:#868991">BLACK</span>
+        <canvas data-tile="" data-theme="black" data-from="r" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="o" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="y" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="g" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="b" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="v" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="w" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="k" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="black" data-from="f" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+      </div>
+      <div style="display:grid; grid-template-columns:90px repeat(9, minmax(0,1fr)); gap:4px; align-items:center">
+        <span style="font-family:'DM Mono',monospace; font-size:11px; color:#868991">WHITE</span>
+        <canvas data-tile="" data-theme="white" data-from="r" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="o" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="y" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="g" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="b" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="v" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="w" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="k" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas><canvas data-tile="" data-theme="white" data-from="f" data-scale="0.86" style="display:block; width:100%; aspect-ratio:0.72"></canvas>
+      </div>
+      <div style="display:grid; grid-template-columns:90px repeat(9, minmax(0,1fr)); gap:4px; font-family:'DM Mono',monospace; font-size:11px; color:#A3A8B0">
+        <span></span><span>#D5352B</span><span>#EE7D22</span><span>#F2BE2E</span><span>#2C9A5A</span><span>#2B6FC4</span><span>#7A4DB2</span><span>#EFECE5</span><span>#141415</span><span>glyph</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="themes" style="display:flex; flex-direction:column; gap:28px">
+    <div style="display:flex; flex-direction:column; gap:12px; max-width:820px">
+      <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#868991">05 · BOARD THEMES</span>
+      <h2 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:40px; line-height:1.05">Board, frame and wall, shown at 16:9.</h2>
+      <p style="margin:0; font-size:15px; line-height:1.65; color:#A3A8B0; text-wrap:pretty">The letterbox is treated as the wall the board hangs on: a quiet radial gradient, lightest just above centre, with a static contact shadow under the frame painted once into the background layer. The board never exceeds 88% of the limiting axis, so there is always wall on every side.</p>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:28px">
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <canvas data-board="" data-theme="black" data-rows="6" data-cols="22" data-lines="|VESTABOARD BLACK||MATTE FLAPS|WARM WHITE GLYPHS|" style="display:block; width:100%; aspect-ratio:16/9; border-radius:6px"></canvas>
+        <div style="display:flex; flex-direction:column; gap:4px; font-family:'DM Mono',monospace; font-size:12px; line-height:1.7; color:#A3A8B0">
+          <span style="color:#EDE6D6">Vestaboard Black</span>
+          <span>face #1C1C1E · hi #232326 · lo #121213</span><span>glyph #EDE6D6 · housing #070708</span><span>frame #0F0F10, pad 0.5H, radius 0.12H</span><span>wall #141518 to #0A0A0C · shadow 0.60</span>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <canvas data-board="" data-theme="white" data-rows="6" data-cols="22" data-lines="|VESTABOARD WHITE||PAPER FLAPS|INK GLYPHS|" style="display:block; width:100%; aspect-ratio:16/9; border-radius:6px"></canvas>
+        <div style="display:flex; flex-direction:column; gap:4px; font-family:'DM Mono',monospace; font-size:12px; line-height:1.7; color:#A3A8B0">
+          <span style="color:#EDE6D6">Vestaboard White</span>
+          <span>face #F0EDE6 · hi #F7F5F0 · lo #DEDAD2</span><span>glyph #18181B · housing #B9B4AB</span><span>frame #E7E3DB, pad 0.5H, radius 0.12H</span><span>wall #D5D1C9 to #C3BEB5 · shadow 0.28</span>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <canvas data-board="" data-theme="solari" data-rows="6" data-cols="22" data-lines="&gt;ODENPLAN|&gt;17 ÅKESHOV       2 MIN|&gt;18 ALVIK         6 MIN|&gt;19 HAGSÄTRA      9 MIN|&gt;14 FRUÄNGEN     12 MIN|" style="display:block; width:100%; aspect-ratio:16/9; border-radius:6px"></canvas>
+        <div style="display:flex; flex-direction:column; gap:4px; font-family:'DM Mono',monospace; font-size:12px; line-height:1.7; color:#A3A8B0">
+          <span style="color:#EDE6D6">Solari Amber</span>
+          <span>face #2A2B2D · hi #313235 · lo #1E1F21</span><span>glyph #F2B01E · housing #0C0D0E · rails #161719</span><span>frame #1C1D1F, pad 0.9H, radius 0.06H, screws #6A6D72</span><span>wall #303236 to #1B1C1F · shadow 0.50</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="viewports" style="display:flex; flex-direction:column; gap:28px">
+    <div style="display:flex; flex-direction:column; gap:12px; max-width:820px">
+      <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#868991">06 · VIEWPORTS</span>
+      <h2 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:40px; line-height:1.05">The board is centred. Everything else is not.</h2>
+      <p style="margin:0; font-size:15px; line-height:1.65; color:#A3A8B0; text-wrap:pretty">Shown at one fifth scale with the resulting tile height. Portrait monitors make a 6 × 22 board small, so Fill screen picks 14 rows there. The 400px phone editor is live in the board file: resize the window under 760px and press Edit.</p>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:32px; align-items:flex-end">
+      <figure style="margin:0; display:flex; flex-direction:column; gap:10px"><canvas data-board="" data-theme="black" data-rows="6" data-cols="22" data-lines="||GOOD MORNING|FRIDAY 27 SEP||" style="display:block; width:384px; height:216px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">1920 × 1080 · H 92px</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:10px"><canvas data-board="" data-theme="black" data-rows="6" data-cols="22" data-lines="||GOOD MORNING|FRIDAY 27 SEP||" style="display:block; width:688px; height:288px; max-width:100%"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">3440 × 1440 ultrawide · H 160px, height limited</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:10px"><canvas data-board="" data-theme="black" data-rows="6" data-cols="22" data-lines="||GOOD MORNING|FRIDAY 27 SEP||" style="display:block; width:216px; height:384px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">1080 × 1920 · 6 × 22 · H 52px</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:10px"><canvas data-board="" data-theme="black" data-rows="14" data-cols="10" data-lines="|||||GOOD|MORNING||14:32|||||" style="display:block; width:216px; height:384px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">1080 × 1920 · fill 14 × 10 · H 98px</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:10px"><canvas data-board="" data-theme="solari" data-rows="6" data-cols="22" data-lines="||GOOD MORNING|FRIDAY 27 SEP||" style="display:block; width:256px; height:160px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">1280 × 800 laptop · H 60px</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="motion" style="display:flex; flex-direction:column; gap:32px">
+    <div style="display:flex; flex-direction:column; gap:12px; max-width:820px">
+      <span style="font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.14em; color:#868991">07 · MOTION</span>
+      <h2 style="margin:0; font-family:'Cormorant Garamond',serif; font-weight:500; font-size:40px; line-height:1.05">Gravity, a small rebound, and a stagger that reads as machinery.</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap:40px 64px; align-items:start">
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <canvas data-plot="" style="display:block; width:100%; height:240px; border-radius:6px; background:#1A1D24"></canvas>
+        <p style="margin:0; font-size:14px; line-height:1.6; color:#A3A8B0; text-wrap:pretty">θ = π · t<sup>1.35</sup>: the flap leaves the catch slowly and accelerates, crossing edge on at 60% of the flip. After the final character lands it rebounds 0.13 rad and settles. Intermediate drum steps skip the rebound.</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <canvas data-slow="" style="display:block; width:100%; height:240px; border-radius:6px"></canvas>
+        <p style="margin:0; font-size:14px; line-height:1.6; color:#A3A8B0; text-wrap:pretty">One tile at roughly eight times slower than Fast, looping, so the shading on each half can be judged by eye.</p>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="border-collapse:collapse; min-width:720px; width:100%; font-family:'DM Mono',monospace; font-size:12px; line-height:1.5; color:#A3A8B0">
+        <thead><tr style="text-align:left; color:#868991"><th style="padding:10px 16px 10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Timing</th><th style="padding:10px 16px 10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Fast</th><th style="padding:10px 16px 10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Gentle</th><th style="padding:10px 0; font-weight:400; border-bottom:1px solid rgba(237,230,214,0.15)">Notes</th></tr></thead>
+        <tbody>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Drum step</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">70ms</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">110ms</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">Each intermediate character on the way to the target</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Final flip + rebound</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">160 + 90ms</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">260 + 120ms</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">The landing is heavier than the passing flips</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Steps per cell</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">max 10</td><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">max 14</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">Longer drum paths show only the last characters before the target, so a page change lands inside about 1.2s</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Stagger</td><td colspan="2" style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">classic 22ms × column + 0 to 30ms jitter · wave 28ms × (row + column) · drift random 0 to 1200ms · curtain 140ms × row + 6ms × column</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">Only cells that change animate</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Reduced motion</td><td colspan="2" style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">140ms crossfade straight to the final character</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">prefers-reduced-motion: reduce</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Control bar</td><td colspan="2" style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">in: opacity 0 to 1 and 8px rise, 180ms ease-out · out: 420ms ease-in after 3s idle, cursor hides with it</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">Hover or an open popover holds it. First visit holds it for 12s.</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Drawer</td><td colspan="2" style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">16px slide and fade in, 260ms cubic-bezier(0.2, 0.8, 0.2, 1)</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">Board re-lays out once to the remaining width. Never animate the canvas size.</td></tr>
+          <tr><td style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08); color:#EDE6D6">Quiet hours, dim</td><td colspan="2" style="padding:10px 16px 10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">canvas layer opacity to 0.22 over 1.6s</td><td style="padding:10px 0; border-bottom:1px solid rgba(237,230,214,0.08)">Blank mode flips every cell to space instead</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:20px">
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-demo="classic" style="display:block; width:100%; aspect-ratio:2.2; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">Classic</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-demo="wave" style="display:block; width:100%; aspect-ratio:2.2; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">Wave</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-demo="drift" style="display:block; width:100%; aspect-ratio:2.2; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">Drift</figcaption></figure>
+      <figure style="margin:0; display:flex; flex-direction:column; gap:8px"><canvas data-demo="curtain" style="display:block; width:100%; aspect-ratio:2.2; border-radius:6px"></canvas><figcaption style="font-family:'DM Mono',monospace; font-size:12px; color:#A3A8B0">Curtain</figcaption></figure>
+    </div>
+    <p style="margin:0; font-size:13px; line-height:1.6; color:#868991; max-width:820px; text-wrap:pretty">Performance budget for a Raspberry Pi 4: device pixel ratio capped at 2 (the Pi runs at 1), one requestAnimationFrame loop that stops when no cell is moving, redraw only animating cells from a cached background slice, and a glyph atlas keyed by theme, character and tile size. A full 6 × 22 page change peaks near 800 draw calls per frame, all blits and flat fills.</p>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const go = () => {
+      if (!window.SplitFlap) { this.t = setTimeout(go, 40); return; }
+      SplitFlap.FOLD.slow = { step: 600, final: 1300, settle: 700, maxSteps: 1 };
+      this.paint(); this.demos();
+      if (document.fonts) document.fonts.ready.then(() => this.paint());
+    };
+    go();
+    this.onR = () => this.paint(); addEventListener('resize', this.onR);
+  }
+  componentWillUnmount() { clearTimeout(this.t); (this.ivs || []).forEach(clearInterval); removeEventListener('resize', this.onR); }
+  lines(str, rows, cols) {
+    return str.split('|').slice(0, rows).map(l => {
+      const left = l.startsWith('>'), s = left ? l.slice(1) : l, a = [...s].slice(0, cols), row = Array(cols).fill(' ');
+      const off = left ? 1 : Math.floor((cols - a.length) / 2);
+      a.forEach((ch, i) => { if (off + i < cols) row[off + i] = ch; }); return row;
+    });
+  }
+  paint() {
+    document.querySelectorAll('canvas[data-tile]').forEach(cv => {
+      const d = cv.dataset;
+      const r = SplitFlap.paintTile(cv, { theme: d.theme, from: d.from || ' ', to: d.to || d.from || ' ', theta: +d.theta || 0, scale: +d.scale || 0.78 });
+      if (r) cv.parentElement.querySelectorAll('[data-guide]').forEach(g => { g.style.top = (r.y + (+g.dataset.guide) * r.h) + 'px'; g.style.left = (r.x - 14) + 'px'; g.style.width = (r.w + 28) + 'px'; });
+    });
+    document.querySelectorAll('canvas[data-board]').forEach(cv => {
+      if (cv._b) return;
+      const rows = +cv.dataset.rows, cols = +cv.dataset.cols;
+      cv._b = new SplitFlap.Board(cv, { rows, cols, theme: cv.dataset.theme });
+      cv._b.setGrid(this.lines(cv.dataset.lines || '', rows, cols), { instant: true });
+    });
+    const pc = document.querySelector('canvas[data-plot]'); if (pc) this.plot(pc);
+  }
+  plot(cv) {
+    const dpr = Math.min(devicePixelRatio || 1, 2), r = cv.getBoundingClientRect(); cv.width = r.width * dpr; cv.height = r.height * dpr;
+    const x = cv.getContext('2d'); x.scale(dpr, dpr);
+    const W = r.width, H = r.height, L = 44, R = 16, T = 18, B = 30, total = 250, pw = W - L - R, ph = H - T - B;
+    const X = ms => L + ms / total * pw, Y = v => T + (1 - v) * ph;
+    x.font = '11px "DM Mono", monospace'; x.fillStyle = '#868991'; x.strokeStyle = 'rgba(237,230,214,0.10)'; x.lineWidth = 1;
+    [0, 0.5, 1].forEach(v => { x.beginPath(); x.moveTo(L, Y(v)); x.lineTo(W - R, Y(v)); x.stroke(); x.fillText(['0', 'π/2', 'π'][v * 2], 8, Y(v) + 4); });
+    [0, 96, 160, 250].forEach(ms => { x.beginPath(); x.moveTo(X(ms), T); x.lineTo(X(ms), H - B); x.stroke(); x.fillText(ms + 'ms', X(ms) - 12, H - 10); });
+    x.strokeStyle = '#C8974A'; x.lineWidth = 2; x.beginPath();
+    for (let ms = 0; ms <= total; ms += 2) {
+      const v = ms <= 160 ? SplitFlap.thetaAt(ms / 160) / Math.PI : 1 - (0.13 * Math.sin(Math.PI * (ms - 160) / 90)) / Math.PI;
+      ms === 0 ? x.moveTo(X(ms), Y(v)) : x.lineTo(X(ms), Y(v));
+    }
+    x.stroke();
+    x.fillStyle = '#C8974A'; x.beginPath(); x.arc(X(96), Y(0.5), 4, 0, Math.PI * 2); x.fill();
+    x.fillText('edge on', X(96) + 8, Y(0.5) + 14);
+  }
+  demos() {
+    this.ivs = [];
+    document.querySelectorAll('canvas[data-demo]').forEach(cv => {
+      const tr = cv.dataset.demo, b = new SplitFlap.Board(cv, { rows: 3, cols: 15, theme: tr === 'drift' ? 'white' : tr === 'curtain' ? 'solari' : 'black', transition: tr });
+      const A = this.lines('|' + tr.toUpperCase() + '|', 3, 15), Bg = this.lines('GOOD MORNING|FRIDAY 14:32|roygbvroygbvroy', 3, 15);
+      let on = false; b.setGrid(A, { instant: true });
+      this.ivs.push(setInterval(() => { on = !on; b.setGrid(on ? Bg : A); }, 3600));
+    });
+    const sc = document.querySelector('canvas[data-slow]');
+    if (sc) {
+      const b = new SplitFlap.Board(sc, { rows: 1, cols: 1, theme: 'black', speed: 'slow', reduced: false }); let on = false;
+      b.setGrid([['A']], { instant: true });
+      this.ivs.push(setInterval(() => { on = !on; b.setGrid([[on ? 'B' : 'A']]); }, 2800));
+    }
+  }
+}
+</script>
+</body>
+</html>
