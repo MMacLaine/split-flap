@@ -5,6 +5,8 @@ Companion to `DESIGN-HANDOVER.md` (how the board looks) and `DESIGN-HANDOVER-edi
 
 ## Where it stands
 
+0.4 is the Letter clock: a grid of letters where the words for the time light up and the rest stay faint, with minute dots in the corners, in English and Swedish. The grids are this board's own layout. Faint flaps are a renderer feature now (`'~' + char`), so other channels could use them.
+
 0.3 is about when pages show. A page can have several times, a time can be a date once or every year, and Show alone gives a page its time to itself. It also adds a transition per page, the heart flap, stereo flap sound, the start-up and hourly rolls, `?bg=transparent` for OBS, and a wall screen that reloads itself when a new version is live. The two fixes under Fix first are in it. 61 tests.
 
 0.2 is live on maclaine.se. It has the three level editor with the content picker, the Type, Paint and Photo composer, eight new channels, the stacked layout, a board location, nine templates, Save as image and a guide. The tests pass, 41 of them, including one that composes every channel on every layout.

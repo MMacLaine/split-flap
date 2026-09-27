@@ -31,14 +31,60 @@ const HOUR_WORDS = {
 };
 // The time in words, to the nearest five minutes. Swedish counts the half hour towards
 // the next hour (halv elva is 10:30) and the minutes around it (fem i halv elva, 10:25).
-export function timeInWords(d, lang) {
-  let m = Math.round(d.getMinutes() / 5) * 5, hr = d.getHours();
+// floor: round down to the five minutes (the letter clock, whose corner dots count the
+// minutes in between) instead of to the nearest five (the word clock).
+export function timeInWords(d, lang, floor) {
+  let m = (floor ? Math.floor : Math.round)(d.getMinutes() / 5) * 5, hr = d.getHours();
   if (m === 60) { m = 0; hr++; }
   const W = HOUR_WORDS[lang] || HOUR_WORDS.en, H = k => W[(hr + k) % 12];
   if (lang === 'sv') return 'KLOCKAN ÄR ' + ({ 0: H(0), 5: 'FEM ÖVER ' + H(0), 10: 'TIO ÖVER ' + H(0), 15: 'KVART ÖVER ' + H(0), 20: 'TJUGO ÖVER ' + H(0),
     25: 'FEM I HALV ' + H(1), 30: 'HALV ' + H(1), 35: 'FEM ÖVER HALV ' + H(1), 40: 'TJUGO I ' + H(1), 45: 'KVART I ' + H(1), 50: 'TIO I ' + H(1), 55: 'FEM I ' + H(1) })[m];
   return 'IT IS ' + ({ 0: H(0) + " O'CLOCK", 5: 'FIVE PAST ' + H(0), 10: 'TEN PAST ' + H(0), 15: 'QUARTER PAST ' + H(0), 20: 'TWENTY PAST ' + H(0),
     25: 'TWENTY FIVE PAST ' + H(0), 30: 'HALF PAST ' + H(0), 35: 'TWENTY FIVE TO ' + H(1), 40: 'TWENTY TO ' + H(1), 45: 'QUARTER TO ' + H(1), 50: 'TEN TO ' + H(1), 55: 'FIVE TO ' + H(1) })[m];
+}
+
+// The letter clock: a fixed grid of letters where the words for the time are lit and
+// the rest are faint. The grids are this board's own, one per board language; hourAt is where the hour words start, so the minute TEN is never read as
+// the hour. Letters that are not part of any phrase are filler. 9 rows of 13 flaps draw
+// close to square, since a flap is taller than it is wide.
+export const LETTER_GRIDS = {
+  en: { hourAt: [3, 0], rows: ['ITRISXQUARTER', 'TWENTYHALFTEN', 'FIVEZPASTKTOW', 'ONETWOTHREEXU', 'FOURFIVESIXLY', 'SEVENEIGHTRAY', 'NINETENELEVEN', 'TWELVEZSPLITQ', 'FLAPSUNOCLOCK'] },
+  sv: { hourAt: [4, 0], rows: ['KLOCKANVÄRSNU', 'PRECISTIOFEMA', 'KVARTTJUGOLNÄ', 'ÖVERSIKHALVBÖ', 'ETTTVÅTREFYRA', 'FEMSEXSJUÅTTA', 'NIOTIOELVADUG', 'TOLVFÄLLBLADS', 'TAVLAQXÖNMGRY'] }
+};
+// The words to light for a time, in reading order, and which of them is the hour.
+export function letterWords(d, lang) {
+  const sv = lang === 'sv', words = timeInWords(d, sv ? 'sv' : 'en', true).replace("O'CLOCK", 'OCLOCK').split(' ');
+  if (sv && d.getMinutes() < 5) words.splice(2, 0, 'PRECIS');   // KLOCKAN ÄR PRECIS TIO
+  return { words, hour: words[words.length - 1] === 'OCLOCK' ? words.length - 2 : words.length - 1 };
+}
+// Finds each word in the grid, left to right and top to bottom, each after the last; the
+// hour word is looked for from hourAt on. Returns the lit cells as row * width + column, or
+// null if a word is missing (the tests check every five minutes in both grids).
+export function letterCells(grid, words, hour) {
+  const lit = new Set(), gw = grid.rows[0].length; let r = 0, c = 0;
+  for (let i = 0; i < words.length; i++) {
+    if (i === hour && (r < grid.hourAt[0] || (r === grid.hourAt[0] && c < grid.hourAt[1]))) [r, c] = grid.hourAt;
+    let at = -1;
+    while (r < grid.rows.length && (at = grid.rows[r].indexOf(words[i], c)) < 0) { r++; c = 0; }
+    if (at < 0) return null;
+    for (let k = 0; k < words[i].length; k++) lit.add(r * gw + at + k);
+    c = at + words[i].length;
+  }
+  return lit;
+}
+// Faint cells are written '~' + the character; the renderer draws them dim.
+function letterClock(o, z, d, lang) {
+  const G = LETTER_GRIDS[lang === 'sv' ? 'sv' : 'en'], gh = G.rows.length, gw = G.rows[0].length, W = z.w > 8 ? z.w - 2 : z.w;
+  if (z.h < gh || z.w < gw) return { lines: wrap(timeInWords(d, lang), W), align: 'center' };   // too small for the grid
+  const { words, hour } = letterWords(d, lang), lit = letterCells(G, words, hour) || new Set();
+  const cells = blank(z.h, z.w), top = Math.floor((z.h - gh) / 2), left = Math.floor((z.w - gw) / 2);
+  G.rows.forEach((row, r) => [...row].forEach((ch, c) => { cells[top + r][left + c] = lit.has(r * gw + c) ? ch : '~' + ch; }));
+  // the minutes past the five, as dots in the corners around the grid, clockwise from top left
+  if (o.dots !== false && top >= 1 && left >= 1 && top + gh < z.h && left + gw < z.w) {
+    const n = d.getMinutes() % 5;
+    [[top - 1, left - 1], [top - 1, left + gw], [top + gh, left + gw], [top + gh, left - 1]].forEach(([r, c], k) => { cells[r][c] = k < n ? 'f' : '~f'; });
+  }
+  return { cells };
 }
 
 // WMO weather codes, as Open-Meteo reports them, to a word that fits on a board.
@@ -100,7 +146,7 @@ export const QUOTES = {
 };
 
 export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote',
-  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url'];
+  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock'];
 // Channels that paint cells directly (pixel font, patterns) instead of printing lines.
 const DRAWN = new Set(['bigclock', 'bigtext', 'art']);
 export const LAYOUTS = ['full', 'header', 'split', 'ticker', 'stacked'];
@@ -234,6 +280,7 @@ export function channelLines(ch, o, z, now, lang, live) {
     return { lines: z.h >= 4 ? [label, '', val, diff > 0 ? w.togo : ''] : [label, val], align: 'center' };
   }
   if (ch === 'wordclock') return { lines: wrap(timeInWords(d, lang), W), align: 'center' };
+  if (ch === 'letterclock') return letterClock(o, z, d, lang);
   if (ch === 'today') return todayLines(o, z, d, W, lang, w, live);
   if (ch === 'sl') return slLines(o, z, now, W, w, live);
   if (ch === 'weather') {

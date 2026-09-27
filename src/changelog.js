@@ -3,6 +3,28 @@
 
 export const CHANGELOG = [
   {
+    v: '0.4', date: '2026-09-27',
+    tag: { en: 'Letter clock', sv: 'Bokstavsklocka' },
+    desc: {
+      en: 'A letter clock, like the designer word clocks where only the words for the time light up.',
+      sv: 'En bokstavsklocka, som designklockorna där bara orden för tiden lyser.'
+    },
+    items: {
+      en: [
+        'The Letter clock is a grid of letters where the words for the time light up and the rest stay faint, in five minute steps. A dot in a corner lights for each minute in between.',
+        'It follows the board language, with a grid of its own in English and Swedish. On the hour the Swedish one says KLOCKAN ÄR PRECIS.',
+        'When the time moves on, the letters fade up and down in place.',
+        'The Letter clock template sets up a square board for it, with quiet hours overnight. As a tile in the picker it needs a zone of 9 × 13, and anything smaller spells the time out like the Word clock.'
+      ],
+      sv: [
+        'Bokstavsklockan är ett rutnät av bokstäver där orden för tiden lyser och resten är svaga, i steg om fem minuter. En prick i ett hörn tänds för varje minut däremellan.',
+        'Den följer tavlans språk, med ett eget rutnät på engelska och svenska. Vid hel timme säger den svenska KLOCKAN ÄR PRECIS.',
+        'När tiden går vidare tonar bokstäverna upp och ned på plats.',
+        'Mallen Bokstavsklocka ställer in en kvadratisk tavla för den, med tysta timmar på natten. Som ruta i väljaren behöver den en zon på 9 × 13, och i något mindre skrivs tiden ut som i Ordklockan.'
+      ]
+    }
+  },
+  {
     v: '0.3', date: '2026-09-27',
     tag: { en: 'Planning the week, part one', sv: 'Planera veckan, del ett' },
     desc: {

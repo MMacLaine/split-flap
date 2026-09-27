@@ -12,7 +12,7 @@
 //   - from the editor handoff (design/editor/flap-renderer.js): the zone highlight and
 //     renderStatic, which draws one still frame of any grid for thumbnails and images
 
-import { CHIPS, DRUM, cellChar, drumPath } from './charset.js';
+import { CHIPS, DRUM, cellChar, drumPath, isDim, baseChar } from './charset.js';
 
 export const GEOM = {
   tileW: 0.68,      // flap width / H
@@ -38,7 +38,7 @@ export const THEMES = {
     glyph: '#EDE6D6', font: '"DM Mono"', weight: 500, capRatio: 0.70,
     frame: '#0F0F10', frameEdge: '#26262A', frameShade: '#050505', framePad: 0.5, frameRadius: 0.12,
     backdrop: ['#141518', '#0A0A0C'], shadow: 0.6,
-    occl: 0.28, cast: 0.35, fallDark: 0.55, riseLight: 0.10, edge: '#4A4A4F', filled: '#EDE6D6'
+    occl: 0.28, cast: 0.35, fallDark: 0.55, riseLight: 0.10, edge: '#4A4A4F', filled: '#EDE6D6', dim: 0.16
   },
   white: {
     id: 'white', label: 'Vestaboard White',
@@ -47,7 +47,7 @@ export const THEMES = {
     glyph: '#18181B', font: '"DM Mono"', weight: 500, capRatio: 0.70,
     frame: '#E7E3DB', frameEdge: '#FAF8F4', frameShade: '#BDB8AF', framePad: 0.5, frameRadius: 0.12,
     backdrop: ['#D5D1C9', '#C3BEB5'], shadow: 0.28,
-    occl: 0.16, cast: 0.22, fallDark: 0.30, riseLight: 0.18, edge: '#FFFFFF', filled: '#18181B'
+    occl: 0.16, cast: 0.22, fallDark: 0.30, riseLight: 0.18, edge: '#FFFFFF', filled: '#18181B', dim: 0.13
   },
   solari: {
     id: 'solari', label: 'Solari Amber',
@@ -57,7 +57,7 @@ export const THEMES = {
     frame: '#1C1D1F', frameEdge: '#3A3C40', frameShade: '#0A0A0B', framePad: 0.9, frameRadius: 0.06,
     rail: '#161719', screws: true, screw: '#6A6D72',
     backdrop: ['#303236', '#1B1C1F'], shadow: 0.5,
-    occl: 0.30, cast: 0.35, fallDark: 0.50, riseLight: 0.10, edge: '#5A5C61', filled: '#F2B01E'
+    occl: 0.30, cast: 0.35, fallDark: 0.50, riseLight: 0.10, edge: '#5A5C61', filled: '#F2B01E', dim: 0.16
   }
 };
 
@@ -70,7 +70,8 @@ export const FOLD = {
   authentic: { step: 52,  final: 160, settle: 90,  maxSteps: Infinity },
   exp: 1.35,          // fold angle = PI * t^1.35 (gravity: slow release, accelerating fall)
   settleAngle: 0.13,  // rebound after the final flap lands (radians)
-  fade: 140           // reduced motion crossfade
+  fade: 140,          // reduced motion crossfade
+  dimFade: 600        // a letter clock word lighting up or going faint
 };
 
 export const STAGGER = {
@@ -88,8 +89,9 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 function paintFace(ctx, ch, x, y, w, h, T) {
-  const hinge = y + h / 2, r = h * GEOM.radius;
-  const chip = ch === 'f' ? T.filled : CHIPS[ch];
+  const hinge = y + h / 2, r = h * GEOM.radius, dim = isDim(ch);
+  if (dim) ch = baseChar(ch);
+  const tint = ch === 'f' ? T.filled : CHIPS[ch], chip = dim ? null : tint;
   ctx.save(); rr(ctx, x, y, w, h, r); ctx.clip();
   let g = ctx.createLinearGradient(0, y, 0, y + h);
   if (chip) {
@@ -100,7 +102,9 @@ function paintFace(ctx, ch, x, y, w, h, T) {
   } else {
     g.addColorStop(0, T.faceHi); g.addColorStop(0.5, T.face); g.addColorStop(0.5, T.faceB); g.addColorStop(1, T.faceLo);
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
-    if (ch === '♥') {
+    ctx.globalAlpha = dim ? T.dim : 1;   // a faint flap: the same glyph or chip, barely there
+    if (dim && tint) { ctx.fillStyle = tint; ctx.fillRect(x, y, w, h); }
+    else if (ch === '♥') {
       // Drawn as a shape: the board faces may not carry the glyph, and a fallback font
       // would draw an emoji. Cap height tall, in the glyph colour.
       const ch2 = h * GEOM.capHeight, top = y + h * (GEOM.baseline - GEOM.capHeight), cx = x + w / 2, hw = ch2 * 0.54;
@@ -117,6 +121,7 @@ function paintFace(ctx, ch, x, y, w, h, T) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = T.glyph;
       ctx.fillText(ch, x + w / 2, y + h * GEOM.baseline);
     }
+    ctx.globalAlpha = 1;
   }
   // hinge occlusion: the halves shade each other near the split
   g = ctx.createLinearGradient(0, hinge - h * 0.08, 0, hinge);
@@ -357,7 +362,11 @@ export class Board {
         if (opt.instant) { cell.cur = want; cell.q = []; cell.a = null; continue; }
         const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
         if (want === dest) continue;
-        cell.q = this.o.reduced ? [want] : drumPath(dest, want, sp.maxSteps); cell.sp = null;
+        // Only faint to lit or back: the letter fades in place, it does not turn the drum.
+        if (baseChar(want) === baseChar(dest) && !cell.a) {
+          cell.q = []; cell.sp = null; cell.a = { kind: 'fade', from: cell.cur, to: want, start: now + st(r, c) * 0.5, dur: FOLD.dimFade }; any = true; continue;
+        }
+        cell.q = this.o.reduced ? [want] : this._path(dest, want, sp.maxSteps); cell.sp = null;
         if (!cell.a) cell.due = now + st(r, c);
         any = true;
       }
@@ -367,13 +376,19 @@ export class Board {
   // Every flap turns the whole drum once and lands where it already was, like a Solari
   // board on power up. At the authentic step timing whatever the board's speed, with
   // the named stagger. A setGrid during the roll takes over from wherever each flap is.
+  // The drum path between two flaps; a faint flap turns as its letter and lands faint.
+  _path(from, to, max) {
+    const p = drumPath(baseChar(from), baseChar(to), max);
+    if (p.length) p[p.length - 1] = to;
+    return p;
+  }
   roll(stagger) {
     if (this.o.reduced) return;
     const now = performance.now(), st = STAGGER[stagger] || STAGGER.curtain;
     for (let r = 0; r < this.o.rows; r++) for (let c = 0; c < this.o.cols; c++) {
       const cell = this.cells[r][c];
       const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
-      cell.q = drumPath(dest, dest, Infinity); cell.sp = FOLD.authentic;
+      cell.q = this._path(dest, dest, Infinity); cell.sp = FOLD.authentic;
       if (!cell.a) cell.due = now + st(r, c);
     }
     this._kick();

@@ -69,7 +69,8 @@ function sanitizeZone(z) {
     if (o.order === 'shuffle') out.order = 'shuffle';
   } else if (ch === 'menu') {
     out.title = str(o.title, 60); out.items = list(o.items, 16, 60); out.suffix = pick(o.suffix, ['', ' KR', ':-'], '');
-  } else if (ch === 'today') { if (o.week === false) out.week = false; if (o.sun === false) out.sun = false; if (o.days === false) out.days = false; if (o.doy) out.doy = true; }
+  } else if (ch === 'letterclock') { if (o.dots === false) out.dots = false; }
+  else if (ch === 'today') { if (o.week === false) out.week = false; if (o.sun === false) out.sun = false; if (o.days === false) out.days = false; if (o.doy) out.doy = true; }
   else if (ch === 'electricity') { out.area = AREAS[o.area] ? o.area : 'SE3'; out.view = o.view === 'chart' ? 'chart' : 'now'; if (o.vat === false) out.vat = false; }
   else if (ch === 'currency') {
     out.base = o.base === 'EUR' ? 'EUR' : 'SEK'; out.dec = int(o.dec, 0, 4, 2);
