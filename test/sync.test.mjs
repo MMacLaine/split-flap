@@ -1,0 +1,89 @@
+// Sync rules for accounts (0.5): merge, guest boards, deletes, and whose boards are
+// whose on a shared computer. Pure functions, no server.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState } from '../src/sync.js';
+
+let n = 0; const newId = () => 'copy' + (++n);
+const B = (id, name = id) => ({ id, name, pages: [] });
+const R = (id, rev, name = id, deleted = false) => ({ id, rev, deleted, board: deleted ? null : B(id, name) });
+const st = (entries, user = 'u1') => ({ user, boards: entries });
+const names = r => r.boards.map(b => b.name).sort();
+
+test('only on the server: taken; a tombstone is ignored', () => {
+  const r = merge([], [R('a', 3), R('b', 2, 'b', true)], emptyState(), 'u1', { newId });
+  assert.deepEqual(names(r), ['a']);
+  assert.deepEqual(r.state.boards.a, { rev: 3, dirty: false, owner: 'u1' });
+  assert.deepEqual(r.push, []);
+});
+
+test('guest boards are never pushed until the account adopts them', () => {
+  const g = merge([B('g')], [], emptyState(), 'u1', { newId });
+  assert.deepEqual([names(g), g.push], [['g'], []]);
+  const s = adopt(emptyState(), ['g'], 'u1');
+  const a = merge([B('g')], [], s, 'u1', { newId });
+  assert.deepEqual(a.push, ['g']);
+});
+
+test('server unchanged: pushed only if changed here', () => {
+  const clean = merge([B('a')], [R('a', 4)], st({ a: { rev: 4, dirty: false, owner: 'u1' } }), 'u1', { newId });
+  assert.deepEqual(clean.push, []);
+  const dirty = merge([B('a', 'edited')], [R('a', 4)], st({ a: { rev: 4, dirty: true, owner: 'u1' } }), 'u1', { newId });
+  assert.deepEqual([names(dirty), dirty.push], [['edited'], ['a']]);
+});
+
+test('server changed, this browser did not: the server version is taken, or removed', () => {
+  const r = merge([B('a', 'old')], [R('a', 5, 'new')], st({ a: { rev: 4, dirty: false, owner: 'u1' } }), 'u1', { newId });
+  assert.deepEqual([names(r), r.push], [['new'], []]);
+  const d = merge([B('a')], [R('a', 5, 'a', true)], st({ a: { rev: 4, dirty: false, owner: 'u1' } }), 'u1', { newId });
+  assert.deepEqual([d.boards.length, d.state.boards.a], [0, undefined]);
+});
+
+test('changed in both places: the server keeps the id, the local edit becomes a pushed copy', () => {
+  const r = merge([B('a', 'mine')], [R('a', 5, 'theirs')], st({ a: { rev: 4, dirty: true, owner: 'u1' } }), 'u1', { suffix: ' (other device)', newId });
+  assert.deepEqual(names(r), ['mine (other device)', 'theirs']);
+  const copy = r.boards.find(b => b.name.startsWith('mine'));
+  assert.notEqual(copy.id, 'a');
+  assert.deepEqual(r.push, [copy.id]);
+  // deleted elsewhere while edited here: the edit survives as a copy
+  const d = merge([B('a', 'mine')], [R('a', 5, 'a', true)], st({ a: { rev: 4, dirty: true, owner: 'u1' } }), 'u1', { newId });
+  assert.deepEqual(names(d), ['mine (other device)']);
+});
+
+test('a delete here is sent, unless the board was edited elsewhere since', () => {
+  const s = markDeleted(st({ a: { rev: 4, dirty: false, owner: 'u1' } }), 'a');
+  const r = merge([], [R('a', 4)], s, 'u1', { newId });
+  assert.deepEqual([r.boards.length, r.push], [0, ['a']]);
+  assert.equal(pushed(r.state, 'a', 5).boards.a, undefined);         // forgotten once the server has it
+  const e = merge([], [R('a', 6, 'edited')], s, 'u1', { newId });
+  assert.deepEqual([names(e), e.push], [['edited'], []]);            // the edit wins over the delete
+});
+
+test('a guest board with the same id as a server board becomes a copy', () => {
+  const r = merge([B('a', 'guest')], [R('a', 2, 'server')], emptyState(), 'u1', { suffix: ' (other device)', newId });
+  assert.deepEqual(names(r), ['guest (other device)', 'server']);
+  assert.deepEqual(r.push, []);
+});
+
+test('sign out keeps only boards that were never synced', () => {
+  const s = st({ a: { rev: 2, dirty: false, owner: 'u1' } });
+  const r = signOut([B('a'), B('g')], s);
+  assert.deepEqual([names(r), r.state], [['g'], emptyState()]);
+});
+
+test('another account never gets the last one\'s boards', () => {
+  const s = st({ a: { rev: 2, dirty: false, owner: 'u1' }, b: { rev: 3, dirty: true, owner: 'u1' } });
+  const boards = [B('a'), B('b'), B('g')];
+  assert.deepEqual(offerable(boards, s).map(b => b.id), ['g']);
+  const sw = switchUser(boards, s, 'u2');
+  assert.deepEqual(names(sw), ['b', 'g']);                           // a is safe on the server; b waits for u1
+  assert.equal(sw.state.user, 'u2');
+  const m = merge(sw.boards, [], sw.state, 'u2', { newId });
+  assert.deepEqual(m.push, []);                                      // u1's board is not pushed to u2
+  assert.deepEqual(offerable(sw.boards, sw.state).map(b => b.id), ['g']);
+});
+
+test('marking changes only touches synced boards', () => {
+  assert.deepEqual(markDirty(emptyState(), 'g'), emptyState());
+  assert.equal(markDirty(st({ a: { rev: 1, dirty: false, owner: 'u1' } }), 'a').boards.a.dirty, true);
+});
