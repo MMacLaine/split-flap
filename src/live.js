@@ -7,7 +7,7 @@
 
 import { wxKey } from './content.js';
 
-const SL_EVERY = 60e3, WX_EVERY = 15 * 60e3, RETRY = 60e3;
+const SL_EVERY = 60e3, WX_EVERY = 15 * 60e3, RETRY = 30e3;
 
 export class Live {
   constructor(onUpdate) {
@@ -30,8 +30,13 @@ export class Live {
   }
   poll(force) {
     const now = Date.now();
-    const due = (entry, every) => force || !entry || (!entry.busy && now - (entry.tried || 0) >= (entry.err ? RETRY : every));
-    for (const site of this.wanted.sl.keys()) if (due(this.data.sl[site], SL_EVERY)) this.fetchSl(site);
+    const due = (entry, every) => !entry || (!entry.busy && (force || now - (entry.tried || 0) >= (entry.err ? RETRY : every)));
+    // SL allows only a short burst of requests per address (about three in a few
+    // seconds, then HTTP 429), so stations are fetched one per 5 second poll, most
+    // overdue first, rather than all at once when a board with several stations opens.
+    const slDue = [...this.wanted.sl.keys()].filter(site => due(this.data.sl[site], SL_EVERY))
+      .sort((a, b) => ((this.data.sl[a] || {}).tried || 0) - ((this.data.sl[b] || {}).tried || 0));
+    if (slDue.length) this.fetchSl(slDue[0]);
     for (const [k, p] of this.wanted.wx) if (due(this.data.wx[k], WX_EVERY)) this.fetchWx(k, p);
   }
   async fetchSl(site) {
