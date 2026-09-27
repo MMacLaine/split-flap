@@ -136,7 +136,7 @@ export class Editor {
     }[plv];
     return h('header', { class: 'sf-panel-head' },
       back ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, backLabel)) : null,
-      h('div', { class: 'sf-panel-title' }, h('span', { class: 'sf-eyebrow' }, kicker), h('strong', null, title)),
+      h('div', { class: 'sf-panel-title' }, h('span', { class: 'sf-eyebrow' }, kicker), plv === 'playlist' ? this.boardName() : h('strong', null, title)),
       h('button', { class: 'sf-btn primary caps', 'data-k': 'done', 'aria-keyshortcuts': 'E', onclick: () => this.app.toggleEdit() }, t.done));
   }
   zoneName(k) { const p = this.page(); return p ? (this.t.zoneNames[p.layout] || [])[k] || '' : ''; }
@@ -167,12 +167,12 @@ export class Editor {
       h('button', { class: 'sf-sec' + (this.E.lv === 'help' ? ' on' : ''), 'data-k': 'open-help', onclick: () => { this.prevLv = this.E.lv; this.go('help'); } },
         h('span', null, h('strong', null, t.help), h('span', null, t.helpSub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')),
       this.app.account.available ? h('button', { class: 'sf-sec' + (this.E.lv === 'account' ? ' on' : ''), 'data-k': 'open-account', onclick: () => { this.prevLv = this.E.lv; this.go('account'); } },
-        h('span', null, h('strong', null, t.account), h('span', null, this.accountSub())), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')) : null);
+        h('span', null, h('strong', null, t.account), h('span', { 'data-account-sub': '' }, this.accountSub())), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')) : null);
   }
   rail() {
     const t = this.t, b = this.app.cur();
     return h('nav', { class: 'sf-rail', 'aria-label': t.playlist },
-      h('div', { class: 'sf-rail-head' }, h('span', { class: 'sf-eyebrow' }, t.playlist, this.app.account.status === 'failed' ? h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark }, ' !') : null), h('strong', null, b.name)),
+      h('div', { class: 'sf-rail-head' }, h('span', { class: 'sf-eyebrow' }, t.playlist, h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark, 'data-sync-fail': '', hidden: this.app.account.status !== 'failed' }, ' !')), this.boardName()),
       h('ol', { class: 'sf-pls compact' }, this.pageItems(true), h('li', null, h('button', { class: 'sf-add', 'data-k': 'add-page', onclick: () => this.addPage() }, '+ ' + t.addPage))),
       h('div', { class: 'sf-rail-foot' }, this.secondary(true),
         h('button', { class: 'sf-version', 'data-k': 'version', onclick: () => { this.prevLv = this.E.lv; this.go('log'); } }, `v${VERSION}`, h('span', { 'aria-hidden': 'true' }, ' · '), t.versionLog)));
@@ -645,11 +645,36 @@ export class Editor {
     return this.tplCache.get(k);
   }
 
+  // ---------- the board's name, renamed in place ----------
+  // The name in the playlist header is a button; pressing it (or Rename in the board menu)
+  // turns it into a text field. Enter or leaving the field saves, Escape keeps the old name.
+  boardName() {
+    const t = this.t, b = this.app.cur();
+    if (!this.E.renaming) return h('button', { class: 'sf-name-btn', title: t.renameBoard, 'aria-label': `${t.renameBoard}: ${b.name}`, 'data-k': 'board-rename',
+      onclick: () => this.startRename(), ondblclick: () => this.startRename() }, h('strong', null, b.name), h('span', { class: 'sf-name-pen', 'aria-hidden': 'true' }, '✎'));
+    const done = save => {
+      if (!this.E.renaming) return;
+      this.E.renaming = false;
+      const v = input.value.trim().slice(0, 80);
+      if (save && v && v !== b.name) this.app.upd(bb => { bb.name = v; }); else this.app.render();
+    };
+    const input = h('input', { class: 'sf-input sf-rename', value: b.name, 'aria-label': t.boardName, 'data-k': 'rename-input', spellcheck: 'false',
+      onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); done(true); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } },
+      onblur: () => done(true) });
+    return input;
+  }
+  startRename() {
+    this.E.renaming = true;
+    if (this.phone() && this.E.lv !== 'playlist') { this.go('playlist'); } else this.app.render();
+    const el = this.app.drawer && this.app.drawer.querySelector('[data-k="rename-input"]');
+    if (el) { el.focus(); el.select(); }
+  }
+
   // ---------- account ----------
+  accountStatus() { const a = this.app.account, t = this.t; return a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting; }
   accountSub() {
-    const a = this.app.account, t = this.t;
-    if (!a.signedIn()) return t.accGuestSub;
-    return `${a.user.name} · ${a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting}`;
+    const a = this.app.account;
+    return a.signedIn() ? `${a.user.name} · ${this.accountStatus()}` : this.t.accGuestSub;
   }
   privacyHref() {
     const alt = this.app.alt;
@@ -678,7 +703,7 @@ export class Editor {
           h('button', { class: 'sf-btn', 'data-k': 'offer-leave', onclick: () => a.answerOffer(false) }, t.offerLeave))) : null,
       h('section', { class: 'sf-field' },
         h('strong', { class: 'sf-acc-name' }, a.user.name), h('span', { class: 'sf-hint' }, a.user.email),
-        h('span', { class: 'sf-acc-status' + (a.status === 'failed' ? ' fail' : ''), role: 'status' }, status)),
+        h('span', { class: 'sf-acc-status' + (a.status === 'failed' ? ' fail' : ''), role: 'status', 'data-account-status': '' }, status)),
       h('div', { class: 'sf-row' },
         h('button', { class: 'sf-btn', 'data-k': 'acc-export', onclick: () => a.exportAll() }, t.exportAll),
         this.confirmBtn('signout', t.signOut, t.confirmSignOut, () => a.signOut())),

@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.5.1', date: '2026-09-27',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'A fix for the editor, and two things that were hard to find.',
+      sv: 'En rättning av redigeraren, och två saker som var svåra att hitta.'
+    },
+    items: {
+      en: [
+        'Typing a name while signed in could leave a stale copy of the editor on screen, so Done seemed to open a second one. Fixed, the editor closes on Done.',
+        'Sign in is in the control bar now, so the account is easy to find. Once you are signed in, the bar shows your first name.',
+        'A board can be renamed where its name is shown: press the name at the top of the page list, or Rename in the board menu. Enter saves and Escape keeps the old name.'
+      ],
+      sv: [
+        'Om du skrev ett namn medan du var inloggad kunde en gammal kopia av redigeraren ligga kvar på skärmen, så att Klar verkade öppna en till. Rättat, redigeraren stängs när du trycker Klar.',
+        'Logga in finns i kontrollraden nu, så kontot är lätt att hitta. När du är inloggad visar raden ditt förnamn.',
+        'En tavla kan byta namn där namnet visas: tryck på namnet högst upp i sidlistan, eller Byt namn i tavelmenyn. Enter sparar och Escape behåller det gamla namnet.'
+      ]
+    }
+  },
+  {
     v: '0.5', date: '2026-09-27',
     tag: { en: 'Accounts', sv: 'Konton' },
     desc: {

@@ -43,6 +43,7 @@ export const STR = {
     // editor drawer (DESIGN-HANDOVER-editor.md)
     addTime: 'Add another time', removeTime: 'Remove this time', rolls: 'Rolls', rollStart: 'Roll every flap when the board starts', rollHourly: 'Roll again on the hour', pageTransition: 'Transition to this page', boardDefault: name => `Board default (${name})`, showAlone: 'Show alone while this is on', showAloneHint: 'Pages without a time wait until it ends.', winDays: 'Days of the week', winDate: 'A date', everyYear: 'Every year',
     monthShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    signIn: 'Sign in', renameBoard: 'Rename board',
     account: 'Account', accGuestSub: 'Guest, boards in this browser only', accSynced: 'Synced', accWaiting: 'Waiting to sync', accFailed: 'Could not sync, it will try again',
     accGuestBody: 'You are using Split-Flap as a guest. Your boards are kept in this browser only, so clearing its data or changing phone or computer loses them.',
     accSignInBody: 'Sign in with Google and your boards are kept with your account, on any device you sign in on.', signInGoogle: 'Sign in with Google', accPrivacy: 'What an account stores',
@@ -115,6 +116,7 @@ export const STR = {
     boardLink: 'Tavellänk', fallback: 'Ingen sida är schemalagd just nu, så tavlan visar klockan.',
     addTime: 'Lägg till en tid till', removeTime: 'Ta bort den här tiden', rolls: 'Rullningar', rollStart: 'Rulla alla blad när tavlan startar', rollHourly: 'Rulla igen varje hel timme', pageTransition: 'Övergång till den här sidan', boardDefault: name => `Tavlans (${name.toLowerCase()})`, showAlone: 'Visa ensam medan den är på', showAloneHint: 'Sidor utan tid väntar tills den är slut.', winDays: 'Veckodagar', winDate: 'Ett datum', everyYear: 'Varje år',
     monthShort: ['jan', 'feb', 'mars', 'apr', 'maj', 'juni', 'juli', 'aug', 'sep', 'okt', 'nov', 'dec'],
+    signIn: 'Logga in', renameBoard: 'Byt namn på tavlan',
     account: 'Konto', accGuestSub: 'Gäst, tavlor bara i den här webbläsaren', accSynced: 'Synkad', accWaiting: 'Väntar på att synka', accFailed: 'Kunde inte synka, försöker igen',
     accGuestBody: 'Du använder Split-Flap som gäst. Dina tavlor sparas bara i den här webbläsaren, så om du rensar den eller byter telefon eller dator försvinner de.',
     accSignInBody: 'Logga in med Google så sparas dina tavlor med ditt konto, på alla enheter där du loggar in.', signInGoogle: 'Logga in med Google', accPrivacy: 'Vad ett konto sparar',
