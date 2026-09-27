@@ -541,7 +541,7 @@ export class App {
   }
   deleteBoard(i) {
     if (this.boards.length < 2) return;
-    this.boards.splice(i, 1); this.active = Math.max(0, Math.min(this.active - (i < this.active ? 1 : 0), this.boards.length - 1));
+    const [gone] = this.boards.splice(i, 1); this.account.deleted(gone.id); this.active = Math.max(0, Math.min(this.active - (i < this.active ? 1 : 0), this.boards.length - 1));
     this.S.sel = 0; this.save(); this.refresh();
   }
   // The page being edited (or showing) as a PNG, with the board frame, at twice the

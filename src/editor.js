@@ -635,7 +635,7 @@ export class Editor {
               h('button', { class: 'sf-small-btn', disabled: cur, 'data-k': `bd-open-${i}`, onclick: () => { app.pickBoard(i); this.go(this.phone() ? 'playlist' : 'page'); } }, cur ? t.current : t.open),
               h('button', { class: 'sf-small-btn', 'data-k': `bd-dup-${i}`, onclick: () => app.duplicateBoard(i) }, t.duplicate),
               h('button', { class: 'sf-small-btn', 'data-k': `bd-exp-${i}`, onclick: () => app.exportJson(i) }, t.exportB),
-              h('button', { class: 'sf-small-btn muted', disabled: app.boards.length < 2, 'data-k': `bd-del-${i}`, onclick: () => app.deleteBoard(i) }, t.del)));
+              h('button', { class: 'sf-small-btn danger', disabled: app.boards.length < 2, 'data-k': `bd-del-${i}`, onclick: () => app.deleteBoard(i) }, t.del)));
         }),
         h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'import', onclick: () => file.click() }, t.importB), file),
         h('p', { class: 'sf-note' }, t.jsonNote)));

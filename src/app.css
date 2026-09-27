@@ -155,8 +155,9 @@ html, body { margin: 0; background: #13151A; }
 .sf-btn.big { height: 44px; padding: 0 16px; font-size: 14px; align-self: flex-start; }
 .sf-btn.muted, .sf-small-btn.muted { color: var(--muted); }
 /* Delete account: plainly a working button, and plainly one that removes things */
-.sf-btn.danger { color: var(--danger); border-color: var(--danger-line); }
-.sf-btn.danger:hover, .sf-btn.danger:focus-visible { background: var(--danger-soft); }
+.sf-btn.danger, .sf-small-btn.danger { color: var(--danger); border-color: var(--danger-line); }
+.sf-small-btn.danger:disabled { opacity: 0.4; }
+.sf-btn.danger:hover, .sf-btn.danger:focus-visible, .sf-small-btn.danger:hover:not(:disabled) { background: var(--danger-soft); }
 .sf-small-btn { height: 36px; padding: 0 10px; border-radius: 8px; }
 .sf-link-btn.inline { padding: 0; font-size: inherit; }
 .sf-icon { width: 36px; height: 36px; flex: none; border: 0; background: none; color: var(--muted); font-size: 16px; }
