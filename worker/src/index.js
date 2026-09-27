@@ -70,8 +70,11 @@ async function route(req, env, url) {
     try {
       await auth.api.deleteUser({ headers: req.headers, body: {} });   // afterDelete removes the boards
     } catch (err) {
-      // Better Auth wants a recent sign-in before deleting: the app signs in again and retries
-      return fail(403, 'sign_in_again');
+      // Better Auth wants a sign-in from the last day before deleting: the app asks for one.
+      // Anything else is a real failure and says so.
+      if (err && err.body && err.body.code === 'SESSION_EXPIRED') return fail(403, 'sign_in_again');
+      console.error(err && err.stack || err);
+      return fail(500, 'server_error');
     }
     return json({ deleted: true });
   }
@@ -86,7 +89,7 @@ async function route(req, env, url) {
 // Tests only: on localhost with DEV_TEST=1, make an account and a session without
 // Google, so the boards API can be walked end to end (worker/test/). Never on in
 // production: it needs both the flag and a localhost BASE_URL.
-const devTest = env => env.DEV_TEST === '1' && /^http:\/\/localhost(:\d+)?$/.test(env.BASE_URL || '');
+export const devTest = env => env.DEV_TEST === '1' && /^http:\/\/localhost(:\d+)?$/.test(env.BASE_URL || '');
 async function devSession(req, env, auth) {
   const { email = 'test@example.com', name = 'Test Person' } = await req.json().catch(() => ({}));
   const ctx = await auth.$context;
