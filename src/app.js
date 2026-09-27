@@ -14,6 +14,7 @@ import { loadBoards, saveBoards, getFlag, setFlag, sanitizeBoard, encodeBoard, d
 import { Live, searchStations, searchCities, MODE_LETTERS } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
+import { CHANGELOG, VERSION } from './changelog.js';
 
 // ---------- tiny DOM helper ----------
 const PROPS = new Set(['value', 'checked', 'disabled', 'readOnly', 'type', 'min', 'max']);
@@ -83,6 +84,7 @@ export class App {
     this.chromeTheme();
     this.bind();
     this.openLink().then(() => {
+      if (location.hash === '#log') this.openLog();
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
       this.iv = setInterval(() => this.tick(), 500);
@@ -168,7 +170,7 @@ export class App {
     document.addEventListener('fullscreenchange', () => { this.set({ isFull: !!document.fullscreenElement }); this.lock(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.lock(); if (this.readHome()) this.refresh(); else this.tick(true); } });
     addEventListener('storage', e => { if (e.key === 'slmap_home' && this.readHome()) this.refresh(); });
-    addEventListener('hashchange', () => this.openLink().then(() => this.refresh()));
+    addEventListener('hashchange', () => { if (location.hash === '#log') return this.openLog(); this.openLink().then(() => this.refresh()); });
     matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => this.chromeTheme());
     this.lock();
   }
@@ -204,6 +206,14 @@ export class App {
     this.S.pageIdx = 0; this.S.pageStart = Date.now(); this.S.sel = 0;
     this.save();
     if (!this.kioskStrict) this.flash(this.t.imported);
+  }
+  openLog() {
+    history.replaceState(null, '', location.pathname + location.search);
+    if (this.kioskStrict) return;
+    Object.assign(this.S, { editing: true, tab: 'log', share: false, switcher: false });
+    this.prevTab = 'pages';
+    scrollTo(0, 0);
+    this.refresh();
   }
   wake(ms) {
     if (!this.S.bar) { this.S.bar = true; this.paintBar(); }
@@ -386,14 +396,18 @@ export class App {
     this.comps = new Map();
     const S = this.S, t = this.t, b = this.cur();
     const tab = (id, label) => h('button', { class: 'sf-tab', role: 'tab', 'aria-selected': String(S.tab === id), 'data-k': 'tab-' + id, onclick: () => this.set({ tab: id }) }, label);
-    const panel = S.tab === 'board' ? this.panelBoard() : S.tab === 'boards' ? this.panelBoards() : this.panelPages();
+    const panel = S.tab === 'log' ? this.panelLog() : S.tab === 'board' ? this.panelBoard() : S.tab === 'boards' ? this.panelBoards() : this.panelPages();
+    // Subtle version line at the foot of every tab; opens the full log.
+    const foot = S.tab === 'log' ? null : h('div', { class: 'sf-drawer-foot' },
+      h('button', { class: 'sf-version', 'data-k': 'version', onclick: () => { this.prevTab = S.tab; this.set({ tab: 'log' }); if (this.drawer) this.drawer.scrollTop = 0; } },
+        `v${VERSION}`, h('span', { 'aria-hidden': 'true' }, ' · '), t.versionLog));
     return h('aside', { class: 'sf-drawer', 'aria-label': t.editor },
       h('div', { class: 'sf-drawer-head' },
         h('div', { class: 'sf-drawer-title' },
           h('div', null, h('span', { class: 'sf-eyebrow' }, t.editing), h('strong', null, b.name)),
           h('button', { class: 'sf-btn primary caps', 'data-k': 'done', onclick: () => this.toggleEdit() }, t.done)),
         h('div', { class: 'sf-tabs', role: 'tablist' }, tab('pages', t.pages), tab('board', t.board), tab('boards', t.boards))),
-      panel);
+      panel, foot);
   }
   seg(items, cur, pick, key) {
     return items.map(([id, label]) => h('button', { class: 'sf-seg', 'aria-pressed': String(id === cur), 'data-k': key + '-' + id, onclick: () => pick(id) }, label));
@@ -562,7 +576,8 @@ export class App {
     return h('div', { class: 'sf-section' },
       h('div', { class: 'sf-field' }, h('span', null, t.modes), h('div', { class: 'sf-row' }, modeBtns)),
       h('div', { class: 'sf-row' }, h('span', { style: 'font-size:12px;color:var(--muted);flex:1' }, t.eta),
-        this.seg([['min', t.etaMin], ['clock', t.etaClock]], o.eta || 'min', v => setO(oo => { oo.eta = v; }), 'eta' + zi)));
+        this.seg([['min', t.etaMin], ['clock', t.etaClock], ['cycle', t.etaCycle]], o.eta || 'min', v => setO(oo => { oo.eta = v; }), 'eta' + zi),
+        o.eta === 'clock' || o.eta === 'cycle' ? this.seg([['24', '24 h'], ['12', '12 h']], o.fmt || '24', v => setO(oo => { oo.fmt = v; }), 'slfmt' + zi) : null));
   }
 
   // A search box whose results update in place (no drawer rebuild while typing).
@@ -660,6 +675,23 @@ export class App {
     else if (k === 'ArrowDown') { e.preventDefault(); caret(pos + w); }
     else if (k === 'Enter') { e.preventDefault(); const nx = (Math.floor(pos / w) + 1) * w; if (nx >= n) this.flash(this.t.full); else caret(nx); }
     else if (k === 'Escape') { e.currentTarget.blur(); }
+  }
+
+  // ---------- version log ----------
+  panelLog() {
+    const t = this.t, lang = this.S.lang;
+    return h('div', { class: 'sf-panel' },
+      h('div', { class: 'sf-section-head' },
+        h('h3', { class: 'sf-eyebrow' }, t.versionLog),
+        h('button', { class: 'sf-link-btn', 'data-k': 'log-back', onclick: () => this.set({ tab: this.prevTab || 'pages' }) }, t.back)),
+      h('ol', { class: 'sf-log' }, CHANGELOG.map((r, i) => h('li', { class: 'sf-log-entry' + (i === 0 ? ' latest' : '') },
+        h('div', { class: 'sf-log-head' },
+          h('span', { class: 'sf-log-v' }, 'v' + r.v),
+          h('span', { class: 'sf-log-tag' }, r.tag[lang]),
+          h('time', { class: 'sf-log-date', datetime: r.date }, r.date)),
+        h('p', { class: 'sf-log-desc' }, r.desc[lang]),
+        h('ul', { class: 'sf-log-list' }, r.items[lang].map(it => h('li', null, it)))))),
+      h('p', { class: 'sf-note' }, t.logNote, ' ', h('a', { href: 'https://github.com/MMacLaine/split-flap/blob/main/CHANGELOG.md' }, 'GitHub'), '.'));
   }
 
   // ---------- board + boards tabs ----------

@@ -179,7 +179,9 @@ export function channelLines(ch, o, z, now, lang, live) {
     const src = slSource(o, live);
     if (!src) return { lines: ['SL', o.home ? w.nohome : w.pick], align: 'center' };
     const name = src.name.toUpperCase(), got = src.sites.map(id => live && live.sl && live.sl[id]).filter(Boolean);
-    if (!got.some(d => d.deps)) return { lines: [name, '', got.some(d => d.err) ? w.nodata : w.loading], align: 'center' };
+    // Say "no data" only after several failed tries in a row; SL often refuses the
+    // first request or two and then answers.
+    if (!got.some(d => d.deps)) return { lines: [name, '', got.some(d => (d.fails || 0) >= 4) ? w.nodata : w.loading], align: 'center' };
     const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null;
     const deps = got.flatMap(d => d.deps || [])
       .filter(x => !modes || modes.includes(x.mode))
@@ -187,13 +189,22 @@ export function channelLines(ch, o, z, now, lang, live) {
       .filter(x => x.m != null && x.m >= 0)
       .sort((a, b) => a.m - b.m);
     if (!deps.length) return { lines: [name, '', w.nodeps], align: 'center' };
-    const eta = x => o.eta === 'clock' ? (x.expected || x.scheduled).slice(11, 16) : x.m === 0 ? w.now : `${x.m} ${w.min}`;
+    // Minutes away, or the clock time in 24 h or 12 h. SL timestamps are Stockholm local.
+    // 'cycle' alternates the two every six seconds, so a glance gets both.
+    const showClock = o.eta === 'clock' || (o.eta === 'cycle' && Math.floor(now / 6000) % 2 === 1);
+    const eta = x => {
+      if (!showClock) return x.m === 0 ? w.now : `${x.m} ${w.min}`;
+      const hhmm = (x.expected || x.scheduled).slice(11, 16);
+      if (o.fmt !== '12') return hhmm;
+      const hh = +hhmm.slice(0, 2);
+      return `${(hh % 12) || 12}:${hhmm.slice(3)} ${hh < 12 ? 'AM' : 'PM'}`;
+    };
     return { lines: [name].concat(deps.slice(0, z.h - 1).map(x => row(x.line, x.dest.toUpperCase(), eta(x), W))), align: 'left' };
   }
   if (ch === 'weather') {
     if (o.lat == null) return { lines: [w.weather, w.pickCity], align: 'center' };
     const city = (o.city || '').toUpperCase(), data = live && live.wx && live.wx[wxKey(o)];
-    if (!data || data.t == null) return { lines: [city, '', data && data.err ? w.nodata : w.loading], align: 'center' };
+    if (!data || data.t == null) return { lines: [city, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
     return weatherLines(o.view || 'now', city, data, z, W, lang, w);
   }
   if (ch === 'quote') {

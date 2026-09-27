@@ -202,3 +202,17 @@ test('station search forgives spelling', async () => {
   assert.equal((await searchStations('tcentralen'))[0].name, 'T-Centralen');        // missing hyphen
   assert.equal((await searchStations('gulmarsplan'))[0].name, 'Gullmarsplan');      // one letter short
 });
+
+test('departure times as minutes, 24 h or 12 h clock', () => {
+  const now = Date.UTC(2026, 8, 27, 3, 0, 0);   // 05:00 Stockholm
+  const live = { sl: { 9306: { deps: [{ line: '11', dest: 'Akalla', expected: '2026-09-27T08:11:00', mode: 'METRO' }] } } };
+  const z = { r: 0, c: 0, h: 2, w: 22 }, o = { sites: [9306], name: 'Västra skogen' };
+  const line = opts => channelLines('sl', { ...o, ...opts }, z, now, 'en', live).lines[1];
+  // Row width 22 - 2 = 20. "11 AKALLA" is 9 characters, so the gap is 20 - 9 - len(right).
+  assert.equal(line({ eta: 'min' }), '11 AKALLA    191 MIN');          // 3 h 11 min = 191; gap 20-9-7 = 4
+  assert.equal(line({ eta: 'clock' }), '11 AKALLA      08:11');         // gap 20-9-5 = 6
+  assert.equal(line({ eta: 'clock', fmt: '12' }), '11 AKALLA    8:11 AM');
+  // Alternate: 6 s on minutes, 6 s on the clock. now is an exact hour, so it starts on minutes.
+  assert.equal(line({ eta: 'cycle' }), '11 AKALLA    191 MIN');
+  assert.equal(channelLines('sl', { ...o, eta: 'cycle' }, z, now + 6000, 'en', live).lines[1], '11 AKALLA      08:11'); // 12 h drops the leading zero, like the clock channel; gap 20-9-7 = 4
+});
