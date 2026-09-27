@@ -671,27 +671,35 @@ export class Editor {
   }
 
   // ---------- account ----------
-  accountStatus() { const a = this.app.account, t = this.t; return a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting; }
+  accountStatus() {
+    const a = this.app.account, t = this.t;
+    return a.status === 'signedout' ? t.accSignedOut : a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting;
+  }
   accountSub() {
     const a = this.app.account;
-    return a.signedIn() ? `${a.user.name} · ${this.accountStatus()}` : this.t.accGuestSub;
+    return a.signedIn() ? `${a.user.name} · ${this.accountStatus()}` : a.status === 'signedout' ? this.t.accSignedOut : this.t.accGuestSub;
   }
   privacyHref() {
     const alt = this.app.alt;
     return alt.en || alt.sv ? (this.lang === 'sv' ? '/split-flap/privacy' : '/en/split-flap/privacy') : './privacy.html';
   }
   // Sign out and delete account ask twice: the first press says what will happen.
-  confirmBtn(key, label, ask, run, cls) {
-    const t = this.t, armed = this.E.confirm === key;
-    return h('button', { class: 'sf-btn ' + (cls || ''), 'data-k': 'acc-' + key, onclick: async () => {
+  // Two presses. The second press's label stays short and the why goes in a note below,
+  // so the button still reads as a button on a phone.
+  confirmBtn(key, label, again, why, run, cls) {
+    const armed = this.E.confirm === key;
+    return [h('button', { class: 'sf-btn ' + (cls || ''), 'data-k': 'acc-' + key, onclick: async () => {
       if (!armed) { this.E.confirm = key; this.app.render(); return; }
       this.E.confirm = null; await run(); this.app.render();
-    } }, armed ? ask : label);
+    } }, armed ? again : label),
+    armed ? h('p', { class: 'sf-note big sf-confirm-why', 'data-k': 'acc-' + key + '-why' }, why) : null];
   }
   accountLevel() {
     const t = this.t, a = this.app.account, privacy = h('a', { href: this.privacyHref(), 'data-k': 'acc-privacy' }, t.accPrivacy);
     if (!a.signedIn()) return h('div', { class: 'sf-level' },
-      h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accGuestBody), h('p', { class: 'sf-note big' }, t.accSignInBody)),
+      a.status === 'signedout'
+        ? h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accSignedOutBody(a.unsyncedCount())))
+        : h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accGuestBody), h('p', { class: 'sf-note big' }, t.accSignInBody)),
       h('div', null, h('button', { class: 'sf-btn primary big', 'data-k': 'acc-signin', onclick: () => a.signIn() }, t.signInGoogle)),
       h('p', { class: 'sf-note' }, privacy));
     const status = a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting;
@@ -704,10 +712,12 @@ export class Editor {
       h('section', { class: 'sf-field' },
         h('strong', { class: 'sf-acc-name' }, a.user.name), h('span', { class: 'sf-hint' }, a.user.email),
         h('span', { class: 'sf-acc-status' + (a.status === 'failed' ? ' fail' : ''), role: 'status', 'data-account-status': '' }, status)),
+      a.refusedBoards().length ? h('section', { class: 'sf-field sf-refused' },
+        a.refusedBoards().map(r => h('span', { class: 'sf-hint warn' }, t.refusedBoard(r.name, r.error)))) : null,
       h('div', { class: 'sf-row' },
         h('button', { class: 'sf-btn', 'data-k': 'acc-export', onclick: () => a.exportAll() }, t.exportAll),
-        this.confirmBtn('signout', t.signOut, t.confirmSignOut, () => a.signOut())),
-      h('div', { class: 'sf-row ruled' }, this.confirmBtn('delete', t.deleteAccount, t.confirmDelete, () => a.deleteAccount(), 'muted')),
+        this.confirmBtn('signout', t.signOut, a.unsyncedCount() ? t.signOutAnyway : t.signOutAgain, a.unsyncedCount() ? t.confirmSignOutUnsynced(a.unsyncedCount()) : t.confirmSignOut, () => a.signOut())),
+      h('div', { class: 'sf-row ruled' }, this.confirmBtn('delete', t.deleteAccount, t.deleteAgain, t.confirmDelete, () => a.deleteAccount(), 'muted')),
       h('p', { class: 'sf-note' }, privacy));
   }
 

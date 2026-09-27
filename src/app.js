@@ -115,6 +115,7 @@ export class App {
   // The account's sync status changed: the text updates in place. Rebuilding the drawer
   // here would run on every keystroke, since every save marks a board for sync.
   paintAccount() {
+    this.renderOverlay();   // the bar's account button shows a failed sync, drawer open or not
     const d = this.drawer; if (!d) return;
     const sub = d.querySelector('[data-account-sub]'); if (sub) sub.textContent = this.editor.accountSub();
     const st = d.querySelector('[data-account-status]');
@@ -416,8 +417,10 @@ export class App {
         h('button', { class: 'sf-bar-btn', 'aria-pressed': String(!!b.sound), 'aria-keyshortcuts': 'S', 'data-k': 'bar-sound', onclick: () => this.toggleSound() },
           h('span', null, t.sound), h('span', { class: 'state' }, b.sound ? t.on : t.off)),
         h('button', { class: 'sf-bar-btn', 'aria-expanded': String(S.share), 'data-k': 'bar-share', onclick: () => this.openShare() }, t.share),
-        this.account && this.account.available ? h('button', { class: 'sf-bar-btn' + (this.account.signedIn() ? ' named' : ' signin'), 'data-k': 'bar-account', onclick: () => this.openAccount() },
-          this.account.signedIn() ? this.account.user.name : t.signIn) : null,
+        this.account && this.account.available ? h('button', { class: 'sf-bar-btn' + (this.account.signedIn() ? ' named' : ' signin'), 'data-k': 'bar-account', onclick: () => this.openAccount(),
+            title: this.account.status === 'failed' || this.account.status === 'signedout' ? this.editor.accountStatus() : null },
+          this.account.signedIn() ? this.account.user.name : this.account.status === 'signedout' ? t.signInToSync : t.signIn,
+          this.account.status === 'failed' || this.account.refusedBoards().length ? h('span', { class: 'sf-bar-fail', 'aria-label': t.syncFailedMark, role: 'img' }, ' !') : null) : null,
         h('span', { class: 'sf-sep' }),
         h('div', { role: 'group', 'aria-label': t.lang, style: 'display:flex' },
           h('button', { class: 'sf-lang', 'aria-pressed': String(S.lang === 'en'), lang: 'en', onclick: () => this.setLang('en') }, 'EN'),
