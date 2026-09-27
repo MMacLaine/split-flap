@@ -2,6 +2,14 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.5.1 (2026-09-27): Fixes
+
+A fix for the editor, and two things that were hard to find.
+
+- Typing a name while signed in could leave a stale copy of the editor on screen, so Done seemed to open a second one. Fixed, the editor closes on Done.
+- Sign in is in the control bar now, so the account is easy to find. Once you are signed in, the bar shows your first name.
+- A board can be renamed where its name is shown: press the name at the top of the page list, or Rename in the board menu. Enter saves and Escape keeps the old name.
+
 ## v0.5 (2026-09-27): Accounts
 
 Optional accounts. Sign in with Google and your boards come with you, and Split-Flap still needs no account.

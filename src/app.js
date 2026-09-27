@@ -112,8 +112,27 @@ export class App {
     this.save(); this.account.replacing = false;
     this.refresh();
   }
-  // The account's status changed: the drawer shows it, so rebuild it when open.
-  paintAccount() { if (this.S.editing) this.render(); }
+  // The account's sync status changed: the text updates in place. Rebuilding the drawer
+  // here would run on every keystroke, since every save marks a board for sync.
+  paintAccount() {
+    const d = this.drawer; if (!d) return;
+    const sub = d.querySelector('[data-account-sub]'); if (sub) sub.textContent = this.editor.accountSub();
+    const st = d.querySelector('[data-account-status]');
+    if (st) { st.textContent = this.editor.accountStatus(); st.classList.toggle('fail', this.account.status === 'failed'); }
+    const mark = d.querySelector('[data-sync-fail]'); if (mark) mark.hidden = this.account.status !== 'failed';
+  }
+  // The bar's account button: opens the Account panel, which explains guest or signed in.
+  openAccount() {
+    this.S.switcher = false;
+    if (!this.S.editing) this.toggleEdit();
+    this.editor.prevLv = 'playlist'; this.editor.go('account');
+  }
+  // Rename the board in place: the playlist header turns into a text field.
+  renameBoard() {
+    this.S.switcher = false;
+    if (!this.S.editing) this.toggleEdit();
+    this.editor.startRename();
+  }
   upd(fn, quiet) {
     const b = clone(this.cur()); fn(b); this.boards[this.active] = b; this.save();
     if (b.id === this.freshId) this.freshId = null;
@@ -326,7 +345,18 @@ export class App {
   }
 
   // ---------- rendering ----------
+  // Never nested: rebuilding the drawer removes a focused text field, and the browser can
+  // fire its change event right then, which calls render again from inside this one. A
+  // nested call waits and runs once this one is done.
   render() {
+    if (this.rendering) { this.renderAgain = true; return; }
+    this.rendering = true;
+    try { this.renderNow(); } finally {
+      this.rendering = false;
+      if (this.renderAgain) { this.renderAgain = false; this.render(); }
+    }
+  }
+  renderNow() {
     const S = this.S, mobile = this.isMobile(), kiosk = this.kioskStrict || S.isFull;
     this.root.classList.toggle('editing', S.editing);
     this.root.classList.toggle('editing-mobile', S.editing && mobile);
@@ -346,9 +376,11 @@ export class App {
         if (lvBefore === (now[0] && now[0].dataset.lv)) now.forEach((el, i) => { if (scrolls[i] != null) el.scrollTop = scrolls[i]; });
         else if (now[1] && scrolls[1] != null) now[1].scrollTop = scrolls[1];
       }
+      // only ever one drawer on the page
+      this.root.querySelectorAll('.sf-drawer').forEach(d => { if (d !== this.drawer) d.remove(); });
       this.editor.after();
       if (focusKey) { const el = this.drawer.querySelector(`[data-k="${focusKey}"]`); if (el) el.focus({ preventScroll: true }); }
-    } else if (old) { old.remove(); this.drawer = null; }
+    } else { this.root.querySelectorAll('.sf-drawer').forEach(d => d.remove()); this.drawer = null; }
     this.renderOverlay();
   }
 
@@ -384,6 +416,8 @@ export class App {
         h('button', { class: 'sf-bar-btn', 'aria-pressed': String(!!b.sound), 'aria-keyshortcuts': 'S', 'data-k': 'bar-sound', onclick: () => this.toggleSound() },
           h('span', null, t.sound), h('span', { class: 'state' }, b.sound ? t.on : t.off)),
         h('button', { class: 'sf-bar-btn', 'aria-expanded': String(S.share), 'data-k': 'bar-share', onclick: () => this.openShare() }, t.share),
+        this.account && this.account.available ? h('button', { class: 'sf-bar-btn' + (this.account.signedIn() ? ' named' : ' signin'), 'data-k': 'bar-account', onclick: () => this.openAccount() },
+          this.account.signedIn() ? this.account.user.name : t.signIn) : null,
         h('span', { class: 'sf-sep' }),
         h('div', { role: 'group', 'aria-label': t.lang, style: 'display:flex' },
           h('button', { class: 'sf-lang', 'aria-pressed': String(S.lang === 'en'), lang: 'en', onclick: () => this.setLang('en') }, 'EN'),
@@ -426,8 +460,10 @@ export class App {
   renderSwitcher() {
     const t = this.t;
     return h('div', { class: 'sf-pop sf-menu', role: 'menu' },
-      this.boards.map((bd, i) => h('button', { class: 'sf-menu-item', role: 'menuitem', 'aria-current': String(i === this.active), onclick: () => this.pickBoard(i) },
-        h('span', null, bd.name), h('span', null, this.sizeLabel(bd)))),
+      this.boards.map((bd, i) => h('div', { class: 'sf-menu-row' },
+        h('button', { class: 'sf-menu-item', role: 'menuitem', 'aria-current': String(i === this.active), onclick: () => this.pickBoard(i), ondblclick: () => { this.pickBoard(i); this.renameBoard(); } },
+          h('span', null, bd.name), h('span', null, this.sizeLabel(bd))),
+        i === this.active ? h('button', { class: 'sf-menu-rename', role: 'menuitem', 'data-k': 'menu-rename', title: t.renameBoard, 'aria-label': t.renameBoard, onclick: () => this.renameBoard() }, '✎') : null)),
       h('button', { class: 'sf-menu-new', role: 'menuitem', onclick: () => this.newBoard() }, '+ ' + t.newBoard));
   }
   sizeLabel(bd) { return bd.size === 'fill' ? this.t.fill : bd.size === 'custom' ? `${bd.rows} × ${bd.cols}` : bd.size.replace('x', ' × '); }
