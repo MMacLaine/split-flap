@@ -61,6 +61,21 @@ export function textToCells(s) {
   return out;
 }
 
+// What the composer's hidden input receives, to flaps. The coloured squares on a phone
+// keyboard place the matching chip; this is for the composer only, so in free text
+// elsewhere (quotes, big text, menus) an emoji never turns into a chip. Returns the
+// flaps and the characters that had no flap, for the "shows as blank" note.
+const EMOJI_CHIPS = { '🟥': 'r', '🟧': 'o', '🟨': 'y', '🟩': 'g', '🟦': 'b', '🟪': 'v', '⬜': 'w', '⬛': 'k', '◻': 'w', '◼': 'k' };
+export function composerInput(s) {
+  const out = [], invalid = [];
+  for (const ch of String(s || '')) {
+    if (ch === '\uFE0F') continue;
+    if (EMOJI_CHIPS[ch]) { out.push(EMOJI_CHIPS[ch]); continue; }
+    const r = cleanChar(ch); if (!r.valid) invalid.push(ch); out.push(r.ch);
+  }
+  return { cells: out, invalid };
+}
+
 // The forward path a flap takes from one entry to another, ending on the target.
 // max caps the visible steps (the flap starts nearer the target); Infinity is the
 // full authentic rotation.
