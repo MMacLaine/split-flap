@@ -85,6 +85,31 @@ try {
   await A.ev(`splitFlap.deleteBoard(splitFlap.boards.findIndex(b => b.name === 'Made while the API was down'))`); await sleep(3500);
   check('a board deleted by a person is deleted on the server', !(await server(A)).includes('Made while the API was down'), await server(A));
 
+  // 0.6.3, guest to account: a guest with three boards signs in for the first time
+  const C = await browser('C'), emailC = `guest-${Date.now()}@example.com`;
+  await C.go('http://localhost:8787/'); await C.ev(`localStorage.setItem('sf_started','1')`); await C.go('http://localhost:8787/');
+  await C.ev(`(() => { splitFlap.duplicateBoard(0); splitFlap.upd(b => { b.name = 'Guest keep'; }); splitFlap.duplicateBoard(0); splitFlap.upd(b => { b.name = 'Guest leave'; }); })()`); await sleep(500);
+  const prompt = await C.ev(`(() => { splitFlap.dismissCue(); splitFlap.renderOverlay(); const p = document.querySelector('[data-k=signin-prompt]'); return p ? p.textContent : ''; })()`);
+  check('a guest with a second board sees the one sign-in prompt', /only in this browser/.test(prompt), prompt.slice(0, 60));
+  // Chrome grants persistence by how much a site is used, so a fresh headless profile says
+  // no. The check is that the app asked; persisted() is reported for the handover.
+  check('the browser was asked to keep guest storage', (await C.ev(`String(!!splitFlap.askedPersist)`)) === 'true', 'persisted() says ' + await C.ev(`navigator.storage.persisted().then(String)`));
+  await C.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailC}', name: 'Guest Person' }) }).then(r => r.status)`);
+  await C.go('http://localhost:8787/'); await sleep(2500);
+  check('the offer shows on the first sign-in', (await C.ev(`splitFlap.account.offer.length`)) === 3);
+  check('a safety copy of the guest boards is kept', (await C.ev(`JSON.parse(localStorage.getItem('sf_guest_backup') || '{"boards":[]}').boards.length`)) === 3);
+  await C.go('http://localhost:8787/'); await sleep(2500);   // the tab closed with the question showing
+  check('closed during the offer and reopened, the offer is back', (await C.ev(`splitFlap.account.offer.length`)) === 3);
+  check('and nothing was taken into the account unasked', JSON.parse(await server(C)).length === 0, await server(C));
+  await C.ev(`(() => { const app = splitFlap, f = app.flash.bind(app); app.flashes = []; app.flash = m => { app.flashes.push(m); f(m); };
+    const a = app.account, id = app.boards.find(b => b.name === 'Guest leave').id; a.toggleOffer(id); a.answerOffer(true); })()`); await sleep(4000);
+  const cServer = JSON.parse(await server(C));
+  check('only the ticked boards reach the account', cServer.length === 2 && cServer.includes('Guest keep') && !cServer.includes('Guest leave'), JSON.stringify(cServer));
+  check('the unticked board stays here', (await names(C)).includes('Guest leave'));
+  check('the safety copy is gone once the server has them', (await C.ev(`String(localStorage.getItem('sf_guest_backup'))`)) === 'null');
+  const said = await C.ev(`splitFlap.flashes.join(' / ')`);
+  check('the count shown matches the server', said === `${cServer.length} boards are now in your account.`, said);
+
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);
   await B.ev(`splitFlap.upd(b => { b.name = 'B unsynced at sign out'; })`); await sleep(2500);

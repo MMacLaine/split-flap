@@ -48,6 +48,7 @@ html, body { margin: 0; background: #13151A; }
 .sf-btn.caps { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
 .sf-check { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
 .sf-check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.sf-offer-list { display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow: auto; }
 .sf-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sf-note { margin: 0; font-size: 12px; color: var(--muted); text-wrap: pretty; }
 
@@ -355,6 +356,7 @@ html, body { margin: 0; background: #13151A; }
 .sf-cue { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--accent-line); max-width: 100%; box-sizing: border-box; font-size: 13px; }
 .sf-cue::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
 .sf-cue button { border: 0; background: none; padding: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.sf-cue button.accent { color: var(--accent); }
 .sf-toast { font-size: 13px; padding: 10px 14px; }
 
 /* ---------- under 1024 px: preview on top, one drawer level below ---------- */

@@ -8,12 +8,14 @@ import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsync
 import { newId } from './content.js';
 import { getFlag, setFlag } from './store.js';
 
+const BACKUP = 'sf_guest_backup';   // the guest boards as they were at the first sign-in, until the server has them
+
 const API = '/split-flap/api';
 const KEY = 'sf_sync';
 
 function loadState() {
-  try { const s = JSON.parse(getFlag(KEY)); if (s && typeof s === 'object' && s.boards) return Object.assign({ declined: [] }, s); } catch { /* bad or missing */ }
-  return Object.assign(emptyState(), { declined: [] });
+  try { const s = JSON.parse(getFlag(KEY)); if (s && typeof s === 'object' && s.boards) return Object.assign({ declined: [], offer: [], confirming: [] }, s); } catch { /* bad or missing */ }
+  return Object.assign(emptyState(), { declined: [], offer: [], confirming: [] });
 }
 
 export class Account {
@@ -22,12 +24,18 @@ export class Account {
     this.available = false;   // the API answered, so the account controls show
     this.user = null;         // { id, name, email } when signed in
     this.status = 'idle';     // idle | syncing | waiting | failed | signedout (the session ran out)
-    this.offer = [];          // guest boards to offer up on the first sign-in
+    this.unticked = new Set(); // boards in the offer the person has unticked
     this.state = loadState();
     this.seen = new Map();    // board id to its JSON when last known in step
     this.timer = 0;
   }
   saveState() { setFlag(KEY, JSON.stringify(this.state)); }
+  // The first sign-in offer is kept in sf_sync (0.6.3), so closing the tab while it shows
+  // brings it back on the next open, and nothing is taken into the account unasked.
+  get offer() { return this.state.offer || []; }
+  set offer(ids) { this.state.offer = ids; }
+  // What a merge must not drop: the offer, the answers to it, and the boards being confirmed.
+  carry(st) { return Object.assign(st, { declined: this.state.declined || [], offer: this.state.offer || [], confirming: this.state.confirming || [] }); }
 
   async api(method, path, body) {
     const r = await fetch(API + path, { method, credentials: 'same-origin', cache: 'no-store',
@@ -56,6 +64,8 @@ export class Account {
     if (!this.state.user) {
       this.state.user = this.user.id;
       this.offer = offerable(this.app.boards, this.state).map(x => x.id).filter(id => !this.state.declined.includes(id));
+      // a safety copy of the guest boards before anything is merged or sent
+      if (this.offer.length) setFlag(BACKUP, JSON.stringify({ at: Date.now(), boards: this.app.boards.filter(b => this.offer.includes(b.id)) }));
     }
     this.saveState();
     addEventListener('online', () => this.sync());
@@ -84,13 +94,14 @@ export class Account {
       if (res.status === 401) { this.lostSession(); return; }
       if (res.status !== 200) throw new Error(res.status);
       const m = merge(this.app.boards, res.data.boards, this.state, this.user.id, { suffix: this.app.t.otherDevice, newId: () => newId('b') });
-      this.state = Object.assign(m.state, { declined: this.state.declined || [] });
+      this.state = this.carry(m.state);
       this.offer = [...new Set(this.offer.concat(m.guests))];   // guest boards that had to become copies: offered, not taken
       for (const r of res.data.boards) if (this.state.boards[r.id] && r.updated) this.state.boards[r.id].updated = r.updated;   // for the board menu
       this.app.replaceBoards(m.boards);
       this.remember();
       await this.push(m.push);
       if (!this.user) return;                                  // signed out part way
+      this.confirmAdopted();
       this.status = Object.values(this.state.boards).some(e => e.dirty && !e.error && e.owner === this.user.id) ? 'waiting' : 'idle';
     } catch {
       if (this.user) this.status = 'failed';
@@ -168,12 +179,28 @@ export class Account {
   }
   unsyncedCount() { return this.state.user ? unsynced(this.state).length : 0; }
 
-  // The first sign-in offer: take the guest boards into the account, or leave them here.
+  // The first sign-in offer, board by board: every board ticked to start with. Keep takes
+  // the ticked ones into the account and leaves the rest here; Leave here leaves them all.
+  toggleOffer(id) { if (this.unticked.has(id)) this.unticked.delete(id); else this.unticked.add(id); this.app.render(); }
   answerOffer(keep) {
-    if (keep) this.state = Object.assign(adopt(this.state, this.offer, this.user.id), { declined: this.state.declined || [] });
-    else this.state.declined = [...new Set((this.state.declined || []).concat(this.offer))];
-    this.offer = []; this.saveState(); this.app.render();
-    if (keep) this.sync();
+    const take = keep ? this.offer.filter(id => !this.unticked.has(id)) : [];
+    const leave = this.offer.filter(id => !take.includes(id));
+    if (take.length) this.state = adopt(this.state, take, this.user.id);
+    this.state.declined = [...new Set((this.state.declined || []).concat(leave))];
+    this.state.confirming = [...new Set((this.state.confirming || []).concat(take))];
+    this.offer = []; this.unticked = new Set(); this.saveState(); this.app.render();
+    if (take.length) this.sync(); else this.confirmAdopted();
+  }
+  // Once the server has every board taken from the offer: say how many, from the server's
+  // own answers, and drop the safety copy. A refused board keeps the copy in place.
+  confirmAdopted() {
+    const ids = this.state.confirming || [];
+    if (this.offer.length) return;
+    const done = ids.filter(id => { const e = this.state.boards[id]; return e && e.rev > 0 && !e.dirty; });
+    if (done.length < ids.length) return;
+    this.state.confirming = []; this.saveState();
+    try { localStorage.removeItem(BACKUP); } catch { /* storage blocked */ }
+    if (done.length) this.app.flash(this.app.t.offerDone(done.length));
   }
 
   // Sign in with Google: to Google and back to the page this started from.
