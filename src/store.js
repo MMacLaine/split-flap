@@ -6,7 +6,9 @@
 // ever produce a valid board.
 
 import { CHANNELS, LAYOUTS, defaultBoard, newId } from './content.js';
-import { cellChar } from './charset.js';
+import { cellChar, CHIP_KEYS } from './charset.js';
+import { PATTERNS } from './pixels.js';
+import { PROFILE_IDS } from './sound.js';
 
 const K = { boards: 'sf_boards', active: 'sf_active' };
 const SIZES = ['6x22', '3x15', 'fill', 'custom'];
@@ -18,6 +20,7 @@ const MODES = ['METRO', 'TRAIN', 'TRAM', 'BUS', 'SHIP'];
 const pick = (v, list, dflt) => list.includes(v) ? v : dflt;
 const str = (v, max, dflt = '') => typeof v === 'string' ? v.slice(0, max) : dflt;
 const int = (v, lo, hi, dflt) => { const n = Math.round(+v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt; };
+const color = v => v === 'rainbow' || CHIP_KEYS.includes(v) ? v : 'f';
 const time = (v, dflt) => /^\d{2}:\d{2}$/.test(v) ? v : dflt;
 const num = (v, lo, hi) => { const n = +v; return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 
@@ -29,14 +32,19 @@ function sanitizeZone(z) {
     else if (typeof o.text === 'string') out.text = str(o.text, 500);
   } else if (ch === 'clock') out.fmt = o.fmt === '12' ? '12' : '24';
   else if (ch === 'countdown') { out.label = str(o.label, 60); out.date = /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : '2027-06-25'; }
+  else if (ch === 'bigclock') { out.fmt = o.fmt === '12' ? '12' : '24'; out.color = color(o.color); }
+  else if (ch === 'bigtext') { out.text = str(o.text, 80, 'HEJ'); out.color = color(o.color); }
+  else if (ch === 'art') { out.pattern = pick(o.pattern, PATTERNS, 'rainbow'); out.step = int(o.step, 2, 60, 4); }
   else if (ch === 'sl') {
-    const site = int(o.site, 1, 99999999, null);
-    if (site) { out.site = site; out.name = str(o.name, 80); }
+    if (o.home) out.home = true;
+    const sites = (Array.isArray(o.sites) ? o.sites : [o.site]).map(v => int(v, 1, 99999999, null)).filter(Boolean).slice(0, 6);
+    if (sites.length) { out.sites = sites; out.name = str(o.name, 80); }
     if (Array.isArray(o.modes)) out.modes = o.modes.filter(m => MODES.includes(m));
     out.eta = o.eta === 'clock' ? 'clock' : 'min';
   } else if (ch === 'weather') {
     const lat = num(o.lat, -90, 90), lon = num(o.lon, -180, 180);
     if (lat != null && lon != null) { out.lat = lat; out.lon = lon; out.city = str(o.city, 80); }
+    out.view = pick(o.view, ['now', 'hours', 'days'], 'now');
   }
   return { ch, o: out };
 }
@@ -62,7 +70,8 @@ export function sanitizeBoard(b) {
     id: str(b.id, 40) || newId('b'), name: str(b.name, 80) || d.name,
     size: pick(b.size, SIZES, '6x22'), rows: int(b.rows, 1, 24, 6), cols: int(b.cols, 4, 60, 22),
     theme: pick(b.theme, THEMES, 'black'), transition: pick(b.transition, TRANSITIONS, 'classic'), speed: pick(b.speed, SPEEDS, 'fast'),
-    sound: !!b.sound,
+    sound: !!b.sound, soundStyle: pick(b.soundStyle, PROFILE_IDS, 'clack'),
+    ...(typeof b.from === 'string' && /^[a-z]{2,12}$/.test(b.from) ? { from: b.from } : {}),
     quiet: { on: !!q.on, from: time(q.from, '23:00'), to: time(q.to, '07:00'), mode: q.mode === 'blank' ? 'blank' : 'dim' },
     pages
   };

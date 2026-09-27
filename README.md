@@ -11,14 +11,18 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 ## What it does
 
 - **A physical-looking board.** Each flap steps forward through the drum to its letter, folds over its hinge with light and shadow, and settles with a small rebound. Drawn on one canvas, so a Raspberry Pi keeps up.
-- **Channels:** free-text messages with colour chips, clock and date, countdowns, SL departures (any stop in Storstockholms Lokaltrafik), weather from Open-Meteo (any city), and a rotating quote.
+- **Channels:** free-text messages with colour chips, clock and date, a big clock and big text drawn in colour chips, countdowns, SL departures (any stop in Storstockholms Lokaltrafik, or the home station you starred on the [Stockholm SL map](https://maclaine.se/en/stockholm-sl-map)), weather from Open-Meteo (now, next hours or three days, with colour chip icons), animated colour patterns (Nordic flags, rain, waves, confetti), and a rotating quote.
+- **Templates:** Demo, Home dashboard, Station board, Weather station, Colour mosaic, a blank page, and Everything at once: fill the screen, roll every flap the long way round, never sit still.
 - **Layouts:** a page can be one zone or two (header and body, split, ticker row), each showing a different channel.
 - **Playlist:** pages rotate on their own timers, optionally only at certain times and days (departures on weekday mornings). Quiet hours dim or blank the board overnight.
-- **Three themes** (Vestaboard Black, Vestaboard White, Solari Amber), any grid from 1 × 4 to 24 × 60, and four transitions at three speeds. Authentic rolls every flap the whole way round.
+- **Three themes** (Vestaboard Black, Vestaboard White, Solari Amber), any grid from 1 × 4 to 24 × 60, and four transitions at three speeds, previewed on the board as you pick them. Authentic rolls every flap the whole way round.
+- **Four flap sounds** (Clack, Heavy, Soft, Tick), synthesised: a plastic tick for each flap and a ka-chunk when the last one lands.
 - **Type on the grid.** The composer is the board: you see exactly where each letter lands.
 - **Share by link or QR (Quick Response) code.** The link holds the whole board, compressed into the part of the URL after `#`, which browsers never send to a server.
 - **Made for walls:** kiosk mode (`?kiosk=1`), screen wake lock, a one pixel drift against burn-in, offline support, and a small note when live data is getting old.
 - English and Swedish. Å Ä Ö Æ Ø Ü É are real flaps.
+
+![A board showing the Swedish flag in blue and yellow colour chips, part of the Nordic flags pattern](docs/mosaic.png)
 
 ![The same board in the Solari Amber theme showing Stockholm weather and a countdown to midsummer](docs/solari.png)
 
@@ -55,6 +59,9 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `src/renderer.js` | The canvas board: glyph atlas, fold, stagger, frame budget. Its constants are the design spec. |
 | `src/charset.js` | The drum (73 flaps), typed text to flaps, Vestaboard character codes for import. |
 | `src/content.js` | Layouts, zones and what each channel prints, as pure functions. |
+| `src/pixels.js` | The 3 × 5 pixel font and the animated colour patterns. |
+| `src/templates.js` | The ready-made boards. |
+| `src/sound.js` | The four synthesised flap sounds. |
 | `src/schedule.js` | Page timers, time windows, quiet hours. |
 | `src/live.js` | SL and Open-Meteo fetchers, station and city search. |
 | `src/store.js` | localStorage, board links, and the sanitizer every imported board goes through. |

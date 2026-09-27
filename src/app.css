@@ -219,3 +219,11 @@ html.sf-kiosk, html.sf-kiosk body { overflow: hidden; }
   .sf-bar-wrap, .sf-canvas-wrap { transition: none; }
 }
 html[data-chrome="light"], html[data-chrome="light"] body { background: #F4F0E7; }
+
+/* ---------- templates ---------- */
+.sf-templates { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sf-template { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-2); background: transparent; text-align: left; }
+.sf-template:hover { border-color: var(--accent-line); background: var(--accent-soft); }
+.sf-template strong { font-size: 14px; font-weight: 600; }
+.sf-template span { font-size: 12px; color: var(--muted); text-wrap: pretty; }
+.sf.editing-mobile .sf-layout-pic { aspect-ratio: 4; }

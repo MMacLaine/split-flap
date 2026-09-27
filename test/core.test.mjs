@@ -147,3 +147,58 @@ test('board link round trip', async () => {
   assert.deepEqual(await decodeBoard(code), b);
   assert.equal(await decodeBoard('not-a-board'), null);
 });
+
+// ---------- round 2: pixels, weather chips, SL home, search ----------
+import { pixelWidth, drawPattern } from '../src/pixels.js';
+import { weatherChip, slSource, blank } from '../src/content.js';
+
+test('pixel font widths and the big clock position', () => {
+  // "12:34": digits are 3 wide, the colon 1, with one gap between glyphs: 3+1+3+1+1+1+3+1+3 = 17
+  assert.equal(pixelWidth('12:34'), 17);
+  // On 6 x 22 the clock sits at row floor((6 - 5) / 2) = 0, column floor((22 - 17) / 2) = 2.
+  // Glyph "1" top row is .#. so column 2 is empty and column 3 is filled.
+  const at1234 = new Date(2026, 9, 3, 12, 34).getTime();
+  const g = compose({ layout: 'full', zones: [{ ch: 'bigclock', o: { color: 'f' } }] }, 6, 22, at1234, 'en', {});
+  assert.equal(g[0][2], ' ');
+  assert.equal(g[0][3], 'f');
+  assert.equal(g[5].join('').trim(), '');          // row 6 stays blank
+});
+
+test('big clock on a 3-row board falls back to printed time', () => {
+  const at = new Date(2026, 9, 3, 9, 5).getTime();
+  const g = compose({ layout: 'full', zones: [{ ch: 'bigclock', o: {} }] }, 3, 15, at, 'en', {});
+  assert.ok(g.map(r => r.join('')).join('|').includes('09:05'));
+});
+
+test('Swedish flag pattern: blue field, yellow cross', () => {
+  const g = blank(6, 22);
+  drawPattern(g, { r: 0, c: 0, h: 6, w: 22 }, 'nordic', 0, 5);   // frame 0 is Sweden
+  // cross row: round(6 * 0.2) = 1 row at floor((6 - 1) / 2) = 2; cross column from round(22 * 5 / 16) = 7
+  assert.equal(g[0][0], 'b');
+  assert.equal(g[2][0], 'y');
+  assert.equal(g[0][7], 'y');
+});
+
+test('weather chips', () => {
+  assert.equal(weatherChip(0), 'y');    // clear: yellow
+  assert.equal(weatherChip(3), 'f');    // overcast: theme colour, visible on every theme
+  assert.equal(weatherChip(63), 'b');   // rain: blue
+  assert.equal(weatherChip(95), 'v');   // thunder: violet
+});
+
+test('SL zone can follow the SL map home station', () => {
+  const live = { home: { name: 'Västra skogen', sites: [9306] } };
+  assert.deepEqual(slSource({ home: true }, live), { name: 'Västra skogen', sites: [9306] });
+  assert.equal(slSource({ home: true }, {}), null);                       // no home starred yet
+  assert.deepEqual(slSource({ site: 9117, name: 'Odenplan' }, live), { name: 'Odenplan', sites: [9117] });  // old boards
+});
+
+test('station search forgives spelling', async () => {
+  const { readFileSync } = await import('node:fs');
+  globalThis.fetch = async u => ({ json: async () => JSON.parse(readFileSync(new URL(u))) });
+  globalThis.addEventListener = globalThis.addEventListener || (() => {});
+  const { searchStations } = await import('../src/live.js');
+  assert.equal((await searchStations('vestra skogen'))[0].name, 'Västra skogen');   // ä typed as e
+  assert.equal((await searchStations('tcentralen'))[0].name, 'T-Centralen');        // missing hyphen
+  assert.equal((await searchStations('gulmarsplan'))[0].name, 'Gullmarsplan');      // one letter short
+});
