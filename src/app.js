@@ -25,7 +25,12 @@ export class App {
     this.stage = root.querySelector('.sf-stage');
     this.wrap = root.querySelector('.sf-canvas-wrap');
     this.canvas = root.querySelector('canvas');
+    // The board as text, for screen readers (0.6). The twin inside the stage always holds the
+    // current text, for anyone who moves to it; the live region speaks only when the page
+    // changes or R is pressed, so a clock or a departures page never talks on every tick.
     this.liveRegion = root.querySelector('[aria-live]');
+    this.twin = h('div', { class: 'sf-vh' }); this.stage.append(this.twin);
+    this.stage.setAttribute('role', 'region');
     this.main = root.querySelector('.sf-main');
     this.overlay = h('div', { class: 'sf-overlay' });
     this.comps = new Map();
@@ -194,7 +199,12 @@ export class App {
     this.maybeReload(now);
     this.wrap.style.opacity = this.quietMode() === 'dim' ? '0.22' : '1';
     const text = g.map(r => r.map(c => isChip(c) || isDim(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
-    if (text !== this.lastAria) { this.lastAria = text; this.liveRegion.textContent = text; }
+    if (text !== this.lastAria) { this.lastAria = text; this.twin.textContent = text; }
+    const pageKey = [b.id, this.S.editing ? 'e' + this.selIdx() : this.S.pageIdx, this.S.lang].join(':');
+    if (pageKey !== this.lastPageKey) {
+      this.lastPageKey = pageKey; this.stage.setAttribute('aria-label', this.stageLabel()); this.stage.setAttribute('aria-roledescription', this.t.stageRole);
+      if (!this.S.editing) { clearTimeout(this.sayT); this.sayT = setTimeout(() => this.announce(), 1200); }   // after live data has had a moment to arrive
+    }
     const stale = this.S.editing ? 0 : this.live.staleMinutes(this.currentPage());
     if (stale !== this.lastStale) { this.lastStale = stale; this.renderOverlay(); }
     if (force && this.S.editing) this.editor.composer.paintGrid();
@@ -294,6 +304,17 @@ export class App {
     this.editor.go('log');
     this.refresh();
   }
+  // The board's name for screen readers: which board, which page of how many.
+  stageLabel() {
+    const b = this.cur(), t = this.t, i = this.S.editing ? this.selIdx() : this.S.pageIdx, p = b.pages[i];
+    return i >= 0 && p ? t.stageLabel(b.name, i + 1, b.pages.length, p.name) : t.stageLabel(b.name);
+  }
+  // Says the page once. Cleared first, so pressing R twice on the same text speaks again.
+  announce() {
+    const text = (this.lastAria || '').replace(/\s+/g, ' ').trim();
+    this.liveRegion.textContent = '';
+    requestAnimationFrame(() => { this.liveRegion.textContent = text ? `${this.stageLabel()}. ${text}` : this.stageLabel(); });
+  }
   wake(ms) {
     if (!this.S.bar) { this.S.bar = true; this.paintBar(); }
     clearTimeout(this.hideT);
@@ -316,6 +337,7 @@ export class App {
     if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
     this.wake();
     const k = e.key.toLowerCase();
+    if (k === 'r') { this.announce(); return; }   // read the board aloud, kiosk or not
     if (this.kioskStrict) return;
     if (k === 'e') this.toggleEdit(); else if (k === 'f') this.toggleFull(); else if (k === 's') this.toggleSound();
   }
