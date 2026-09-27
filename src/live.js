@@ -7,14 +7,25 @@
 
 import { wxKey, slSource } from './content.js';
 
-const SL_EVERY = 60e3, WX_EVERY = 15 * 60e3, RETRY = 30e3;
+const SL_EVERY = 60e3, WX_EVERY = 15 * 60e3;
+// SL's open API throttles intermittently (HTTP 429 in streaks of a few requests, even
+// a minute apart), so failures retry fast and then back off. Weather rarely fails.
+const RETRY = [4e3, 8e3, 15e3, 30e3, 60e3];
+const retryAfter = fails => RETRY[Math.min(fails, RETRY.length) - 1] || RETRY[0];
+
+// fetch with a deadline: a request that never answers must not block refreshes forever
+async function get(url) {
+  const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 12e3);
+  try { const r = await fetch(url, { signal: ac.signal }); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  finally { clearTimeout(timer); }
+}
 
 export class Live {
   constructor(onUpdate) {
     this.onUpdate = onUpdate;
     this.data = { sl: {}, wx: {} };
     this.wanted = { sl: new Map(), wx: new Map() };
-    this.timer = setInterval(() => this.poll(), 5000);
+    this.timer = setInterval(() => this.poll(), 2000);
     addEventListener('online', () => this.poll(true));
   }
   // Tell the fetcher which stations and places the board needs. Called whenever the
@@ -30,10 +41,9 @@ export class Live {
   }
   poll(force) {
     const now = Date.now();
-    const due = (entry, every) => !entry || (!entry.busy && (force || now - (entry.tried || 0) >= (entry.err ? RETRY : every)));
-    // SL allows only a short burst of requests per address (about three in a few
-    // seconds, then HTTP 429), so stations are fetched one per 5 second poll, most
-    // overdue first, rather than all at once when a board with several stations opens.
+    const due = (entry, every) => !entry || (!entry.busy && (force || now - (entry.tried || 0) >= (entry.err ? retryAfter(entry.fails) : every)));
+    // One SL station per 2 second poll, most overdue first, rather than all at once
+    // when a board with several stations opens: bursts are what SL throttles.
     const slDue = [...this.wanted.sl.keys()].filter(site => due(this.data.sl[site], SL_EVERY))
       .sort((a, b) => ((this.data.sl[a] || {}).tried || 0) - ((this.data.sl[b] || {}).tried || 0));
     if (slDue.length) this.fetchSl(slDue[0]);
@@ -43,35 +53,32 @@ export class Live {
     const e = this.data.sl[site] || (this.data.sl[site] = {});
     e.busy = true; e.tried = Date.now();
     try {
-      const r = await fetch(`https://transport.integration.sl.se/v1/sites/${encodeURIComponent(site)}/departures?forecast=90`);
-      if (!r.ok) throw new Error(r.status);
-      const j = await r.json();
+      const j = await get(`https://transport.integration.sl.se/v1/sites/${encodeURIComponent(site)}/departures?forecast=90`);
       e.deps = (j.departures || []).filter(d => d.line).map(d => ({
         line: String(d.line.designation || '').slice(0, 4), dest: String(d.destination || '').slice(0, 40),
         expected: d.expected || null, scheduled: d.scheduled || null, mode: d.line.transport_mode || ''
       }));
-      e.at = Date.now(); e.err = false;
-    } catch { e.err = true; }
+      e.at = Date.now(); e.err = false; e.fails = 0;
+    } catch { e.err = true; e.fails = (e.fails || 0) + 1; }
     e.busy = false; this.onUpdate();
   }
   async fetchWx(k, p) {
     const e = this.data.wx[k] || (this.data.wx[k] = {});
     e.busy = true; e.tried = Date.now();
     try {
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}`
+      const j = await get(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}`
         + '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day'
         + '&hourly=temperature_2m,precipitation_probability,weather_code'
         + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset'
         + '&timezone=auto&forecast_days=4&wind_speed_unit=ms');
-      if (!r.ok) throw new Error(r.status);
-      const j = await r.json(), c = j.current, h = j.hourly, dl = j.daily;
+      const c = j.current, h = j.hourly, dl = j.daily;
       e.t = c.temperature_2m; e.feels = c.apparent_temperature; e.code = c.weather_code; e.wind = c.wind_speed_10m;
       // hourly from the current hour onwards (times are local to the place, as is current.time)
       const from = Math.max(0, h.time.findIndex(t => t >= c.time.slice(0, 13)));
       e.hourly = h.time.slice(from, from + 24).map((time, i) => ({ time, t: h.temperature_2m[from + i], pp: h.precipitation_probability[from + i], code: h.weather_code[from + i] }));
       e.daily = dl.time.map((date, i) => ({ date, code: dl.weather_code[i], max: dl.temperature_2m_max[i], min: dl.temperature_2m_min[i], sum: dl.precipitation_sum[i], pp: dl.precipitation_probability_max[i], sunrise: dl.sunrise[i], sunset: dl.sunset[i] }));
-      e.at = Date.now(); e.err = false;
-    } catch { e.err = true; }
+      e.at = Date.now(); e.err = false; e.fails = 0;
+    } catch { e.err = true; e.fails = (e.fails || 0) + 1; }
     e.busy = false; this.onUpdate();
   }
   // Minutes since the oldest source this page depends on last updated, or 0 if fresh.

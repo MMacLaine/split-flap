@@ -40,7 +40,7 @@ function sanitizeZone(z) {
     const sites = (Array.isArray(o.sites) ? o.sites : [o.site]).map(v => int(v, 1, 99999999, null)).filter(Boolean).slice(0, 6);
     if (sites.length) { out.sites = sites; out.name = str(o.name, 80); }
     if (Array.isArray(o.modes)) out.modes = o.modes.filter(m => MODES.includes(m));
-    out.eta = o.eta === 'clock' ? 'clock' : 'min';
+    out.eta = pick(o.eta, ['min', 'clock', 'cycle'], 'min'); out.fmt = o.fmt === '12' ? '12' : '24';
   } else if (ch === 'weather') {
     const lat = num(o.lat, -90, 90), lon = num(o.lon, -180, 180);
     if (lat != null && lon != null) { out.lat = lat; out.lon = lon; out.city = str(o.city, 80); }

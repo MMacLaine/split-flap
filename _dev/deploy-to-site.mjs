@@ -21,6 +21,9 @@ const ASSET_DIR = join(SITE, 'split-flap');
 
 const SHIP_DIRS = ['src', 'data', 'fonts', 'icons'];
 
+// CHANGELOG.md follows src/changelog.js, so a deploy never ships a log the repo lacks.
+await import('./gen-changelog.mjs');
+
 function walk(dir, base = dir, out = []) {
   for (const name of readdirSync(dir)) {
     if (name === '.DS_Store') continue;
