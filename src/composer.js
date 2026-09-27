@@ -6,14 +6,11 @@
 
 import { h, clone } from './dom.js';
 import { THEMES } from './renderer.js';
-import { CHIPS, CHIP_KEYS, CHIP_NAMES, cleanChar } from './charset.js';
+import { CHIPS, CHIP_KEYS, CHIP_NAMES, composerInput } from './charset.js';
 import { toCells } from './content.js';
 import { getFlag, setFlag } from './store.js';
 import { mapImage, sampleImage } from './photo.js';
 
-// The coloured squares on a phone keyboard place the matching chip. Only here, in the
-// composer: in free text elsewhere (quotes, big text) they stay blank.
-const EMOJI = { '🟥': 'r', '🟧': 'o', '🟨': 'y', '🟩': 'g', '🟦': 'b', '🟪': 'v', '⬜': 'w', '⬛': 'k', '◻': 'w', '◼': 'k' };
 const MAX_HIST = 60, MAX_DRAFTS = 12;
 
 export class Composer {
@@ -138,13 +135,10 @@ export class Composer {
   }
   typed(e) {
     const v = e.target.value; e.target.value = ''; if (!v) return;
-    const out = [];
-    for (const ch of v) {
-      if (ch === '️') continue;                     // emoji presentation selector
-      if (EMOJI[ch]) { out.push(EMOJI[ch]); continue; }
-      const r = cleanChar(ch); if (!r.valid) this.app.flash(this.t.blankNote(ch)); out.push(r.ch);
-    }
-    this.place(out);
+    // coloured square emoji place chips; anything with no flap shows as blank, with a note
+    const { cells, invalid } = composerInput(v);
+    if (invalid.length) this.app.flash(this.t.blankNote(invalid[0]));
+    this.place(cells);
   }
   typeKey(e) {
     const zd = this.zd, n = zd.h * zd.w, w = zd.w, pos = Math.min(this.app.S.caret, n), k = e.key, S = this.app.S;

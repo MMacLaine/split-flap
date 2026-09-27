@@ -151,3 +151,11 @@ test('hearts from a phone become the heart flap, and 0.2 boards are unchanged', 
   assert.deepEqual(twice, once);
   assert.deepEqual(once.pages[0].zones[0].o.cells[0].slice(0, 5), ['H', 'E', 'J', 'r', '°']);
 });
+
+test('coloured squares place chips in the composer, and only there', async () => {
+  const { composerInput, textToCells } = await import('../src/charset.js');
+  assert.deepEqual(composerInput('🟥🟧🟨🟩🟦🟪⬜⬛'), { cells: ['r', 'o', 'y', 'g', 'b', 'v', 'w', 'k'], invalid: [] });
+  assert.deepEqual(composerInput('⬜️A'), { cells: ['w', 'A'], invalid: [] });            // with the presentation selector
+  assert.deepEqual(composerInput('🟫'), { cells: [' '], invalid: ['🟫'] });              // brown has no chip
+  assert.deepEqual(textToCells('🟥'), [' ']);                                           // free text: never a chip
+});
