@@ -32,7 +32,9 @@ export function authOptions(env, database) {
       }
     },
     // a phone should not have to sign in again every week
-    session: { expiresIn: 60 * 60 * 24 * 60, updateAge: 60 * 60 * 24 },
+    // The cookie cache keeps a signed copy of the session in the cookie for five minutes,
+    // so most requests skip the database lookup (and fit the free plan's CPU time).
+    session: { expiresIn: 60 * 60 * 24 * 60, updateAge: 60 * 60 * 24, cookieCache: { enabled: true, maxAge: 300 } },
     advanced: {
       ipAddress: { disableIpTracking: true },
       cookiePrefix: 'sf',
