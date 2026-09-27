@@ -3,6 +3,38 @@
 
 export const CHANGELOG = [
   {
+    v: '0.5.2', date: '2026-09-27',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'I had the account sync reviewed and it found ways to lose changes. All of them are fixed here, with a few smaller ones.',
+      sv: 'Jag lät granska kontosynken och den hittade sätt att tappa ändringar. Alla är rättade här, tillsammans med några mindre saker.'
+    },
+    items: {
+      en: [
+        'Signing out while a change had not reached your account yet, when offline say, took that board out of the browser and the change was lost. Sign out now tells you how many boards are not synced yet, and if you sign out anyway they stay here as guest boards.',
+        'If your session ran out, changes made after that were not marked, so signing in again could replace them with the copy in your account. Now the bar says Sign in to sync and the changes are kept. If the board also changed on another device, you get both versions, one of them as a copy.',
+        'A board the account could not take, the 51st say, stopped every board after it from syncing, and the app only said the sync had failed. Each board syncs on its own now, and the account panel names a refused board and says why.',
+        'Deleting a new board before it had synced could leave the status on Waiting to sync for good. Fixed, the status clears.',
+        'The bar shows a ! next to your name when a sync has failed, so you can see it with the editor closed.',
+        'If a guest board here clashes with one in your account when you sign in, it is kept as a copy and you are asked before it goes into the account.',
+        'Export everything is called Export my account now, since the guest boards in this browser are not in the file. The privacy page also mentions the sign-in cookie.',
+        'If deleting the account fails, the message says it failed. Before, it always asked you to sign in again.',
+        'The warnings for signing out and deleting the account sit below the button, so they are easy to read on a phone.'
+      ],
+      sv: [
+        'Om du loggade ut medan en ändring inte hade nått ditt konto än, till exempel utan nät, togs tavlan bort från webbläsaren och ändringen försvann. Logga ut säger nu hur många tavlor som inte är synkade än, och loggar du ut ändå finns de kvar här som gästtavlor.',
+        'Om din inloggning gick ut märktes ändringar gjorda efter det inte, så när du loggade in igen kunde kopian i ditt konto ersätta dem. Nu säger raden Logga in för att synka och ändringarna finns kvar. Om tavlan också ändrades på en annan enhet får du båda versionerna, den ena som kopia.',
+        'En tavla som kontot inte kunde ta emot, den 51:a till exempel, stoppade alla tavlor efter den från att synkas, och appen sa bara att synken misslyckades. Varje tavla synkas för sig nu, och kontopanelen visar vilken tavla som nekades och varför.',
+        'Om du raderade en ny tavla innan den hade synkats kunde statusen fastna på Väntar på att synka. Rättat, statusen försvinner.',
+        'Raden visar ett ! bredvid ditt namn när en synk har misslyckats, så du ser det även när redigeraren är stängd.',
+        'Om en gästtavla här krockar med en i ditt konto när du loggar in, sparas den som kopia och du får frågan innan den läggs i kontot.',
+        'Exportera allt heter Exportera mitt konto nu, eftersom gästtavlorna i den här webbläsaren inte finns med i filen. Integritetssidan nämner också inloggningscookien.',
+        'Om det inte går att radera kontot säger meddelandet att det misslyckades. Förut bad det dig alltid logga in igen.',
+        'Varningarna när du loggar ut och raderar kontot ligger under knappen, så de är lätta att läsa på en telefon.'
+      ]
+    }
+  },
+  {
     v: '0.5.1', date: '2026-09-27',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

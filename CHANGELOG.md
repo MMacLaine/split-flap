@@ -2,6 +2,20 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.5.2 (2026-09-27): Fixes
+
+I had the account sync reviewed and it found ways to lose changes. All of them are fixed here, with a few smaller ones.
+
+- Signing out while a change had not reached your account yet, when offline say, took that board out of the browser and the change was lost. Sign out now tells you how many boards are not synced yet, and if you sign out anyway they stay here as guest boards.
+- If your session ran out, changes made after that were not marked, so signing in again could replace them with the copy in your account. Now the bar says Sign in to sync and the changes are kept. If the board also changed on another device, you get both versions, one of them as a copy.
+- A board the account could not take, the 51st say, stopped every board after it from syncing, and the app only said the sync had failed. Each board syncs on its own now, and the account panel names a refused board and says why.
+- Deleting a new board before it had synced could leave the status on Waiting to sync for good. Fixed, the status clears.
+- The bar shows a ! next to your name when a sync has failed, so you can see it with the editor closed.
+- If a guest board here clashes with one in your account when you sign in, it is kept as a copy and you are asked before it goes into the account.
+- Export everything is called Export my account now, since the guest boards in this browser are not in the file. The privacy page also mentions the sign-in cookie.
+- If deleting the account fails, the message says it failed. Before, it always asked you to sign in again.
+- The warnings for signing out and deleting the account sit below the button, so they are easy to read on a phone.
+
 ## v0.5.1 (2026-09-27): Fixes
 
 A fix for the editor, and two things that were hard to find.
