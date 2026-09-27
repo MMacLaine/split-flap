@@ -9,6 +9,8 @@
 //   - the glyph atlas is cleared on resize and theme change (its keys include the
 //     tile size, so a long-running kiosk that resized would otherwise grow forever)
 //   - a frame budget: if animation frames run long, the canvas drops to 1x density
+//   - from the editor handoff (design/editor/flap-renderer.js): the zone highlight and
+//     renderStatic, which draws one still frame of any grid for thumbnails and images
 
 import { CHIPS, DRUM, cellChar, drumPath } from './charset.js';
 
@@ -286,8 +288,31 @@ export class Board {
     this.ctx.drawImage(this.bg, 0, 0);
     const now = performance.now();
     for (let r = 0; r < this.o.rows; r++) for (let c = 0; c < this.o.cols; c++) this._drawCell(r, c, now);
+    this._drawHl();
+  }
+  // Editor zone highlight: the cells outside the zone are dimmed with the housing colour
+  // and an accent line runs in the gaps around it. z is { r, c, h, w } or null.
+  setHighlight(z, color) {
+    const k = z ? [z.r, z.c, z.h, z.w, color].join(',') : '';
+    if (k === this._hlk) return;
+    this._hlk = k; this.hl = z ? { r: z.r, c: z.c, h: z.h, w: z.w, color: color || '#C8974A' } : null; this._full();
+  }
+  _inHl(r, c) { const z = this.hl; return !z || (r >= z.r && r < z.r + z.h && c >= z.c && c < z.c + z.w); }
+  _drawHl() {
+    const z = this.hl; if (!z || !this.W) return;
+    const a = this.cellXY(z.r, z.c), b = this.cellXY(z.r + z.h - 1, z.c + z.w - 1), x = this.ctx;
+    const lw = Math.max(2, Math.round(this.th * 0.05)), px = this.gx / 2, py = this.gy / 2;
+    x.strokeStyle = z.color; x.lineWidth = lw;
+    rr(x, a[0] - px, a[1] - py, b[0] + this.tw - a[0] + 2 * px, b[1] + this.th - a[1] + 2 * py, this.th * 0.08); x.stroke();
   }
   _drawCell(r, c, now) {
+    this._drawCellInner(r, c, now);
+    if (this.hl && !this._inHl(r, c)) {
+      const p = this.cellXY(r, c), x = this.ctx; x.globalAlpha = 0.62; x.fillStyle = THEMES[this.o.theme].housing;
+      x.fillRect(p[0], p[1], this.tw, this.th); x.globalAlpha = 1;
+    }
+  }
+  _drawCellInner(r, c, now) {
     const p = this.cellXY(r, c), x = p[0], y = p[1], tw = this.tw, th = this.th, ctx = this.ctx, T = THEMES[this.o.theme], A = this.A;
     ctx.drawImage(this.bg, x, y, tw, th, x, y, tw, th);
     const cell = this.cells[r][c], a = cell.a;
@@ -364,5 +389,42 @@ export class Board {
   }
   destroy() { cancelAnimationFrame(this._raf); this.ro.disconnect(); }
 }
+
+// Static render helper: one still frame of any grid, for thumbnails, the zone diagram
+// and Save as image. One atlas shared by every thumbnail; float geometry, so HTML
+// overlays line up with staticGeom() percentages. No animation and no wall.
+// Size comes from the canvas's CSS box, or o.width and o.height in device pixels.
+const SHARED = new Atlas();
+export function staticGeom(rows, cols, pad) {
+  const p = pad == null ? 0.35 : pad, G = GEOM;
+  return { pad: p, uw: cols * G.tileW + (cols - 1) * G.gapX + 2 * p, uh: rows + (rows - 1) * G.gapY + 2 * p };
+}
+export function renderStatic(canvas, o) {
+  const T = THEMES[o.theme] || THEMES.black;
+  let W = o.width, H = o.height;
+  if (!W || !H) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    W = Math.round(r.width * dpr); H = Math.round(r.height * dpr);
+  }
+  if (canvas.width !== W) canvas.width = W;
+  if (canvas.height !== H) canvas.height = H;
+  if (SHARED.m.size > 5000) SHARED.clear();
+  const x = canvas.getContext('2d'), g = staticGeom(o.rows, o.cols, o.pad), G = GEOM;
+  const h = Math.min(W / g.uw, H / g.uh), ox = (W - g.uw * h) / 2, oy = (H - g.uh * h) / 2;
+  x.fillStyle = T.frame; x.fillRect(0, 0, W, H);
+  const bp = h * 0.08;
+  x.fillStyle = T.housing; rr(x, ox + g.pad * h - bp, oy + g.pad * h - bp, (g.uw - 2 * g.pad) * h + 2 * bp, (g.uh - 2 * g.pad) * h + 2 * bp, h * 0.06); x.fill();
+  const th = Math.max(2, Math.round(h)), tw = Math.max(2, Math.round(h * G.tileW));
+  for (let r = 0; r < o.rows; r++) for (let c = 0; c < o.cols; c++) {
+    const ch = cellChar(o.grid && o.grid[r] ? o.grid[r][c] : ' ');
+    const px = ox + (g.pad + c * (G.tileW + G.gapX)) * h, py = oy + (g.pad + r * (1 + G.gapY)) * h;
+    x.drawImage(SHARED.get(ch, tw, th, T), px, py, h * G.tileW, h);
+  }
+  return { h, ox, oy };
+}
+// Clears the shared atlas once the web fonts arrive, so thumbnails drawn before then
+// (in the fallback face) are redrawn in DM Mono.
+export function resetStatic() { SHARED.clear(); }
 
 export { DRUM };

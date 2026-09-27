@@ -7,6 +7,7 @@
 
 import { textToCells, isChip } from './charset.js';
 import { drawPixels, pixelPages, pixelWidth, drawPattern } from './pixels.js';
+import { isoWeek, dayOfYear, swedishDay, sunTimes } from './almanac.js';
 
 const DAYS = {
   en: ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
@@ -17,9 +18,28 @@ const MONTHS = {
   sv: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC']
 };
 const WORDS = {
-  en: { now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY' },
-  sv: { now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT' }
+  en: { now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
+    week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'ADD A WEB ADDRESS', empty: 'NOTHING IN THE FEED', noMessages: 'ADD A MESSAGE', otd: 'ON THIS DAY' },
+  sv: { now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
+    week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'LÄGG TILL EN WEBBADRESS', empty: 'INGET I FLÖDET', noMessages: 'LÄGG TILL ETT MEDDELANDE', otd: 'DEN HÄR DAGEN' }
 };
+
+// Hours in words for the word clock, twelve first so hour % 12 indexes it.
+const HOUR_WORDS = {
+  en: ['TWELVE', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN'],
+  sv: ['TOLV', 'ETT', 'TVÅ', 'TRE', 'FYRA', 'FEM', 'SEX', 'SJU', 'ÅTTA', 'NIO', 'TIO', 'ELVA']
+};
+// The time in words, to the nearest five minutes. Swedish counts the half hour towards
+// the next hour (halv elva is 10:30) and the minutes around it (fem i halv elva, 10:25).
+export function timeInWords(d, lang) {
+  let m = Math.round(d.getMinutes() / 5) * 5, hr = d.getHours();
+  if (m === 60) { m = 0; hr++; }
+  const W = HOUR_WORDS[lang] || HOUR_WORDS.en, H = k => W[(hr + k) % 12];
+  if (lang === 'sv') return 'KLOCKAN ÄR ' + ({ 0: H(0), 5: 'FEM ÖVER ' + H(0), 10: 'TIO ÖVER ' + H(0), 15: 'KVART ÖVER ' + H(0), 20: 'TJUGO ÖVER ' + H(0),
+    25: 'FEM I HALV ' + H(1), 30: 'HALV ' + H(1), 35: 'FEM ÖVER HALV ' + H(1), 40: 'TJUGO I ' + H(1), 45: 'KVART I ' + H(1), 50: 'TIO I ' + H(1), 55: 'FEM I ' + H(1) })[m];
+  return 'IT IS ' + ({ 0: H(0) + " O'CLOCK", 5: 'FIVE PAST ' + H(0), 10: 'TEN PAST ' + H(0), 15: 'QUARTER PAST ' + H(0), 20: 'TWENTY PAST ' + H(0),
+    25: 'TWENTY FIVE PAST ' + H(0), 30: 'HALF PAST ' + H(0), 35: 'TWENTY FIVE TO ' + H(1), 40: 'TWENTY TO ' + H(1), 45: 'QUARTER TO ' + H(1), 50: 'TEN TO ' + H(1), 55: 'FIVE TO ' + H(1) })[m];
+}
 
 // WMO weather codes, as Open-Meteo reports them, to a word that fits on a board.
 export function weatherWord(code, lang) {
@@ -51,6 +71,7 @@ export function weatherChip(code) {
 }
 
 export const QUOTES = {
+  proverbs: {
   en: [
     'WELL BEGUN IS HALF DONE',
     'SLOW IS SMOOTH AND SMOOTH IS FAST',
@@ -71,14 +92,21 @@ export const QUOTES = {
     'BORTA BRA MEN HEMMA BÄST',
     'MORGONSTUND HAR GULD I MUND'
   ]
+  },
+  work: {
+    en: ['MEASURE TWICE CUT ONCE', 'SLOW IS SMOOTH AND SMOOTH IS FAST', 'MANY HANDS MAKE LIGHT WORK', 'DONE IS BETTER THAN PERFECT', 'WHAT GETS MEASURED GETS MANAGED', 'WELL BEGUN IS HALF DONE'],
+    sv: ['ÖVNING GÖR MÄSTARE', 'SKYNDA LÅNGSAMT', 'MÅNGA BÄCKAR SMÅ GÖR EN STOR Å', 'ÄRLIGHET VARAR LÄNGST', 'LITEN TUVA STJÄLPER OFTA STORT LASS', 'DEN SOM GAPAR EFTER MYCKET MISTER OFTA HELA STYCKET']
+  }
 };
 
-export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote'];
+export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote',
+  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url'];
 // Channels that paint cells directly (pixel font, patterns) instead of printing lines.
 const DRAWN = new Set(['bigclock', 'bigtext', 'art']);
-export const LAYOUTS = ['full', 'header', 'split', 'ticker'];
+export const LAYOUTS = ['full', 'header', 'split', 'ticker', 'stacked'];
 
 export function zonesFor(l, R, C) {
+  if (l === 'stacked' && R > 1) { const a = Math.floor(R / 2); return [{ r: 0, c: 0, h: a, w: C }, { r: a, c: 0, h: R - a, w: C }]; }
   if (l === 'header' && R > 1) return [{ r: 0, c: 0, h: 1, w: C }, { r: 1, c: 0, h: R - 1, w: C }];
   if (l === 'split' && C > 3) { const a = Math.floor((C - 1) / 2); return [{ r: 0, c: 0, h: R, w: a }, { r: 0, c: a + 1, h: R, w: C - a - 1 }]; }
   if (l === 'ticker' && R > 1) return [{ r: 0, c: 0, h: R - 1, w: C }, { r: R - 1, c: 0, h: 1, w: C }];
@@ -156,81 +184,244 @@ export function depMinutes(ts, now) {
   return Math.floor((target - stockholmWall(now)) / 60000);
 }
 
+const hm = (t, fmt) => {   // epoch ms to local HH:MM, or h:MM AM in 12 h
+  const d = new Date(t), hh = d.getHours(), mm = two(d.getMinutes());
+  return fmt === '12' ? `${(hh % 12) || 12}:${mm} ${hh < 12 ? 'AM' : 'PM'}` : `${two(hh)}:${mm}`;
+};
+// Left text and right text on one line of width W, the left cut to make room.
+const lr = (left, right, W) => {
+  left = String(left); right = String(right);
+  if (left.length + 1 + right.length > W) left = left.slice(0, Math.max(0, W - right.length - 1));
+  return left.padEnd(Math.max(0, W - right.length)) + right;
+};
+// A stable shuffle of 0..n-1 for one pass through a list, so a shuffled rotation
+// still shows every message once before any repeats.
+function order(n, pass) {
+  const a = Array.from({ length: n }, (_, i) => i); let x = (pass * 2654435761 + 1) >>> 0;
+  for (let i = n - 1; i > 0; i--) { x = (x * 1103515245 + 12345) >>> 0; const j = x % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
 export function channelLines(ch, o, z, now, lang, live) {
   const d = new Date(now), W = z.w > 8 ? z.w - 2 : z.w, w = WORDS[lang] || WORDS.en;
   if (ch === 'clock') {
-    const hh = d.getHours(), mm = String(d.getMinutes()).padStart(2, '0');
-    const time = o.fmt === '12' ? `${(hh % 12) || 12}:${mm} ${hh < 12 ? 'AM' : 'PM'}` : `${String(hh).padStart(2, '0')}:${mm}`;
-    const day = DAYS[lang][d.getDay()], mon = MONTHS[lang][d.getMonth()];
+    const time = hm(now, o.fmt), day = DAYS[lang][d.getDay()], mon = MONTHS[lang][d.getMonth()];
+    const showDate = o.date !== false, date = `${d.getDate()} ${mon}`;
     if (z.h === 1) {
-      const left = `${day.slice(0, 3)} ${d.getDate()} ${mon}`;
-      return { exact: left.slice(0, Math.max(0, W - time.length - 1)).padEnd(W - time.length) + time };
+      const left = showDate ? `${day.slice(0, 3)} ${date}` : o.week ? `${w.week} ${isoWeek(d)}` : day;
+      return { exact: lr(left, time, W) };
     }
-    if (z.h < 4) return { lines: [day, time], align: 'center' };
-    return { lines: [day, `${d.getDate()} ${mon}`, '', time], align: 'center' };
+    if (z.h < 4) return { lines: [showDate && W >= day.length + date.length + 1 ? `${day} ${date}` : day, time], align: 'center' };
+    const lines = [day];
+    if (showDate) lines.push(date);
+    if (o.week) lines.push(`${w.week} ${isoWeek(d)}`);
+    lines.push('', time);
+    return { lines: lines.slice(-z.h), align: 'center' };
   }
   if (ch === 'countdown') {
-    const target = new Date((o.date || '2027-06-25') + 'T00:00:00').getTime(), diff = target - now;
-    const days = Math.ceil(diff / 864e5), hrs = Math.max(0, Math.ceil(diff / 36e5));
-    const val = diff <= 0 ? w.today : days > 1 ? `${days} ${w.days}` : `${hrs} ${hrs === 1 ? w.hour : w.hours}`;
-    return { lines: [(o.label || '').toUpperCase(), '', val, diff > 0 ? w.togo : ''], align: 'center' };
+    const target = new Date((o.date || '2027-06-25') + 'T00:00:00').getTime(), label = (o.label || '').toUpperCase();
+    // Count up ("days since") once the date has passed; before it, it counts down as usual.
+    if (o.dir === 'up' && now >= target) {
+      const days = Math.floor((now - target) / 864e5), val = days === 0 ? w.today : `${days} ${days === 1 ? w.day : w.days}`;
+      if (z.h === 1) return { exact: lr(label, val, W) };
+      return { lines: z.h >= 4 ? [label, '', val] : [label, val], align: 'center' };
+    }
+    const diff = target - now, days = Math.ceil(diff / 864e5), hrs = Math.max(0, Math.ceil(diff / 36e5));
+    const val = diff <= 0 ? w.today : days > 1 || o.unit === 'days' ? `${days} ${days === 1 ? w.day : w.days}` : `${hrs} ${hrs === 1 ? w.hour : w.hours}`;
+    if (z.h === 1) return { exact: lr(label, val, W) };
+    return { lines: z.h >= 4 ? [label, '', val, diff > 0 ? w.togo : ''] : [label, val], align: 'center' };
   }
-  if (ch === 'sl') {
-    const src = slSource(o, live);
-    if (!src) return { lines: ['SL', o.home ? w.nohome : w.pick], align: 'center' };
-    const name = src.name.toUpperCase(), got = src.sites.map(id => live && live.sl && live.sl[id]).filter(Boolean);
-    // Say "no data" only after several failed tries in a row; SL often refuses the
-    // first request or two and then answers.
-    if (!got.some(d => d.deps)) return { lines: [name, '', got.some(d => (d.fails || 0) >= 4) ? w.nodata : w.loading], align: 'center' };
-    const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null;
-    const deps = got.flatMap(d => d.deps || [])
-      .filter(x => !modes || modes.includes(x.mode))
-      .map(x => ({ ...x, m: depMinutes(x.expected || x.scheduled, now) }))
-      .filter(x => x.m != null && x.m >= 0)
-      .sort((a, b) => a.m - b.m);
-    if (!deps.length) return { lines: [name, '', w.nodeps], align: 'center' };
-    // Minutes away, or the clock time in 24 h or 12 h. SL timestamps are Stockholm local.
-    // 'cycle' alternates the two every six seconds, so a glance gets both.
-    const showClock = o.eta === 'clock' || (o.eta === 'cycle' && Math.floor(now / 6000) % 2 === 1);
-    const eta = x => {
-      if (!showClock) return x.m === 0 ? w.now : `${x.m} ${w.min}`;
-      const hhmm = (x.expected || x.scheduled).slice(11, 16);
-      if (o.fmt !== '12') return hhmm;
-      const hh = +hhmm.slice(0, 2);
-      return `${(hh % 12) || 12}:${hhmm.slice(3)} ${hh < 12 ? 'AM' : 'PM'}`;
-    };
-    return { lines: [name].concat(deps.slice(0, z.h - 1).map(x => row(x.line, x.dest.toUpperCase(), eta(x), W))), align: 'left' };
-  }
+  if (ch === 'wordclock') return { lines: wrap(timeInWords(d, lang), W), align: 'center' };
+  if (ch === 'today') return todayLines(o, z, d, W, lang, w, live);
+  if (ch === 'sl') return slLines(o, z, now, W, w, live);
   if (ch === 'weather') {
-    if (o.lat == null) return { lines: [w.weather, w.pickCity], align: 'center' };
-    const city = (o.city || '').toUpperCase(), data = live && live.wx && live.wx[wxKey(o)];
+    const place = wxPlace(o, live);
+    if (!place) return { lines: [w.weather, w.pickCity], align: 'center' };
+    const city = (place.city || '').toUpperCase(), data = live && live.wx && live.wx[wxKey(place)];
     if (!data || data.t == null) return { lines: [city, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
-    return weatherLines(o.view || 'now', city, data, z, W, lang, w);
+    return weatherLines(o, city, data, z, W, lang, w);
   }
   if (ch === 'quote') {
-    const list = QUOTES[lang] || QUOTES.en, q = list[Math.floor(now / 60000) % list.length];
+    const set = QUOTES[o.set] || QUOTES.proverbs, list = set[lang] || set.en, q = list[Math.floor(now / 60000) % list.length];
     return { lines: wrap(q, W), align: 'center' };
+  }
+  if (ch === 'rotating') {
+    const msgs = (o.messages || []).map(m => String(m || '').trim()).filter(Boolean);
+    if (!msgs.length) return { lines: [w.noMessages], align: 'center' };
+    const slot = Math.floor(now / 1000 / Math.max(3, +o.interval || 8)), n = msgs.length;
+    const i = o.order === 'shuffle' ? order(n, Math.floor(slot / n))[slot % n] : slot % n;
+    return { lines: wrap(msgs[i].toUpperCase(), W), align: 'center' };
+  }
+  if (ch === 'menu') {
+    const sfx = o.suffix || '', rows = (o.items || []).map(x => String(x || '').trim().toUpperCase()).filter(Boolean).map(x => {
+      const m = /^(.*?)\s+(\d+(?:[.,]\d+)?)$/.exec(x);   // a price at the end lines up on the right
+      return m ? lr(m[1], m[2] + sfx, W) : x;
+    });
+    const title = String(o.title || '').toUpperCase();
+    return { lines: (title && z.h > rows.length ? [title] : []).concat(rows), align: 'left' };
+  }
+  if (ch === 'electricity') return powerLines(o, z, now, W, w, live);
+  if (ch === 'currency') {
+    const base = o.base === 'EUR' ? 'EUR' : 'SEK', data = live && live.fx && live.fx[base];
+    const pairs = (Array.isArray(o.pairs) && o.pairs.length ? o.pairs : ['EUR', 'USD', 'GBP']).filter(p => p !== base);
+    if (!data || !data.rates) return { lines: [base, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+    const dec = o.dec == null ? 2 : +o.dec;
+    const val = p => { const r = data.rates[p]; if (!r) return '-'; const v = (1 / r).toFixed(dec); return lang === 'sv' ? v.replace('.', ',') : v; };
+    if (z.h === 1) return { lines: [pairs.map(p => `${p} ${val(p)}`).join('  ')], align: 'center' };
+    return { lines: pairs.map(p => lr(W >= 14 ? `1 ${p}` : p, W >= 14 ? `${val(p)} ${base}` : val(p), W)), align: 'left' };
+  }
+  if (ch === 'onthisday') {
+    const data = live && live.otd && live.otd[lang === 'sv' ? 'sv' : 'en'], md = `${two(d.getMonth() + 1)}-${two(d.getDate())}`;
+    if (!data || data.md !== md || !data.items || !data.items.length) return { lines: [w.otd, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+    // Prefer events short enough to fit the zone whole; rotate among them every minute.
+    const rows = Math.max(1, z.h - 1), fits = data.items.filter(x => wrap(x.text.toUpperCase(), W).length <= rows);
+    const pool = fits.length ? fits : data.items.slice().sort((a, b) => a.text.length - b.text.length).slice(0, 3);
+    const it = pool[Math.floor(now / 60000) % pool.length];
+    if (z.h === 1) return { lines: [`${it.year} ${it.text.toUpperCase()}`], align: 'center' };
+    return { lines: [String(it.year)].concat(wrap(it.text.toUpperCase(), W).slice(0, rows)), align: 'center' };
+  }
+  if (ch === 'url') {
+    if (!o.url) return { lines: [w.noUrl], align: 'center' };
+    const data = live && live.url && live.url[o.url];
+    if (!data || !data.items) return { lines: ['', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+    const lines = (o.header ? [String(o.header).toUpperCase()] : []).concat(data.items.slice(0, o.max || 4).map(it => applyTemplate(o.tpl, it)));
+    return { lines: lines.length ? lines : [w.empty], align: 'left' };
   }
   return { lines: wrap(String(o.text || '').toUpperCase(), W), align: 'center' };
 }
 
-export const wxKey = o => `${(+o.lat).toFixed(2)},${(+o.lon).toFixed(2)}`;
+// {{name}} and {{a.b}} tokens filled from one item of a feed, printed in capitals.
+export function applyTemplate(tpl, item) {
+  return String(tpl || '{{text}}').replace(/\{\{\s*([\w.]+)\s*\}\}/g, (m, k) => {
+    const v = k.split('.').reduce((x, p) => (x != null && typeof x === 'object' ? x[p] : undefined), item);
+    return v == null || typeof v === 'object' ? '' : String(v);
+  }).toUpperCase().replace(/\s+/g, ' ').trim();
+}
+export function templateTokens(tpl) { const out = []; String(tpl || '').replace(/\{\{\s*([\w.]+)\s*\}\}/g, (m, k) => { if (!out.includes(k)) out.push(k); return m; }); return out; }
 
-// Which SL sites a zone shows. o.home follows the home station starred on the
-// maclaine.se SL map (read by the app into live.home); otherwise the zone's own pick.
-// Interchanges can be several sites (Kungsträdgården's metro and tram are two).
-export function slSource(o, live) {
-  if (o.home) { const h = live && live.home; return h && h.sites && h.sites.length ? { name: h.name, sites: h.sites } : null; }
-  const sites = Array.isArray(o.sites) && o.sites.length ? o.sites : o.site ? [o.site] : [];
-  return sites.length ? { name: o.name || '', sites } : null;
+// The weather zone's own city, else the board location.
+export function wxPlace(o, live) {
+  if (o.lat != null && o.lon != null) return { lat: o.lat, lon: o.lon, city: o.city || '' };
+  const l = live && live.loc; return l && l.lat != null ? { lat: l.lat, lon: l.lon, city: l.city || '' } : null;
 }
 
+function todayLines(o, z, d, W, lang, w, live) {
+  const day = DAYS[lang][d.getDay()], mon = MONTHS[lang][d.getMonth()], date = `${d.getDate()} ${mon} ${d.getFullYear()}`;
+  const sd = o.days !== false ? swedishDay(d) : null;
+  // Chips before the name: red for a red day, blue and yellow for a flag day.
+  const special = sd ? [...(sd.red ? ['r', ' '] : sd.flag ? ['b', 'y', ' '] : []), ...textToCells(sd[lang === 'sv' ? 'sv' : 'en'])].slice(0, W) : null;
+  let sun = null;
+  if (o.sun !== false && live && live.loc && live.loc.lat != null) {
+    const s = sunTimes(d, live.loc.lat, live.loc.lon);
+    sun = s.polar ? (s.polar === 'day' ? w.midnightSun : w.polarNight) : W >= 16 ? `${w.sun} ${hm(s.up)} ${hm(s.down)}` : `${hm(s.up)} ${hm(s.down)}`;
+  }
+  if (z.h === 1) return { exact: lr(`${day.slice(0, 3)} ${d.getDate()} ${mon}`, o.week !== false ? `${w.week} ${isoWeek(d)}` : '', W) };
+  const lines = [day, date];
+  if (special) lines.push(special);
+  if (o.week !== false) lines.push(`${w.week} ${isoWeek(d)}`);
+  if (sun) lines.push(sun);
+  if (o.doy) lines.push(`${w.day} ${dayOfYear(d)}`);
+  return { lines: lines.slice(0, z.h), align: 'center' };
+}
+
+// Which stations a zone shows, each { name, sites }. o.home follows the home station
+// starred on the maclaine.se SL map (read by the app into live.home); o.stations is the
+// zone's own list (up to six); o.sites and o.name are the one-station shape from before.
+// Interchanges can be several sites (Kungsträdgården's metro and tram are two).
+export function slStations(o, live) {
+  if (o.home) { const h = live && live.home; return h && h.sites && h.sites.length ? [{ name: h.name, sites: h.sites }] : []; }
+  if (Array.isArray(o.stations) && o.stations.length) return o.stations.map(s => ({ name: s.name || '', sites: [s.id] }));
+  const sites = Array.isArray(o.sites) && o.sites.length ? o.sites : o.site ? [o.site] : [];
+  return sites.length ? [{ name: o.name || '', sites }] : [];
+}
+export function slSource(o, live) {
+  const st = slStations(o, live);
+  return st.length ? { name: st[0].name, sites: st.flatMap(s => s.sites) } : null;
+}
+
+function slLines(o, z, now, W, w, live) {
+  const stations = slStations(o, live);
+  if (!stations.length) return { lines: ['SL', o.home ? w.nohome : w.pick], align: 'center' };
+  const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null, walk = +o.walk || 0;
+  // Minutes away, or the clock time in 24 h or 12 h. SL timestamps are Stockholm local.
+  // 'cycle' alternates the two every six seconds, so a glance gets both.
+  const showClock = o.eta === 'clock' || (o.eta === 'cycle' && Math.floor(now / 6000) % 2 === 1);
+  const eta = x => {
+    if (!showClock) return x.m === 0 ? w.now : `${x.m} ${w.min}`;
+    const hhmm = (x.expected || x.scheduled).slice(11, 16);
+    if (o.fmt !== '12') return hhmm;
+    const hh = +hhmm.slice(0, 2);
+    return `${(hh % 12) || 12}:${hhmm.slice(3)} ${hh < 12 ? 'AM' : 'PM'}`;
+  };
+  const per = stations.map(st => {
+    const got = st.sites.map(id => live && live.sl && live.sl[id]).filter(Boolean);
+    const deps = got.flatMap(d => d.deps || [])
+      .filter(x => !modes || modes.includes(x.mode))
+      .map(x => ({ ...x, m: depMinutes(x.expected || x.scheduled, now) }))
+      .filter(x => x.m != null && x.m >= walk)
+      .sort((a, b) => a.m - b.m);
+    return { name: st.name.toUpperCase(), got, deps };
+  });
+  if (stations.length === 1) {
+    const { name, got, deps } = per[0];
+    // Say "no data" only after several failed tries in a row; SL often refuses the
+    // first request or two and then answers.
+    if (!got.some(d => d.deps)) return { lines: [name, '', got.some(d => (d.fails || 0) >= 4) ? w.nodata : w.loading], align: 'center' };
+    if (!deps.length) return { lines: [name, '', w.nodeps], align: 'center' };
+    const n = Math.min(z.h - 1, o.rows || Infinity);
+    return { lines: [name].concat(deps.slice(0, n).map(x => row(x.line, x.dest.toUpperCase(), eta(x), W))), align: 'left' };
+  }
+  // Several stations: a name line and its next departures for each, as many as fit.
+  const each = Math.max(1, Math.min(o.rows || Infinity, Math.floor((z.h - stations.length) / stations.length)));
+  const lines = [];
+  for (const st of per) {
+    lines.push(st.name);
+    if (!st.got.some(d => d.deps)) lines.push(st.got.some(d => (d.fails || 0) >= 4) ? w.nodata : w.loading);
+    else if (!st.deps.length) lines.push(w.nodeps);
+    else st.deps.slice(0, each).forEach(x => lines.push(row(x.line, x.dest.toUpperCase(), eta(x), W)));
+  }
+  return { lines: lines.slice(0, z.h), align: 'left' };
+}
+
+// Spot prices from elprisetjustnu.se, stored as 24 hourly averages (öre per kWh before
+// VAT) per Stockholm date. The market prices in 15 minute slots, so each hour is the
+// mean of its four. Hours are coloured by where they sit in the day's range.
+export const AREAS = { SE1: 'LULEÅ', SE2: 'SUNDSVALL', SE3: 'STOCKHOLM', SE4: 'MALMÖ' };
+function powerLines(o, z, now, W, w, live) {
+  const area = AREAS[o.area] ? o.area : 'SE3', data = live && live.el && live.el[area];
+  const wall = new Date(stockholmWall(now)), today = wall.toISOString().slice(0, 10), hr = wall.getUTCHours();
+  const tomorrow = new Date(stockholmWall(now) + 864e5).toISOString().slice(0, 10);
+  const day = data && data.days && data.days[today];
+  if (!day) return { lines: [`${w.power} ${area}`, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+  const vat = o.vat === false ? 1 : 1.25, P = day.map(p => p == null ? null : Math.round(p * vat));
+  const next = P.concat((data.days[tomorrow] || []).map(p => p == null ? null : Math.round(p * vat)));
+  const known = P.filter(p => p != null).sort((a, b) => a - b), lo = known[Math.floor(known.length / 3)], hi = known[Math.floor(known.length * 2 / 3)];
+  const lvl = p => p == null ? ' ' : p <= lo ? 'g' : p <= hi ? 'y' : 'r', now$ = P[hr];
+  if (z.h === 1) return { exact: lr(`${w.power} ${area}`, `${now$} ${w.ore}`, W) };
+  if (o.view === 'chart' && z.h >= 3) {
+    // Header row, then one bar per hour across the zone, the current hour in the theme's glyph colour.
+    const cells = blank(z.h, z.w), max = Math.max(...known, 1), bh = z.h - 1;
+    [...lr(`${area} ${w.today}`, `${now$} ${w.ore}`, W)].forEach((ch, i) => { cells[0][(z.w > 8 ? 1 : 0) + i] = ch; });
+    for (let c = 0; c < z.w; c++) {
+      const i = Math.min(23, Math.floor(c * 24 / z.w)), p = P[i]; if (p == null) continue;
+      const n = Math.max(1, Math.round(p / max * bh));
+      for (let k = 0; k < n; k++) cells[z.h - 1 - k][c] = i === hr ? 'f' : lvl(p);
+    }
+    return { cells };
+  }
+  const lines = [W >= 16 ? `${w.power} ${area} ${AREAS[area]}` : `${w.power} ${area}`, W >= 14 ? `${w.now} ${now$} ${w.kwh}` : `${now$} ${w.ore}`];
+  if (z.h >= 3) lines.push(Array.from({ length: W }, (_, i) => lvl(next[hr + i])));
+  return { lines: lines.slice(0, z.h), align: 'center' };
+}
+
+export const wxKey = o => `${(+o.lat).toFixed(2)},${(+o.lon).toFixed(2)}`;
+
 const two = n => String(n).padStart(2, '0');
-const deg = t => `${Math.round(t)}°`;
 
 // Three weather views. Chip icons are placed as cells (arrays) so they are not
 // uppercased into letters on the way to the grid.
-function weatherLines(view, city, d, z, W, lang, w) {
+function weatherLines(o, city, d, z, W, lang, w) {
+  const view = o.view || 'now', deg = t => `${Math.round(o.units === 'f' ? t * 9 / 5 + 32 : t)}°`;
   const word = weatherWord(d.code, lang), today = (d.daily || [])[0] || {};
   const dayName = date => DAYS[lang][new Date(date + 'T12:00:00').getDay()].slice(0, 3);
   if (view === 'hours') {
@@ -254,7 +445,7 @@ function weatherLines(view, city, d, z, W, lang, w) {
   }
   // now: the detail view
   const lines = [city, [weatherChip(d.code), ' ', ...`${deg(d.t)} ${word}`]];
-  if (d.feels != null && z.h >= 4) lines.push(`${w.feels} ${deg(d.feels)}  ${w.wind} ${Math.round(d.wind)} M/S`);
+  if (d.feels != null && z.h >= 4) lines.push(o.wind === false ? `${w.feels} ${deg(d.feels)}` : `${w.feels} ${deg(d.feels)}  ${w.wind} ${Math.round(d.wind)} M/S`);
   if (z.h >= 5) lines.push(today.pp != null ? `${w.rain} ${today.pp}%  ${(today.sum || 0).toFixed(1)} MM` : w.dry);
   if (z.h >= 6 && today.sunrise) lines.push(`${w.sun} ${today.sunrise.slice(11, 16)} / ${today.sunset.slice(11, 16)}`);
   if (z.h < 4) lines.length = Math.min(lines.length, z.h);
@@ -274,6 +465,7 @@ export function compose(page, R, C, now, lang, live) {
     if (DRAWN.has(zd.ch) && (zd.ch === 'art' || z.h >= 5)) { drawChannel(g, zd.ch, o, z, now); return; }
     const ch = zd.ch === 'bigclock' ? 'clock' : zd.ch === 'bigtext' ? 'message' : zd.ch;
     const res = channelLines(ch, o, z, now, lang, live);
+    if (res.cells) { for (let r = 0; r < z.h; r++) for (let c = 0; c < z.w; c++) g[z.r + r][z.c + c] = res.cells[r][c]; return; }
     if (res.exact != null) { put(g, z.r, z.c + (z.w > 8 ? 1 : 0), z.w > 8 ? z.w - 2 : z.w, res.exact, 'left'); return; }
     if (z.h === 1) {  // ticker rows page through word-wrapped segments; flaps cannot scroll smoothly
       const flat = res.lines.map(l => Array.isArray(l) ? l.map(c => isChip(c) ? ' ' : c).join('').trim() : l);
@@ -288,7 +480,7 @@ export function compose(page, R, C, now, lang, live) {
 // Big clock, big text and patterns paint colour chips straight into the grid.
 function drawChannel(g, ch, o, z, now) {
   const color = o.color || 'f';
-  if (ch === 'art') { drawPattern(g, z, o.pattern || 'rainbow', now, o.step); return; }
+  if (ch === 'art') { drawPattern(g, z, o.pattern || 'rainbow', now, o.step, o.palette); return; }
   if (ch === 'bigclock') {
     const d = new Date(now), hh = d.getHours();
     const time = o.fmt === '12' ? `${(hh % 12) || 12}:${two(d.getMinutes())}` : `${two(hh)}:${two(d.getMinutes())}`;

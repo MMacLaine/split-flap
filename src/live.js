@@ -1,13 +1,17 @@
-// Live data, fetched straight from the browser. Both sources are keyless and send open
+// Live data, fetched straight from the browser. Every source is keyless and sends open
 // CORS headers, so there is no server of ours in the path:
 //   SL departures: transport.integration.sl.se (the SL Transport API, via Trafiklab)
 //   Weather and city search: Open-Meteo (CC BY 4.0)
+//   Electricity spot prices: elprisetjustnu.se
+//   Exchange rates: Frankfurter (European Central Bank reference rates)
+//   On this day: Wikipedia's featured feed (CC BY-SA 4.0)
+//   Follow a URL: whatever address the board names, if it allows browsers to read it
 // Only what the current board uses is fetched. Failed fetches keep the last good data,
 // and the board says how old it is.
 
-import { wxKey, slSource } from './content.js';
+import { wxKey, wxPlace, slStations, AREAS, stockholmWall } from './content.js';
 
-const SL_EVERY = 60e3, WX_EVERY = 15 * 60e3;
+const SL_EVERY = 60e3, WX_EVERY = 15 * 60e3, EL_EVERY = 30 * 60e3, FX_EVERY = 3 * 36e5, OTD_EVERY = 6 * 36e5;
 // SL's open API throttles intermittently (HTTP 429 in streaks of a few requests, even
 // a minute apart), so failures retry fast and then back off. Weather rarely fails.
 const RETRY = [4e3, 8e3, 15e3, 30e3, 60e3];
@@ -23,20 +27,27 @@ async function get(url) {
 export class Live {
   constructor(onUpdate) {
     this.onUpdate = onUpdate;
-    this.data = { sl: {}, wx: {} };
-    this.wanted = { sl: new Map(), wx: new Map() };
+    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, loc: null };
+    this.wanted = { sl: new Map(), wx: new Map(), el: new Set(), fx: new Set(), otd: new Set(), url: new Map() };
     this.timer = setInterval(() => this.poll(), 2000);
     addEventListener('online', () => this.poll(true));
   }
   // Tell the fetcher which stations and places the board needs. Called whenever the
   // board changes; unneeded sources simply stop being refreshed.
-  want(board) {
-    const sl = new Map(), wx = new Map();
+  // lang picks the Wikipedia edition for On this day.
+  want(board, lang) {
+    const sl = new Map(), wx = new Map(), el = new Set(), fx = new Set(), otd = new Set(), url = new Map();
+    this.data.loc = board && board.loc && board.loc.lat != null ? board.loc : null;
     for (const p of (board && board.pages) || []) for (const z of p.zones) {
-      if (z.ch === 'sl') { const src = slSource(z.o, this.data); if (src) for (const id of src.sites) sl.set(id, true); }
-      if (z.ch === 'weather' && z.o.lat != null) wx.set(wxKey(z.o), { lat: z.o.lat, lon: z.o.lon });
+      const o = z.o || {};
+      if (z.ch === 'sl') for (const st of slStations(o, this.data)) for (const id of st.sites) sl.set(id, true);
+      if (z.ch === 'weather') { const pl = wxPlace(o, this.data); if (pl) wx.set(wxKey(pl), { lat: pl.lat, lon: pl.lon }); }
+      if (z.ch === 'electricity') el.add(AREAS[o.area] ? o.area : 'SE3');
+      if (z.ch === 'currency') fx.add(o.base === 'EUR' ? 'EUR' : 'SEK');
+      if (z.ch === 'onthisday') otd.add(lang === 'sv' ? 'sv' : 'en');
+      if (z.ch === 'url' && /^https:\/\//.test(o.url || '')) url.set(o.url, { every: Math.max(1, +o.every || 5) * 60e3, path: o.path || '' });
     }
-    this.wanted = { sl, wx };
+    this.wanted = { sl, wx, el, fx, otd, url };
     this.poll();
   }
   poll(force) {
@@ -48,6 +59,68 @@ export class Live {
       .sort((a, b) => ((this.data.sl[a] || {}).tried || 0) - ((this.data.sl[b] || {}).tried || 0));
     if (slDue.length) this.fetchSl(slDue[0]);
     for (const [k, p] of this.wanted.wx) if (due(this.data.wx[k], WX_EVERY)) this.fetchWx(k, p);
+    for (const a of this.wanted.el) { const e = this.data.el[a]; if (due(e, EL_EVERY) || this.elStale(e, now)) this.fetchEl(a); }
+    for (const b of this.wanted.fx) if (due(this.data.fx[b], FX_EVERY)) this.fetchFx(b);
+    for (const l of this.wanted.otd) { const e = this.data.otd[l]; if (due(e, OTD_EVERY) || (e && !e.busy && e.md !== monthDay(now))) this.fetchOtd(l); }
+    for (const [u, p] of this.wanted.url) if (due(this.data.url[u], p.every)) this.fetchUrl(u, p);
+  }
+  // The prices for today are missing (just past midnight), or tomorrow's are not in yet
+  // after they are published around 13:00: fetch again sooner than the usual half hour.
+  elStale(e, now) {
+    if (!e || e.busy || !e.days || now - (e.tried || 0) < 10 * 60e3) return false;
+    const today = new Date(stockholmWall(now)).toISOString().slice(0, 10), tomorrow = new Date(stockholmWall(now) + 864e5).toISOString().slice(0, 10);
+    return !e.days[today] || (new Date(stockholmWall(now)).getUTCHours() >= 13 && !e.days[tomorrow]);
+  }
+  async run(bucket, k, fn) {
+    const e = this.data[bucket][k] || (this.data[bucket][k] = {});
+    e.busy = true; e.tried = Date.now();
+    try { await fn(e); e.at = Date.now(); e.err = false; e.fails = 0; } catch { e.err = true; e.fails = (e.fails || 0) + 1; }
+    e.busy = false; this.onUpdate();
+  }
+  // Today and tomorrow in Stockholm time. Tomorrow answers 404 until it is published.
+  fetchEl(area) {
+    return this.run('el', area, async e => {
+      const now = Date.now(), days = {};
+      for (const off of [0, 1]) {
+        const date = new Date(stockholmWall(now) + off * 864e5).toISOString().slice(0, 10);
+        try {
+          const j = await get(`https://www.elprisetjustnu.se/api/v1/prices/${date.slice(0, 4)}/${date.slice(5)}_${area}.json`);
+          const hours = Array.from({ length: 24 }, () => []);
+          for (const x of j) { const h = +String(x.time_start).slice(11, 13); if (h >= 0 && h < 24 && Number.isFinite(x.SEK_per_kWh)) hours[h].push(x.SEK_per_kWh * 100); }
+          days[date] = hours.map(v => v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
+        } catch (err) { if (off === 0) throw err; }
+      }
+      e.days = days;
+    });
+  }
+  fetchFx(base) {
+    return this.run('fx', base, async e => {
+      const j = await get(`https://api.frankfurter.dev/v1/latest?base=${base}`);
+      e.rates = j.rates || {}; e.date = j.date;
+    });
+  }
+  fetchOtd(lang) {
+    return this.run('otd', lang, async e => {
+      const md = monthDay(Date.now());
+      const j = await get(`https://${lang}.wikipedia.org/api/rest_v1/feed/onthisday/selected/${md.replace('-', '/')}`);
+      e.items = (j.selected || []).filter(x => x && x.text && x.year != null).slice(0, 30).map(x => ({ year: x.year, text: String(x.text).slice(0, 300) }));
+      e.md = md;
+    });
+  }
+  // JSON: the list at path (a.b.c), else the first list found; each item is an object
+  // (a plain value becomes { text }). Plain text: one item per non-empty line.
+  fetchUrl(url, p) {
+    return this.run('url', url, async e => {
+      const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 12e3);
+      let body;
+      try {
+        const r = await fetch(url, { signal: ac.signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+        if (!r.ok) throw new Error(r.status);
+        body = await r.text();
+      } finally { clearTimeout(timer); }
+      if (body.length > 1e6) throw new Error('too big');
+      e.items = feedItems(body, p.path).slice(0, 50);
+    });
   }
   async fetchSl(site) {
     const e = this.data.sl[site] || (this.data.sl[site] = {});
@@ -82,18 +155,32 @@ export class Live {
     e.busy = false; this.onUpdate();
   }
   // Minutes since the oldest source this page depends on last updated, or 0 if fresh.
-  // SL counts as stale after 3 minutes (departures move); weather after 45.
+  // SL counts as stale after 3 minutes (departures move); weather and prices after 45.
   staleMinutes(page) {
     if (!page) return 0;
     const now = Date.now(); let worst = 0;
+    const check = (e, limit) => { if (e && e.at && now - e.at > limit) worst = Math.max(worst, Math.floor((now - e.at) / 60e3)); };
     for (const z of page.zones) {
-      let e = null, limit = 0;
-      if (z.ch === 'sl') { const src = slSource(z.o, this.data); if (src) { e = this.data.sl[src.sites[0]]; limit = 3 * 60e3; } }
-      if (z.ch === 'weather' && z.o.lat != null) { e = this.data.wx[wxKey(z.o)]; limit = 45 * 60e3; }
-      if (e && e.at && now - e.at > limit) worst = Math.max(worst, Math.floor((now - e.at) / 60e3));
+      const o = z.o || {};
+      if (z.ch === 'sl') for (const st of slStations(o, this.data)) for (const id of st.sites) check(this.data.sl[id], 3 * 60e3);
+      if (z.ch === 'weather') { const pl = wxPlace(o, this.data); if (pl) check(this.data.wx[wxKey(pl)], 45 * 60e3); }
+      if (z.ch === 'electricity') check(this.data.el[AREAS[o.area] ? o.area : 'SE3'], 75 * 60e3);
+      if (z.ch === 'url' && o.url) check(this.data.url[o.url], Math.max(1, +o.every || 5) * 60e3 * 3);
     }
     return worst;
   }
+}
+
+const monthDay = now => { const d = new Date(now); return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+export function feedItems(body, path) {
+  let j = null;
+  try { j = JSON.parse(body); } catch { j = null; }
+  if (j == null) return String(body).split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(text => ({ text }));
+  let list = path ? String(path).split('.').filter(Boolean).reduce((x, k) => (x != null ? x[k] : undefined), j) : j;
+  if (!Array.isArray(list) && list && typeof list === 'object') list = Object.values(list).find(Array.isArray) || [list];
+  if (!Array.isArray(list)) list = list == null ? [] : [list];
+  return list.map(x => x && typeof x === 'object' ? x : { text: x });
 }
 
 // --- search ---
