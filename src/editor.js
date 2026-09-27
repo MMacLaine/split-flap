@@ -258,7 +258,11 @@ export class Editor {
       h('div', { class: 'sf-field gap' }, h('span', { class: 'sf-eyebrow' }, t.timing),
         h('div', { class: 'sf-row between' }, h('span', { class: 'sf-label' }, t.showFor),
           this.stepper(`${p.dur} s`, () => durStep(-1), () => durStep(1), 'dur', di <= 0, p.dur >= DURS[DURS.length - 1])),
-        this.windowsEl(p)),
+        this.windowsEl(p),
+        h('div', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.pageTransition),
+          h('div', { class: 'sf-row' }, [['', t.boardDefault(t.transitions[b.transition])], ...Object.entries(t.transitions)].map(([id, label]) =>
+            h('button', { class: 'sf-seg', 'aria-pressed': String((p.tr || '') === id), 'data-k': 'ptr-' + (id || 'board'),
+              onclick: () => { this.app.updPage(pp => { if (id) pp.tr = id; else delete pp.tr; }); this.app.previewTransition(); } }, label))))),
       h('div', { class: 'sf-row ruled' },
         h('button', { class: 'sf-btn', 'data-k': 'dup-page', onclick: () => this.dupPage() }, t.dupPage),
         h('button', { class: 'sf-btn', 'data-k': 'save-image', onclick: () => this.app.saveImage() }, t.saveImage),

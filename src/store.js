@@ -120,7 +120,7 @@ export function sanitizeBoard(b) {
     while (zones.length < need) zones.push({ ch: 'message', o: {} });
     const wins = sanitizeWins(p);
     return { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10), wins, win: legacyWin(wins),
-      ...(p.alone === true && wins.length ? { alone: true } : {}), zones };
+      ...(p.alone === true && wins.length ? { alone: true } : {}), ...(TRANSITIONS.includes(p.tr) ? { tr: p.tr } : {}), zones };
   });
   if (!pages.length) return null;
   return {

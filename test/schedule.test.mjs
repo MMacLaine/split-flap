@@ -135,3 +135,8 @@ test('without Show alone a board behaves as in 0.2', () => {
   const b = sanitizeBoard(board([{ alone: true, wins: [] }, { alone: 'yes', wins: [{ from: '06:00', to: '07:00' }] }, { alone: true, wins: [{ from: '06:00', to: '07:00' }] }]));
   assert.deepEqual(b.pages.map(p => !!p.alone), [false, false, true]);   // only with a window, only a real true
 });
+
+test('a page keeps a valid transition of its own and drops a bad one', () => {
+  const b = sanitizeBoard(board([{ tr: 'wave' }, { tr: 'explode' }, {}]));
+  assert.deepEqual(b.pages.map(p => p.tr), ['wave', undefined, undefined]);
+});
