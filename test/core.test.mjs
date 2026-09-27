@@ -9,26 +9,26 @@ import { wrap, toCells, depMinutes, channelLines, compose, zonesFor } from '../s
 import { sanitizeBoard, encodeBoard, decodeBoard } from '../src/store.js';
 
 // ---------- charset ----------
-test('drum holds 73 flaps', () => {
-  // 1 blank + 26 letters + 7 Nordic (Å Ä Ö Æ Ø Ü É) + 10 digits + 20 punctuation + 9 chips
-  assert.equal(DRUM.length, 73);
+test('drum holds 74 flaps', () => {
+  // 1 blank + 26 letters + 7 Nordic (Å Ä Ö Æ Ø Ü É) + 10 digits + 20 punctuation + the heart + 9 chips
+  assert.equal(DRUM.length, 74);
 });
 
 test('Z to B goes forward the long way round', () => {
-  // Z is flap 26, B is flap 2. Forward from 26 to 2 wraps: (2 - 26) mod 73 = 49 steps.
+  // Z is flap 26, B is flap 2. Forward from 26 to 2 wraps: (2 - 26) mod 74 = 50 steps.
   const full = drumPath('Z', 'B');
-  assert.equal(full.length, 49);
+  assert.equal(full.length, 50);
   assert.equal(full[0], 'Å');                 // flap 27, the one after Z
   assert.deepEqual(full.slice(-3), [' ', 'A', 'B']);
 });
 
 test('fast speed shows only the last 10 flaps before the target', () => {
-  // Last 10 flaps ending at B (flap 2): flaps 66..72 are chips y g b v w k f, then 0 1 2.
+  // Last 10 flaps ending at B (flap 2): flaps 67..73 are chips y g b v w k f, then 0 1 2.
   assert.deepEqual(drumPath('Z', 'B', 10), ['y', 'g', 'b', 'v', 'w', 'k', 'f', ' ', 'A', 'B']);
 });
 
-test('same flap to itself is a full turn (73)', () => {
-  assert.equal(drumPath('A', 'A').length, 73);
+test('same flap to itself is a full turn (74)', () => {
+  assert.equal(drumPath('A', 'A').length, 74);
 });
 
 test('typing: lowercase prints as capitals, Nordic letters stay themselves', () => {
