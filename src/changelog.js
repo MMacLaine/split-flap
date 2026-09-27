@@ -3,6 +3,28 @@
 
 export const CHANGELOG = [
   {
+    v: '0.6.3', date: '2026-09-28',
+    tag: { en: 'Accounts', sv: 'Konton' },
+    desc: {
+      en: 'Making an account after using Split-Flap as a guest, with nothing lost on the way.',
+      sv: 'Att skaffa ett konto efter att ha använt Split-Flap som gäst, utan att något försvinner på vägen.'
+    },
+    items: {
+      en: [
+        'The first time you sign in, the question about your guest boards stays until you answer it. Before, closing the tab while it showed skipped it, and the boards went into your account without asking.',
+        'You choose board by board what goes to your account. The rest stay in this browser as they are.',
+        'The app keeps a copy of your guest boards until the server has every one you kept, then tells you how many are now in your account.',
+        'As a guest, once you have made a second board, the app suggests signing in once, and asks the browser not to clear your boards on its own. Dismiss it and it does not come back.'
+      ],
+      sv: [
+        'Första gången du loggar in ligger frågan om dina gästtavlor kvar tills du har svarat. Förut försvann den om du stängde fliken medan den visades, och tavlorna gick till ditt konto utan att du blev tillfrågad.',
+        'Du väljer tavla för tavla vad som går till ditt konto. Resten ligger kvar i den här webbläsaren som de är.',
+        'Appen sparar en kopia av dina gästtavlor tills servern har alla du valde att behålla, och säger sedan hur många som nu finns i ditt konto.',
+        'Som gäst föreslår appen en gång att du loggar in när du har gjort en andra tavla, och ber webbläsaren att inte rensa dina tavlor av sig själv. Stänger du förslaget kommer det inte tillbaka.'
+      ]
+    }
+  },
+  {
     v: '0.6.2', date: '2026-09-28',
     tag: { en: 'Fix', sv: 'Rättning' },
     desc: {
