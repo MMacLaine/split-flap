@@ -159,11 +159,19 @@ export function toCells(o, h, w) {
   return out;
 }
 
-function row(num, dest, right, W) {
-  let left = num.padEnd(3) + dest;
-  if (left.length + 1 + right.length > W) left = left.slice(0, Math.max(0, W - right.length - 1));
-  return left.padEnd(W - right.length) + right;
+// Left text and right text on one line of width W, with at least one space between.
+// When the left has to be cut it loses whole words, as long as that keeps at least half
+// the room; a long single word is cut at the letter.
+export function lr(left, right, W) {
+  left = String(left); right = String(right);
+  const room = Math.max(0, W - right.length - 1);
+  if (left.length > room) {
+    const sp = left.lastIndexOf(' ', room);
+    left = sp >= Math.ceil(room / 2) ? left.slice(0, sp).trimEnd() : left.slice(0, room);
+  }
+  return left.padEnd(Math.max(0, W - right.length)) + right;
 }
+const row = (num, dest, right, W) => lr(num.padEnd(3) + dest, right, W);
 
 // Wall-clock fields in Stockholm for an instant, whatever the viewer's timezone.
 // SL timestamps carry no offset and are Stockholm local, so they are compared in the
@@ -187,12 +195,6 @@ export function depMinutes(ts, now) {
 const hm = (t, fmt) => {   // epoch ms to local HH:MM, or h:MM AM in 12 h
   const d = new Date(t), hh = d.getHours(), mm = two(d.getMinutes());
   return fmt === '12' ? `${(hh % 12) || 12}:${mm} ${hh < 12 ? 'AM' : 'PM'}` : `${two(hh)}:${mm}`;
-};
-// Left text and right text on one line of width W, the left cut to make room.
-const lr = (left, right, W) => {
-  left = String(left); right = String(right);
-  if (left.length + 1 + right.length > W) left = left.slice(0, Math.max(0, W - right.length - 1));
-  return left.padEnd(Math.max(0, W - right.length)) + right;
 };
 // A stable shuffle of 0..n-1 for one pass through a list, so a shuffled rotation
 // still shows every message once before any repeats.

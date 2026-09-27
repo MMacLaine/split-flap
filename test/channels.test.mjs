@@ -2,7 +2,8 @@
 // helpers behind Today. Run with TZ=Europe/Stockholm (npm test sets it).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compose, zonesFor, channelLines, timeInWords, applyTemplate, templateTokens, CHANNELS } from '../src/content.js';
+import { compose, zonesFor, channelLines, timeInWords, applyTemplate, templateTokens, CHANNELS, lr } from '../src/content.js';
+import { fromTemplate } from '../src/templates.js';
 import { sanitizeBoard } from '../src/store.js';
 import { easter, swedishDay, isoWeek, sunTimes } from '../src/almanac.js';
 import { feedItems } from '../src/live.js';
@@ -173,4 +174,25 @@ test('every channel composes on every layout without throwing', () => {
     assert.ok(g.every(r => r.length === 22), `${ch} on ${layout}`);
   }
   assert.ok(text(compose(page('full', [{ ch: 'wordclock', o: {} }]), 6, 22, at(2026, 9, 27, 9, 0), 'en', {})).includes("NINE O'CLOCK"));
+});
+
+test('a line that has to be cut loses whole words, a long word is cut at the letter', () => {
+  assert.equal(lr('CAKE OF THE DAY', '45 KR', 20), 'CAKE OF THE    45 KR');
+  assert.equal(lr('SUPERCALIFRAGILISTIC', '45 KR', 20), 'SUPERCALIFRAGI 45 KR');
+  assert.equal(lr('A VERYLONGWORDINDEED', '45 KR', 20), 'A VERYLONGWORD 45 KR');   // a word cut would keep under half
+  assert.equal(lr('KAFFE', '30 KR', 20), 'KAFFE          30 KR');
+});
+
+test('the Café menu fits: every item ends in its price, no word cut', () => {
+  for (const lang of ['en', 'sv']) {
+    const b = fromTemplate('cafe', lang), menu = b.pages[0].zones[0];
+    const g = compose(b.pages[0], 6, 22, 0, lang, {});
+    const rows = g.map(r => r.join('').trim()).filter(Boolean).slice(1);
+    assert.equal(rows.length, menu.o.items.length);
+    rows.forEach((r, i) => {
+      assert.match(r, /\d+ KR$/, r);
+      const name = menu.o.items[i].replace(/\s+\d+$/, '').toUpperCase();
+      assert.ok(r.startsWith(name), `${lang}: ${r}`);
+    });
+  }
 });
