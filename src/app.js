@@ -419,7 +419,8 @@ export class App {
         h('button', { class: 'sf-bar-btn', 'aria-expanded': String(S.share), 'data-k': 'bar-share', onclick: () => this.openShare() }, t.share),
         this.account && this.account.available ? h('button', { class: 'sf-bar-btn' + (this.account.signedIn() ? ' named' : ' signin'), 'data-k': 'bar-account', onclick: () => this.openAccount(),
             title: this.account.status === 'failed' || this.account.status === 'signedout' ? this.editor.accountStatus() : null },
-          this.account.signedIn() ? this.account.user.name : this.account.status === 'signedout' ? t.signInToSync : t.signIn,
+          this.account.signedIn() ? this.account.user.name : this.account.status === 'signedout'
+            ? [h('span', { class: 'sf-wide' }, t.signInToSync), h('span', { class: 'sf-narrow' }, t.signIn, h('span', { class: 'sf-bar-fail', 'aria-hidden': 'true' }, ' !'))] : t.signIn,
           this.account.status === 'failed' || this.account.refusedBoards().length ? h('span', { class: 'sf-bar-fail', 'aria-label': t.syncFailedMark, role: 'img' }, ' !') : null) : null,
         h('span', { class: 'sf-sep' }),
         h('div', { role: 'group', 'aria-label': t.lang, style: 'display:flex' },
