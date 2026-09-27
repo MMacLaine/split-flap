@@ -211,7 +211,10 @@ export function fillGrid(w, h) {
 
 export class Board {
   constructor(canvas, o) {
-    this.cv = canvas; this.ctx = canvas.getContext('2d', { alpha: false });
+    // transparent (for OBS and other overlays) needs an alpha canvas, which cannot be
+    // switched later, so it is read here. The frame is drawn on nothing.
+    this.clear = !!(o && o.transparent);
+    this.cv = canvas; this.ctx = canvas.getContext('2d', { alpha: this.clear });
     this.A = new Atlas(); this.bg = document.createElement('canvas');
     this.o = Object.assign({
       rows: 6, cols: 22, theme: 'black', speed: 'fast', transition: 'classic', maxDpr: 2,
@@ -268,8 +271,8 @@ export class Board {
     const T = THEMES[this.o.theme], b = this.bg; b.width = this.W; b.height = this.H;
     const x = b.getContext('2d'), W = this.W, H = this.H, bx = this.bx, by = this.by, bw = this.bw, bh = this.bh, th = this.th;
     const g = x.createRadialGradient(W / 2, H * 0.46, 0, W / 2, H * 0.46, Math.hypot(W, H) * 0.6);
-    g.addColorStop(0, T.backdrop[0]); g.addColorStop(1, T.backdrop[1]); x.fillStyle = g; x.fillRect(0, 0, W, H);
-    for (let i = 1; i <= 6; i++) {                     // static contact shadow, painted once
+    if (!this.clear) { g.addColorStop(0, T.backdrop[0]); g.addColorStop(1, T.backdrop[1]); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+    for (let i = 1; i <= 6 && !this.clear; i++) {      // static contact shadow, painted once
       const s = i * th * 0.07; x.fillStyle = `rgba(0,0,0,${(T.shadow / 12).toFixed(3)})`;
       rr(x, bx - s * 0.4, by + s * 0.9, bw + s * 0.8, bh + s * 0.5, th * T.frameRadius + s); x.fill();
     }
@@ -296,6 +299,7 @@ export class Board {
   }
   _full() {
     if (!this.W) return;
+    if (this.clear) this.ctx.clearRect(0, 0, this.W, this.H);
     this.ctx.drawImage(this.bg, 0, 0);
     const now = performance.now();
     for (let r = 0; r < this.o.rows; r++) for (let c = 0; c < this.o.cols; c++) this._drawCell(r, c, now);
@@ -325,6 +329,7 @@ export class Board {
   }
   _drawCellInner(r, c, now) {
     const p = this.cellXY(r, c), x = p[0], y = p[1], tw = this.tw, th = this.th, ctx = this.ctx, T = THEMES[this.o.theme], A = this.A;
+    if (this.clear) ctx.clearRect(x, y, tw, th);
     ctx.drawImage(this.bg, x, y, tw, th, x, y, tw, th);
     const cell = this.cells[r][c], a = cell.a;
     if (!a) { ctx.drawImage(A.get(cell.cur, tw, th, T), x, y); return; }

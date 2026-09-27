@@ -362,6 +362,9 @@ html, body { margin: 0; background: #13151A; }
 
 .sf.kiosk .sf-about, .sf.editing .sf-about { display: none; }
 html.sf-kiosk, html.sf-kiosk body { overflow: hidden; }
+/* ?bg=transparent: the board and its frame on nothing, for OBS and other overlays */
+html.sf-transparent, html.sf-transparent body, html.sf-transparent .sf, html.sf-transparent .sf-main, html.sf-transparent .sf-stage { background: transparent !important; }
+html.sf-transparent .sf-offline, html.sf-transparent .sf-about { display: none; }
 
 @media (max-width: 600px) {
   .sf-about-in { padding: 64px 20px 48px 20px; gap: 64px; }
