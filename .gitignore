@@ -22,3 +22,7 @@ AGENTS.md
 
 # Local scratch
 _local/
+
+# Worker: local secrets and wrangler state, never committed
+.dev.vars
+.wrangler/

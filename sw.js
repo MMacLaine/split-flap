@@ -4,12 +4,15 @@
 // online (so a new page never meets an old module, the mismatch that once stranded
 // Tunnelbana on a loading screen), and the last good copy when offline. Live data
 // (SL, Open-Meteo) is cross-origin and never touched here: the board shows its age.
-const CACHE = 'split-flap-v2';
+const CACHE = 'split-flap-v3';
 // Paths this worker answers for: the page it controls (its scope) and the folder the
 // app's files live in, which on maclaine.se differs from the page (?assets=/split-flap/).
 const SCOPE = new URL(self.registration.scope).pathname;
 const ASSETS = new URL(location.href).searchParams.get('assets') || SCOPE.replace(/[^/]*$/, '');
-const mine = p => p === SCOPE || p === SCOPE.replace(/\/$/, '') || p.startsWith(SCOPE.replace(/\/?$/, '/')) || p.startsWith(ASSETS);
+// The account API (from 0.5) is never answered or cached here: its replies carry
+// personal data and must always come fresh from the server.
+const API = /\/split-flap\/api(\/|$)/;
+const mine = p => !API.test(p) && (p === SCOPE || p === SCOPE.replace(/\/$/, '') || p.startsWith(SCOPE.replace(/\/?$/, '/')) || p.startsWith(ASSETS));
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil((async () => {
