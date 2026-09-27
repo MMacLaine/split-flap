@@ -2,7 +2,7 @@
 // whose on a shared computer. Pure functions, no server.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState } from '../src/sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState, refused, unsynced } from '../src/sync.js';
 
 let n = 0; const newId = () => 'copy' + (++n);
 const B = (id, name = id) => ({ id, name, pages: [] });
@@ -86,4 +86,43 @@ test('another account never gets the last one\'s boards', () => {
 test('marking changes only touches synced boards', () => {
   assert.deepEqual(markDirty(emptyState(), 'g'), emptyState());
   assert.equal(markDirty(st({ a: { rev: 1, dirty: false, owner: 'u1' } }), 'a').boards.a.dirty, true);
+});
+
+// ---------- 0.5.2: from the review of the build ----------
+test('sign out keeps boards whose changes have not reached the account', () => {
+  const s = st({ a: { rev: 2, dirty: true, owner: 'u1' }, b: { rev: 3, dirty: false, owner: 'u1' } });
+  assert.deepEqual(unsynced(s), ['a']);
+  const r = signOut([B('a'), B('b'), B('g')], s);
+  assert.deepEqual(names(r), ['a', 'g']);                                // a stays as a guest board, b is safe on the server
+  assert.deepEqual(r.state, emptyState());
+});
+
+test('edits made while signed out survive a server that moved on, as a copy', () => {
+  // the session ran out; the app kept marking the account's boards changed
+  const s = markDirty(st({ a: { rev: 4, dirty: false, owner: 'u1' } }), 'a');
+  const r = merge([B('a', 'offline edit')], [R('a', 6, 'phone edit')], s, 'u1', { suffix: ' (copy)', newId });
+  assert.deepEqual(names(r), ['offline edit (copy)', 'phone edit']);
+});
+
+test('a refused board is kept here, skipped, and tried again once it changes', () => {
+  let s = st({ a: { rev: 0, dirty: true, owner: 'u1' }, b: { rev: 0, dirty: true, owner: 'u1' } });
+  s = refused(s, 'a', 'too_many_boards');
+  const r = merge([B('a'), B('b')], [], s, 'u1', { newId });
+  assert.deepEqual(r.push, ['b']);                                        // b is not held up by a
+  assert.equal(r.state.boards.a.error, 'too_many_boards');
+  const again = merge([B('a'), B('b')], [], markDirty(r.state, 'a'), 'u1', { newId });
+  assert.ok(again.push.includes('a'));
+});
+
+test('a board deleted before its first push is forgotten, so the status can settle', () => {
+  const s = markDeleted(adopt(st({}), ['n'], 'u1'), 'n');
+  const r = merge([], [], s, 'u1', { newId });
+  assert.deepEqual([r.state.boards.n, r.push], [undefined, []]);
+});
+
+test('a guest board that clashes with an account board becomes a copy that is offered, not taken', () => {
+  const r = merge([B('a', 'guest')], [R('a', 2, 'server')], emptyState(), 'u1', { suffix: ' (copy)', newId });
+  const copy = r.boards.find(b => b.name === 'guest (copy)');
+  assert.deepEqual(r.guests, [copy.id]);
+  assert.equal(r.state.boards[copy.id], undefined);                      // no entry: still a guest board
 });
