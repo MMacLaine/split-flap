@@ -673,6 +673,7 @@ export class Editor {
   // ---------- account ----------
   accountStatus() {
     const a = this.app.account, t = this.t;
+    if (a.status === 'idle' && a.unsyncedCount()) return t.accSyncedExcept(a.unsyncedCount());   // a refused board is not waiting, but it is not synced either
     return a.status === 'signedout' ? t.accSignedOut : a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting;
   }
   accountSub() {
@@ -702,7 +703,7 @@ export class Editor {
         : h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accGuestBody), h('p', { class: 'sf-note big' }, t.accSignInBody)),
       h('div', null, h('button', { class: 'sf-btn primary big', 'data-k': 'acc-signin', onclick: () => a.signIn() }, t.signInGoogle)),
       h('p', { class: 'sf-note' }, privacy));
-    const status = a.status === 'failed' ? t.accFailed : a.status === 'idle' ? t.accSynced : t.accWaiting;
+    const status = this.accountStatus();
     return h('div', { class: 'sf-level' },
       a.offer.length ? h('section', { class: 'sf-field sf-offer' },
         h('strong', null, t.offerTitle(a.offer.length)), h('span', { class: 'sf-hint' }, t.offerBody(a.offer.length)),
