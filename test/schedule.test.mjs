@@ -103,3 +103,35 @@ test('the sanitizer keeps real dates only, and a date replaces the days', () => 
   assert.deepEqual(w[3], { from: '08:00', to: '09:00', days: [], date: '2028-02-29' });   // yearly must be true, not truthy
   assert.equal(sanitizeBoard(board([{ wins: [w[0]] }])).pages[0].win, null);   // no 0.2 shape for a dated window
 });
+
+test('Show alone: the morning trains own their slot', () => {
+  const trains = { dur: 10, alone: true, wins: [{ from: '06:30', to: '07:15', days: [1, 2, 3, 4, 5] }] };
+  const weather = { dur: 10, wins: [] };
+  const evening = { dur: 10, wins: [{ from: '17:00', to: '22:00', days: [] }] };
+  const pages = [trains, weather, evening];
+  const seen = now => { const out = new Set(); let idx = -1, start = 0; for (let i = 0; i < 6; i++) { const n = nextPage(pages, idx, start, now + i * 11000); idx = n.idx; start = n.start; out.add(idx); } return [...out].sort(); };
+  assert.deepEqual(seen(at(9, 29, 6, 45)), [0]);            // Tuesday 06:45: trains only
+  assert.deepEqual(seen(at(9, 29, 7, 20)), [1]);            // after the window: weather (evening is shut)
+  assert.deepEqual(seen(at(10, 3, 6, 45)), [1]);            // Saturday: the window is shut, weather shows
+  // the current page is dropped at once when a Show alone window opens
+  assert.equal(nextPage(pages, 1, at(9, 29, 6, 30) - 2000, at(9, 29, 6, 30)).idx, 0);
+});
+
+test('two Show alone pages whose windows overlap both show; other windowed pages in their window too', () => {
+  const a = { dur: 10, alone: true, wins: [{ from: '06:00', to: '08:00', days: [] }] };
+  const b = { dur: 10, alone: true, wins: [{ from: '07:00', to: '09:00', days: [] }] };
+  const c = { dur: 10, wins: [{ from: '07:00', to: '07:30', days: [] }] };
+  const d = { dur: 10, wins: [] };
+  let idx = -1, start = 0; const shown = new Set(), now = at(9, 29, 7, 10);
+  for (let i = 0; i < 8; i++) { const n = nextPage([a, b, c, d], idx, start, now + i * 11000); idx = n.idx; start = n.start; shown.add(idx); }
+  assert.deepEqual([...shown].sort(), [0, 1, 2]);
+});
+
+test('without Show alone a board behaves as in 0.2', () => {
+  const pages = [{ dur: 10, wins: [{ from: '06:30', to: '07:15', days: [] }] }, { dur: 10, wins: [] }];
+  let idx = -1, start = 0; const shown = new Set(), now = at(9, 29, 6, 45);
+  for (let i = 0; i < 4; i++) { const n = nextPage(pages, idx, start, now + i * 11000); idx = n.idx; start = n.start; shown.add(idx); }
+  assert.deepEqual([...shown].sort(), [0, 1]);
+  const b = sanitizeBoard(board([{ alone: true, wins: [] }, { alone: 'yes', wins: [{ from: '06:00', to: '07:00' }] }, { alone: true, wins: [{ from: '06:00', to: '07:00' }] }]));
+  assert.deepEqual(b.pages.map(p => !!p.alone), [false, false, true]);   // only with a window, only a real true
+});

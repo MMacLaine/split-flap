@@ -300,7 +300,10 @@ export class Editor {
         h('span', null, t.window)),
       wins.length ? h('div', { class: 'sf-indent' },
         wins.map(card),
-        wins.length < 8 ? h('button', { class: 'sf-link-btn', 'data-k': 'win-add', onclick: () => setWins(list => { const last = list[list.length - 1]; list.push({ from: last.from, to: last.to, days: [] }); }) }, '+ ' + t.addTime) : null) : null
+        wins.length < 8 ? h('button', { class: 'sf-link-btn', 'data-k': 'win-add', onclick: () => setWins(list => { const last = list[list.length - 1]; list.push({ from: last.from, to: last.to, days: [] }); }) }, '+ ' + t.addTime) : null,
+        h('div', { class: 'sf-field' },
+          h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!p.alone, 'data-k': 'win-alone', onchange: e => this.app.updPage(pp => { if (e.target.checked) pp.alone = true; else delete pp.alone; }) }), h('span', null, t.showAlone)),
+          h('span', { class: 'sf-hint' }, t.showAloneHint))) : null
     ];
   }
   winLabel(w) {
