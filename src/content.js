@@ -5,7 +5,8 @@
 // Ported from the design handoff (design/board-content.js); the mock SL and weather
 // tables are replaced by the live cache, and the strings moved to strings.js.
 
-import { textToCells } from './charset.js';
+import { textToCells, isChip } from './charset.js';
+import { drawPixels, pixelPages, pixelWidth, drawPattern } from './pixels.js';
 
 const DAYS = {
   en: ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
@@ -16,8 +17,8 @@ const MONTHS = {
   sv: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC']
 };
 const WORDS = {
-  en: { now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY' },
-  sv: { now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD' }
+  en: { now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY' },
+  sv: { now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT' }
 };
 
 // WMO weather codes, as Open-Meteo reports them, to a word that fits on a board.
@@ -34,6 +35,19 @@ export function weatherWord(code, lang) {
   if (code === 85 || code === 86) return sv ? 'SNÖBYAR' : 'SNOW SHOWERS';
   if (code >= 95) return sv ? 'ÅSKA' : 'THUNDER';
   return '';
+}
+
+// A colour chip that reads as the weather at a glance: sun yellow, part sun orange,
+// cloud in the theme's glyph colour (a white chip would vanish on the white board),
+// snow white, rain blue, thunder violet.
+export function weatherChip(code) {
+  if (code == null) return ' ';
+  if (code <= 1) return 'y';
+  if (code === 2) return 'o';
+  if (code === 3 || code === 45 || code === 48) return 'f';
+  if (code >= 71 && code <= 77 || code === 85 || code === 86) return 'w';
+  if (code >= 95) return 'v';
+  return 'b';
 }
 
 export const QUOTES = {
@@ -59,7 +73,9 @@ export const QUOTES = {
   ]
 };
 
-export const CHANNELS = ['message', 'clock', 'countdown', 'sl', 'weather', 'quote'];
+export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote'];
+// Channels that paint cells directly (pixel font, patterns) instead of printing lines.
+const DRAWN = new Set(['bigclock', 'bigtext', 'art']);
 export const LAYOUTS = ['full', 'header', 'split', 'ticker'];
 
 export function zonesFor(l, R, C) {
@@ -72,8 +88,9 @@ export function zonesFor(l, R, C) {
 export const blank = (R, C) => Array.from({ length: R }, () => Array(C).fill(' '));
 
 // Place a string (already board characters) on one row of a zone.
+// A line may also be an array of cells (so channels can place colour chips).
 function put(g, r, c0, w, s, align) {
-  const a = textToCells(s).slice(0, w);
+  const a = (Array.isArray(s) ? s : textToCells(s)).slice(0, w);
   const off = align === 'left' ? 0 : align === 'right' ? w - a.length : Math.floor((w - a.length) / 2);
   a.forEach((ch, i) => { if (g[r] && c0 + off + i < g[r].length && c0 + off + i >= 0) g[r][c0 + off + i] = ch; });
 }
@@ -159,11 +176,12 @@ export function channelLines(ch, o, z, now, lang, live) {
     return { lines: [(o.label || '').toUpperCase(), '', val, diff > 0 ? w.togo : ''], align: 'center' };
   }
   if (ch === 'sl') {
-    if (!o.site) return { lines: ['SL', w.pick], align: 'center' };
-    const name = (o.name || '').toUpperCase(), data = live && live.sl && live.sl[o.site];
-    if (!data || !data.deps) return { lines: [name, '', data && data.err ? w.nodata : w.loading], align: 'center' };
+    const src = slSource(o, live);
+    if (!src) return { lines: ['SL', o.home ? w.nohome : w.pick], align: 'center' };
+    const name = src.name.toUpperCase(), got = src.sites.map(id => live && live.sl && live.sl[id]).filter(Boolean);
+    if (!got.some(d => d.deps)) return { lines: [name, '', got.some(d => d.err) ? w.nodata : w.loading], align: 'center' };
     const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null;
-    const deps = data.deps
+    const deps = got.flatMap(d => d.deps || [])
       .filter(x => !modes || modes.includes(x.mode))
       .map(x => ({ ...x, m: depMinutes(x.expected || x.scheduled, now) }))
       .filter(x => x.m != null && x.m >= 0)
@@ -173,13 +191,10 @@ export function channelLines(ch, o, z, now, lang, live) {
     return { lines: [name].concat(deps.slice(0, z.h - 1).map(x => row(x.line, x.dest.toUpperCase(), eta(x), W))), align: 'left' };
   }
   if (ch === 'weather') {
-    if (o.lat == null) return { lines: [lang === 'sv' ? 'VÄDER' : 'WEATHER', w.pickCity], align: 'center' };
+    if (o.lat == null) return { lines: [w.weather, w.pickCity], align: 'center' };
     const city = (o.city || '').toUpperCase(), data = live && live.wx && live.wx[wxKey(o)];
     if (!data || data.t == null) return { lines: [city, '', data && data.err ? w.nodata : w.loading], align: 'center' };
-    const now1 = `${Math.round(data.t)}° ${weatherWord(data.code, lang)}`.trim();
-    const days = (data.daily || []).slice(1, 4).map(f => `${DAYS[lang][new Date(f.date + 'T12:00:00').getDay()].slice(0, 3)} ${Math.round(f.max)}°`);
-    if (W < 16) return { lines: [city, now1, ''].concat(days), align: 'center' };
-    return { lines: [city, now1, '', days.join('  ')], align: 'center' };
+    return weatherLines(o.view || 'now', city, data, z, W, lang, w);
   }
   if (ch === 'quote') {
     const list = QUOTES[lang] || QUOTES.en, q = list[Math.floor(now / 60000) % list.length];
@@ -190,6 +205,51 @@ export function channelLines(ch, o, z, now, lang, live) {
 
 export const wxKey = o => `${(+o.lat).toFixed(2)},${(+o.lon).toFixed(2)}`;
 
+// Which SL sites a zone shows. o.home follows the home station starred on the
+// maclaine.se SL map (read by the app into live.home); otherwise the zone's own pick.
+// Interchanges can be several sites (Kungsträdgården's metro and tram are two).
+export function slSource(o, live) {
+  if (o.home) { const h = live && live.home; return h && h.sites && h.sites.length ? { name: h.name, sites: h.sites } : null; }
+  const sites = Array.isArray(o.sites) && o.sites.length ? o.sites : o.site ? [o.site] : [];
+  return sites.length ? { name: o.name || '', sites } : null;
+}
+
+const two = n => String(n).padStart(2, '0');
+const deg = t => `${Math.round(t)}°`;
+
+// Three weather views. Chip icons are placed as cells (arrays) so they are not
+// uppercased into letters on the way to the grid.
+function weatherLines(view, city, d, z, W, lang, w) {
+  const word = weatherWord(d.code, lang), today = (d.daily || [])[0] || {};
+  const dayName = date => DAYS[lang][new Date(date + 'T12:00:00').getDay()].slice(0, 3);
+  if (view === 'hours') {
+    const hrs = (d.hourly || []).slice(0, Math.max(1, Math.floor(W / 3)));
+    const cells = f => hrs.flatMap(h => [...f(h).padEnd(3).slice(0, 3)]);
+    return { lines: [
+      `${city} ${deg(d.t)}`,
+      cells(h => h.time.slice(11, 13)),
+      hrs.flatMap(h => [weatherChip(h.code), weatherChip(h.code), ' ']),
+      cells(h => deg(h.t)),
+      cells(h => !h.pp ? '' : `${Math.min(99, h.pp)}%`)
+    ], align: 'left' };
+  }
+  if (view === 'days') {
+    const days = (d.daily || []).slice(0, Math.max(1, z.h - 1));
+    return { lines: [city].concat(days.map((f, i) => {
+      const name = i === 0 ? w.today.slice(0, 5) : dayName(f.date);
+      const txt = `${deg(f.max)} ${deg(f.min)}`, rain = f.pp != null && W >= 18 ? ` ${f.pp}%` : '';
+      return [...name.padEnd(6), weatherChip(f.code), ' ', ...txt, ...rain];
+    })), align: 'left' };
+  }
+  // now: the detail view
+  const lines = [city, [weatherChip(d.code), ' ', ...`${deg(d.t)} ${word}`]];
+  if (d.feels != null && z.h >= 4) lines.push(`${w.feels} ${deg(d.feels)}  ${w.wind} ${Math.round(d.wind)} M/S`);
+  if (z.h >= 5) lines.push(today.pp != null ? `${w.rain} ${today.pp}%  ${(today.sum || 0).toFixed(1)} MM` : w.dry);
+  if (z.h >= 6 && today.sunrise) lines.push(`${w.sun} ${today.sunrise.slice(11, 16)} / ${today.sunset.slice(11, 16)}`);
+  if (z.h < 4) lines.length = Math.min(lines.length, z.h);
+  return { lines, align: W >= 18 ? 'left' : 'center' };
+}
+
 export function compose(page, R, C, now, lang, live) {
   const g = blank(R, C); if (!page) return g;
   zonesFor(page.layout, R, C).forEach((z, i) => {
@@ -199,15 +259,34 @@ export function compose(page, R, C, now, lang, live) {
       for (let r = 0; r < z.h; r++) for (let c = 0; c < z.w; c++) g[z.r + r][z.c + c] = cells[r][c];
       return;
     }
-    const res = channelLines(zd.ch, o, z, now, lang, live);
+    // Pixel glyphs are 5 flaps tall; in a shorter zone the big channels print normally.
+    if (DRAWN.has(zd.ch) && (zd.ch === 'art' || z.h >= 5)) { drawChannel(g, zd.ch, o, z, now); return; }
+    const ch = zd.ch === 'bigclock' ? 'clock' : zd.ch === 'bigtext' ? 'message' : zd.ch;
+    const res = channelLines(ch, o, z, now, lang, live);
     if (res.exact != null) { put(g, z.r, z.c + (z.w > 8 ? 1 : 0), z.w > 8 ? z.w - 2 : z.w, res.exact, 'left'); return; }
     if (z.h === 1) {  // ticker rows page through word-wrapped segments; flaps cannot scroll smoothly
-      const segs = wrap(res.lines.filter(Boolean).join('   '), z.w);
+      const flat = res.lines.map(l => Array.isArray(l) ? l.map(c => isChip(c) ? ' ' : c).join('').trim() : l);
+      const segs = wrap(flat.filter(Boolean).join('   '), z.w);
       put(g, z.r, z.c, z.w, segs[Math.floor(now / 3500) % Math.max(1, segs.length)] || '', 'center'); return;
     }
     block(g, z, res.lines, res.align);
   });
   return g;
+}
+
+// Big clock, big text and patterns paint colour chips straight into the grid.
+function drawChannel(g, ch, o, z, now) {
+  const color = o.color || 'f';
+  if (ch === 'art') { drawPattern(g, z, o.pattern || 'rainbow', now, o.step); return; }
+  if (ch === 'bigclock') {
+    const d = new Date(now), hh = d.getHours();
+    const time = o.fmt === '12' ? `${(hh % 12) || 12}:${two(d.getMinutes())}` : `${two(hh)}:${two(d.getMinutes())}`;
+    drawPixels(g, z, pixelWidth(time) <= z.w ? time : time.replace(':', ''), color, now);
+    return;
+  }
+  // bigtext: word-wrapped pages of pixel text, one page every 4 seconds
+  const pages = pixelPages(o.text || 'HEJ', z.w);
+  drawPixels(g, z, pages[Math.floor(now / 4000) % pages.length], color, now);
 }
 
 // What the board shows when no page is allowed right now (every page has a time

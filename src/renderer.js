@@ -299,6 +299,8 @@ export class Board {
     if (a.kind === 'settle') { drawFold(ctx, A, x, y, tw, th, T, a.to, a.to, Math.PI - FOLD.settleAngle * Math.sin(Math.PI * t), a.to); return; }
     drawFold(ctx, A, x, y, tw, th, T, a.from, a.to, thetaAt(t));
   }
+  // True when no flap is moving or queued.
+  isIdle() { return this.cells.every(row => row.every(c => !c.a && !c.q.length)); }
   // What the board currently says (or is heading to), as rows of cells.
   snapshot() {
     return this.cells.map(row => row.map(cell => cell.q.length ? cell.q[cell.q.length - 1] : (cell.a ? cell.a.to : cell.cur)));

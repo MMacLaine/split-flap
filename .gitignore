@@ -1,3 +1,24 @@
+# OS and editor
 .DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Dependencies and logs (the app has none, but tooling may)
 node_modules/
 *.log
+npm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+
+# AI assistant playbooks, agent pointers and local config: personal, never published
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursor/
+
+# Local scratch
+_local/
