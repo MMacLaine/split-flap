@@ -11,17 +11,17 @@ export const CHANGELOG = [
     },
     items: {
       en: [
-        'With a screen reader on, the board reads a page out once when it comes up, and again when you press R. Before, a clock or departures page was read out every minute, so it never stopped talking.',
+        'With a screen reader on, the board reads a page out when you open it, switch board or close the editor, and whenever you press R. Pages that rotate by themselves are not read out. Before, a clock or departures page was read out every minute, so it never stopped talking.',
         'The editor, the board menu and Share work with the keyboard alone. Focus moves into each one when it opens and goes back to its button when it closes.',
         'When a sync has made a copy of a board, the board menu shows when each board last changed, so you can tell which one is newer.',
-        'If I have to restore the accounts database to an earlier point, a board you changed after that point is kept in your browser as a copy. Before, the older copy from the server replaced it.',
+        'If I have to restore the accounts database to an earlier point, a board you changed after that point goes back up from your browser. Before, the older copy from the server replaced it.',
         'The tests run on every change to the code, and the server logs requests that fail, with nothing about you or your boards in the log.'
       ],
       sv: [
-        'Med en skärmläsare på läser tavlan upp en sida en gång när den kommer fram, och igen när du trycker R. Förut lästes en klocka eller avgångar upp varje minut, så den slutade aldrig prata.',
+        'Med en skärmläsare på läser tavlan upp en sida när du öppnar den, byter tavla eller stänger redigeraren, och varje gång du trycker R. Sidor som byts av sig själva läses inte upp. Förut lästes en klocka eller avgångar upp varje minut, så den slutade aldrig prata.',
         'Redigeraren, tavelmenyn och Dela går att använda med bara tangentbordet. Fokus flyttas in när de öppnas och tillbaka till knappen när de stängs.',
         'När en synk har gjort en kopia av en tavla visar tavelmenyn när varje tavla ändrades senast, så du ser vilken som är nyast.',
-        'Om jag måste återställa kontodatabasen till en tidigare tidpunkt, finns en tavla du ändrade efter den tidpunkten kvar i din webbläsare som kopia. Förut ersatte den äldre kopian från servern den.',
+        'Om jag måste återställa kontodatabasen till en tidigare tidpunkt, skickas en tavla du ändrade efter den tidpunkten upp igen från din webbläsare. Förut ersatte den äldre kopian från servern den.',
         'Testerna körs vid varje ändring av koden, och servern loggar förfrågningar som misslyckas, utan något om dig eller dina tavlor i loggen.'
       ]
     }

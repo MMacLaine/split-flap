@@ -6,10 +6,10 @@ Each version is a release, newest first. The app shows this log under Edit, at t
 
 Groundwork before wall screens can follow an account. Most of it is behind the scenes, but some of it you will notice.
 
-- With a screen reader on, the board reads a page out once when it comes up, and again when you press R. Before, a clock or departures page was read out every minute, so it never stopped talking.
+- With a screen reader on, the board reads a page out when you open it, switch board or close the editor, and whenever you press R. Pages that rotate by themselves are not read out. Before, a clock or departures page was read out every minute, so it never stopped talking.
 - The editor, the board menu and Share work with the keyboard alone. Focus moves into each one when it opens and goes back to its button when it closes.
 - When a sync has made a copy of a board, the board menu shows when each board last changed, so you can tell which one is newer.
-- If I have to restore the accounts database to an earlier point, a board you changed after that point is kept in your browser as a copy. Before, the older copy from the server replaced it.
+- If I have to restore the accounts database to an earlier point, a board you changed after that point goes back up from your browser. Before, the older copy from the server replaced it.
 - The tests run on every change to the code, and the server logs requests that fail, with nothing about you or your boards in the log.
 
 ## v0.5.3 (2026-09-27): Fixes
