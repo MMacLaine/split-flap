@@ -351,7 +351,7 @@ export class App {
     this.S.pageStart = Date.now();
     this.wrap.style.transform = '';
     if (editing) this.editor.open(); else this.refresh();
-    if (!editing) this.wake();
+    if (!editing) { this.wake(); const edit = this.root.querySelector('[data-k="bar-edit"]'); if (edit && (!document.activeElement || document.activeElement === document.body)) edit.focus({ preventScroll: true }); }
   }
   toggleFull() {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -453,7 +453,14 @@ export class App {
     }
     const focusKey = document.activeElement && this.overlay.contains(document.activeElement) && document.activeElement.dataset.k;
     this.overlay.replaceChildren(...kids);
+    const inPop = focusKey == null && this.popWas && document.activeElement === document.body;
     if (focusKey) { const el = this.overlay.querySelector(`[data-k="${focusKey}"]`); if (el) el.focus({ preventScroll: true }); }
+    // A menu or the share panel takes focus when it opens, and gives it back to its button
+    // when it closes, so the keyboard never ends up behind the page.
+    const pop = S.switcher ? 'switcher' : S.share ? 'share' : null;
+    if (pop && pop !== this.popWas) { const first = this.overlay.querySelector('.sf-pop button, .sf-pop a, .sf-pop input'); if (first) first.focus({ preventScroll: true }); }
+    else if (!pop && this.popWas && (inPop || document.activeElement === document.body)) { const opener = this.overlay.querySelector(`[data-k="bar-${this.popWas === 'switcher' ? 'board' : 'share'}"]`); if (opener) opener.focus({ preventScroll: true }); }
+    this.popWas = pop;
     this.paintBar();
   }
 
