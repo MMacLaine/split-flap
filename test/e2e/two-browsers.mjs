@@ -12,13 +12,13 @@ let id = 0; const pend = new Map();
 ws.addEventListener('message', m => { const d = JSON.parse(m.data); if (d.id && pend.has(d.id)) { pend.get(d.id)(d); pend.delete(d.id); } });
 const send = (method, params = {}, sessionId) => new Promise(r => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params, sessionId })); });
 
-async function browser(name) {
-  const { result: { browserContextId } } = await send('Target.createBrowserContext');
+async function browser(name, shareWith) {
+  const browserContextId = shareWith ? shareWith.ctx : (await send('Target.createBrowserContext')).result.browserContextId;
   const { result: { targetId } } = await send('Target.createTarget', { url: 'about:blank', browserContextId });
   const { result: { sessionId } } = await send('Target.attachToTarget', { targetId, flatten: true });
   await send('Runtime.enable', {}, sessionId); await send('Network.enable', {}, sessionId);
   const b = {
-    name,
+    name, ctx: browserContextId,
     ev: async expr => { const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }, sessionId); if (r.result.exceptionDetails) throw new Error(name + ': ' + (r.result.exceptionDetails.exception?.description || r.result.exceptionDetails.text)); return r.result.result.value; },
     go: async url => { await send('Page.navigate', { url }, sessionId); await sleep(2500); },
     offline: async off => send('Network.emulateNetworkConditions', { offline: off, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, sessionId),
@@ -109,6 +109,16 @@ try {
   check('the safety copy is gone once the server has them', (await C.ev(`String(localStorage.getItem('sf_guest_backup'))`)) === 'null');
   const said = await C.ev(`splitFlap.flashes.join(' / ')`);
   check('the count shown matches the server', said === `${cServer.length} boards are now in your account.`, said);
+
+  // 0.6.4: two tabs of one guest browser. A board made in one tab must survive an edit in
+  // an older tab that was left open.
+  const T1 = await browser('T1'); await T1.go('http://localhost:8787/'); await T1.ev(`localStorage.setItem('sf_started','1')`); await T1.go('http://localhost:8787/');
+  const T2 = await browser('T2', T1); await T2.go('http://localhost:8787/');
+  await T1.ev(`(() => { splitFlap.duplicateBoard(0); splitFlap.upd(b => { b.name = 'Made in tab one'; }); })()`); await sleep(800);
+  await T2.ev(`splitFlap.upd(b => { b.name = 'Edited in tab two'; })`); await sleep(800);
+  const stored = await T2.ev(`JSON.stringify(JSON.parse(localStorage.getItem('sf_boards')).map(b => b.name))`);
+  check('a board made in one tab survives an edit in another', stored.includes('Made in tab one') && stored.includes('Edited in tab two'), stored);
+  check('and the other tab shows it', (await names(T2)).includes('Made in tab one'), await names(T2));
 
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);

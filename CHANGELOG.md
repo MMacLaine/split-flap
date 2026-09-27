@@ -2,6 +2,13 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.6.4 (2026-09-28): Fixes
+
+Two fixes from the review of 0.6.3, one of them to boards being lost as a guest.
+
+- With Split-Flap open in two tabs, a change in one tab could save its older list of boards over the other, so a board made in the other tab was lost. Signed in it came back from your account, but as a guest it was gone. Now each tab picks up what the other saved before it saves again.
+- After your first sign-in, if you deleted one of the boards you had kept before it reached the server, the message saying how many are in your account never came. It comes now, and counts only the boards that arrived.
+
 ## v0.6.3 (2026-09-28): Accounts
 
 Making an account after using Split-Flap as a guest, with nothing lost on the way.

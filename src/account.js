@@ -4,7 +4,7 @@
 // without the Worker (npm run serve) never gets past init(), and the app shows
 // no account controls at all.
 
-import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsynced, strays, offerable, signOut, switchUser, emptyState } from './sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsynced, strays, settled, offerable, signOut, switchUser, emptyState } from './sync.js';
 import { newId } from './content.js';
 import { getFlag, setFlag } from './store.js';
 
@@ -13,7 +13,7 @@ const BACKUP = 'sf_guest_backup';   // the guest boards as they were at the firs
 const API = '/split-flap/api';
 const KEY = 'sf_sync';
 
-function loadState() {
+export function loadState() {
   try { const s = JSON.parse(getFlag(KEY)); if (s && typeof s === 'object' && s.boards) return Object.assign({ declined: [], offer: [], confirming: [] }, s); } catch { /* bad or missing */ }
   return Object.assign(emptyState(), { declined: [], offer: [], confirming: [] });
 }
@@ -194,10 +194,9 @@ export class Account {
   // Once the server has every board taken from the offer: say how many, from the server's
   // own answers, and drop the safety copy. A refused board keeps the copy in place.
   confirmAdopted() {
-    const ids = this.state.confirming || [];
     if (this.offer.length) return;
-    const done = ids.filter(id => { const e = this.state.boards[id]; return e && e.rev > 0 && !e.dirty; });
-    if (done.length < ids.length) return;
+    const { done, open } = settled(this.state, this.state.confirming || []);
+    if (open.length) return;
     this.state.confirming = []; this.saveState();
     try { localStorage.removeItem(BACKUP); } catch { /* storage blocked */ }
     if (done.length) this.app.flash(this.app.t.offerDone(done.length));

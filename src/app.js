@@ -15,7 +15,7 @@ import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
-import { Account } from './account.js';
+import { Account, loadState } from './account.js';
 import { h, clone } from './dom.js';
 import { VERSION, versionIn, shouldReload } from './changelog.js';
 
@@ -126,6 +126,19 @@ export class App {
     return this.boards.length >= 2 || (+getFlag('sf_edit_ms') || 0) >= 180000;
   }
   dismissPrompt() { setFlag('sf_signin_prompt', 'done'); this.renderOverlay(); }
+  // Another tab saved (0.6.4). Its list and its sync state are newer than this tab's, so
+  // they are taken as they are, before this tab's next save could write an older list
+  // over them. Nothing is saved here, so the tabs never echo each other.
+  fromOtherTab() {
+    const { boards } = loadBoards(), curId = this.cur() && this.cur().id;
+    if (boards.length) {
+      this.boards = boards;
+      const i = boards.findIndex(b => b.id === curId); this.active = i >= 0 ? i : Math.min(this.active, boards.length - 1);
+      if (i < 0) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
+    }
+    if (this.account) { this.account.state = loadState(); this.account.remember(); }
+    this.refresh();
+  }
   // The whole list at once (a sync pull, signing out), keeping the board on screen when it
   // is still there. Not counted as an edit to push. An empty list becomes a blank board.
   replaceBoards(list) {
@@ -285,7 +298,10 @@ export class App {
     this.wasMobile = this.isMobile();
     document.addEventListener('fullscreenchange', () => { this.set({ isFull: !!document.fullscreenElement }); this.lock(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.lock(); if (this.readHome()) this.refresh(); else this.tick(true); } });
-    addEventListener('storage', e => { if (e.key === 'slmap_home' && this.readHome()) this.refresh(); });
+    addEventListener('storage', e => {
+      if (e.key === 'slmap_home' && this.readHome()) this.refresh();
+      if (e.key === 'sf_boards' || e.key === 'sf_sync') this.fromOtherTab();
+    });
     addEventListener('hashchange', () => { if (location.hash === '#log') return this.openLog(); this.openLink().then(() => this.refresh()); });
     matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => this.chromeTheme());
     this.lock();

@@ -127,6 +127,19 @@ export function unrefuse(state, error) {
 // the first sign-in (those are offered or declined), so they are the account's.
 export const strays = (boards, state, skip = []) => state.user ? boards.filter(b => !state.boards[b.id] && !skip.includes(b.id)).map(b => b.id) : [];
 
+// Boards taken from the first sign-in offer, split into those the server has (done) and
+// those still on their way (open). A board deleted since, or already forgotten after its
+// delete went through, is settled without counting, so the wait always ends.
+export function settled(state, ids) {
+  const done = [], open = [];
+  for (const id of ids) {
+    const e = state.boards[id];
+    if (!e || e.deleted) continue;
+    if (e.rev > 0 && !e.dirty) done.push(id); else open.push(id);
+  }
+  return { done, open };
+}
+
 // Boards of the account with changes the server has not got yet.
 export const unsynced = state => Object.entries(state.boards).filter(([, e]) => e.owner === state.user && e.dirty && !e.deleted).map(([id]) => id);
 
