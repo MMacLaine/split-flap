@@ -23,7 +23,7 @@ export const DRUM_IDX = Object.fromEntries([...DRUM].map((c, i) => [c, i]));
 const FOLD_MAP = {
   'È': 'E', 'Ê': 'E', 'Ë': 'E', 'Á': 'A', 'À': 'A', 'Â': 'A', 'Í': 'I', 'Ì': 'I', 'Ó': 'O', 'Ò': 'O',
   'Ô': 'O', 'Ú': 'U', 'Ù': 'U', 'Ñ': 'N', 'Ç': 'C', 'ß': 'SS',
-  '’': "'", '‘': "'", '“': '"', '”': '"', '–': '-', '—': '-', '´': "'", '`': "'"
+  '\u2019': "'", '\u2018': "'", '\u201C': '"', '\u201D': '"', '\u2013': '-', '\u2014': '-', '\u00B4': "'", '`': "'"
 };
 
 export const isChip = ch => ch === 'f' || Object.prototype.hasOwnProperty.call(CHIPS, ch);

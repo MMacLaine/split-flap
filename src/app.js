@@ -220,7 +220,8 @@ export class App {
   setLang(lang) {
     if (lang === this.S.lang) return;
     const link = this.alt[lang];
-    if (link && link.href !== location.href.split('#')[0]) { location.href = link.href; return; }
+    // Same origin, same query (keeps ?kiosk=1): only the path swaps language.
+    if (link) { const path = new URL(link.href).pathname; if (path !== location.pathname) { location.href = path + location.search; return; } }
     setFlag('sf_lang', lang); this.S.lang = lang; this.refresh();
   }
 
