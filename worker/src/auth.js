@@ -20,8 +20,7 @@ export function authOptions(env, database) {
       google: {
         clientId: env.GOOGLE_CLIENT_ID,
         clientSecret: env.GOOGLE_CLIENT_SECRET,
-        scope: ['openid', 'email', 'profile'],
-        prompt: 'select_account',
+        prompt: 'select_account',   // Better Auth asks for openid, email and profile by default, nothing more
         mapProfileToUser: profile => ({ name: profile.name, image: null })
       }
     },
