@@ -2,7 +2,7 @@
 // whose on a shared computer. Pure functions, no server.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState, refused, unsynced } from '../src/sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, offerable, signOut, switchUser, emptyState, refused, unrefuse, unsynced } from '../src/sync.js';
 
 let n = 0; const newId = () => 'copy' + (++n);
 const B = (id, name = id) => ({ id, name, pages: [] });
@@ -112,6 +112,14 @@ test('a refused board is kept here, skipped, and tried again once it changes', (
   assert.equal(r.state.boards.a.error, 'too_many_boards');
   const again = merge([B('a'), B('b')], [], markDirty(r.state, 'a'), 'u1', { newId });
   assert.ok(again.push.includes('a'));
+});
+
+test('boards refused for the limit go again once there is room, other refusals stay', () => {
+  let s = st({ a: { rev: 0, dirty: true, owner: 'u1' }, b: { rev: 0, dirty: true, owner: 'u1' } });
+  s = refused(refused(s, 'a', 'too_many_boards'), 'b', 'too_big');
+  const r = merge([B('a'), B('b')], [], unrefuse(s, 'too_many_boards'), 'u1', { newId });
+  assert.deepEqual(r.push, ['a']);
+  assert.equal(r.state.boards.b.error, 'too_big');
 });
 
 test('a board deleted before its first push is forgotten, so the status can settle', () => {

@@ -4,7 +4,7 @@
 // without the Worker (python3 -m http.server) never gets past init(), and the app shows
 // no account controls at all.
 
-import { merge, adopt, markDirty, markDeleted, pushed, refused, unsynced, offerable, signOut, switchUser, emptyState } from './sync.js';
+import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsynced, offerable, signOut, switchUser, emptyState } from './sync.js';
 import { newId } from './content.js';
 import { getFlag, setFlag } from './store.js';
 
@@ -97,11 +97,15 @@ export class Account {
       const res = e.deleted || !board
         ? await this.api('DELETE', '/boards/' + encodeURIComponent(id), { baseRev: e.rev })
         : await this.api('PUT', '/boards/' + encodeURIComponent(id), { board, baseRev: e.rev });
-      if (res.status === 200) { this.state = pushed(this.state, id, res.data.rev); continue; }
+      if (res.status === 200) {
+        this.state = pushed(this.state, id, res.data.rev);
+        if (e.deleted && Object.values(this.state.boards).some(x => x.error === 'too_many_boards')) { this.state = unrefuse(this.state, 'too_many_boards'); this.again = true; }   // room for a board the limit held back
+        continue;
+      }
       if (res.status === 409) { this.again = true; continue; }   // changed elsewhere: the next pull sorts it out
       if (res.status === 413 || res.status === 400) { this.state = refused(this.state, id, (res.data && res.data.error) || 'bad_board'); continue; }   // kept here, not retried until it changes
       if (res.status === 401) { this.lostSession(); return; }
-      if (res.status === 429) return;                           // too many writes: the next sync carries on
+      if (res.status === 429) { clearTimeout(this.retry); this.retry = setTimeout(() => this.sync(), 60000); return; }   // too many writes: try again in a minute
       throw new Error(res.status);
     }
     if (this.again) { this.again = false; this.running = false; setTimeout(() => this.sync(), 50); }

@@ -105,6 +105,13 @@ export function refused(state, id, error) {
   return Object.assign({}, state, { boards: Object.assign({}, state.boards, { [id]: Object.assign({}, e, { error }) }) });
 }
 
+// Room in the account again (a delete went through): boards refused for the limit go on the next sync.
+export function unrefuse(state, error) {
+  const boards = {};
+  for (const [id, e] of Object.entries(state.boards)) { if (e.error === error) { const { error: _, ...rest } = e; boards[id] = rest; } else boards[id] = e; }
+  return Object.assign({}, state, { boards });
+}
+
 // Boards of the account with changes the server has not got yet.
 export const unsynced = state => Object.entries(state.boards).filter(([, e]) => e.owner === state.user && e.dirty && !e.deleted).map(([id]) => id);
 
