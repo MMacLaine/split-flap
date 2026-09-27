@@ -88,7 +88,15 @@ function sanitizeZone(z) {
 function sanitizeWin(w) {
   if (!w || typeof w !== 'object') return null;
   const days = Array.isArray(w.days) ? [...new Set(w.days.map(Number).filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort() : [];
-  return { from: time(w.from, '07:00'), to: time(w.to, '09:00'), days };
+  const out = { from: time(w.from, '07:00'), to: time(w.to, '09:00'), days };
+  if (realDate(w.date)) { out.date = w.date; out.days = []; if (w.yearly === true) out.yearly = true; }
+  return out;
+}
+// YYYY-MM-DD and a day that exists (no 31 April).
+function realDate(v) {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [y, m, d] = v.split('-').map(Number), t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
 }
 // A page's windows: the 0.3 list, else the one 0.2 window if it was switched on.
 const MAX_WINS = 8;
@@ -98,7 +106,9 @@ function sanitizeWins(p) {
 }
 // A board saved by 0.3 may be opened by a wall screen still running 0.2, which only
 // reads win. So the first window is also written in the old shape for now.
-const legacyWin = wins => wins[0] ? { on: true, from: wins[0].from, to: wins[0].to, days: wins[0].days } : null;
+// A window on a date has no 0.2 shape, so the first window by days is used; a page with
+// only dated windows shows at any time on such a screen until it reloads.
+const legacyWin = wins => { const w = wins.find(x => !x.date); return w ? { on: true, from: w.from, to: w.to, days: w.days } : null; };
 
 export function sanitizeBoard(b) {
   if (!b || typeof b !== 'object' || !Array.isArray(b.pages)) return null;

@@ -2,12 +2,16 @@
 // browser. All times are the viewer's local clock, which for a wall display is the
 // clock of the room it hangs in.
 
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export function toMin(s) {
   const p = String(s || '0:0').split(':');
   return (+p[0] || 0) * 60 + (+p[1] || 0);
 }
 
-// win = { from: 'HH:MM', to: 'HH:MM', days?: [0..6] } with 0 = Sunday, like Date.getDay().
+// win = { from: 'HH:MM', to: 'HH:MM', days?: [0..6] } with 0 = Sunday, like Date.getDay(),
+// or with date: 'YYYY-MM-DD' in place of days, and yearly: true to match the month and
+// day in any year (29 February then only matches in leap years).
 // A window that crosses midnight (22:00 to 02:00) belongs to the day it starts on, so
 // "Friday 22:00 to 02:00" is still showing at 01:00 on Saturday. The 0.2 shape carried
 // on: false for a window that was switched off, which counts as always open.
@@ -16,11 +20,15 @@ export function inWindow(win, now) {
   const d = new Date(now), m = d.getHours() * 60 + d.getMinutes();
   const a = toMin(win.from), b = toMin(win.to);
   const days = Array.isArray(win.days) && win.days.length ? win.days : null;
-  const dayOk = day => !days || days.includes(day);
-  if (a === b) return dayOk(d.getDay());                 // from equals to: the whole day
-  if (a < b) return m >= a && m < b && dayOk(d.getDay());
-  if (m >= a) return dayOk(d.getDay());
-  if (m < b) return dayOk((d.getDay() + 6) % 7);         // after midnight: yesterday's window
+  const dayOk = day => {                                 // day: the Date the window starts on
+    if (win.date) { const k = ymd(day); return win.yearly ? k.slice(5) === win.date.slice(5) : k === win.date; }
+    return !days || days.includes(day.getDay());
+  };
+  const yesterday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+  if (a === b) return dayOk(d);                          // from equals to: the whole day
+  if (a < b) return m >= a && m < b && dayOk(d);
+  if (m >= a) return dayOk(d);
+  if (m < b) return dayOk(yesterday);                    // after midnight: yesterday's window
   return false;
 }
 
