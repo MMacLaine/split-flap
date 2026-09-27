@@ -2,6 +2,17 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.5 (2026-09-27): Accounts
+
+Optional accounts. Sign in with Google and your boards come with you, and Split-Flap still needs no account.
+
+- You can sign in with Google now, under Account at the foot of the page list. Your boards are kept with the account and come back on any phone or computer you sign in on.
+- It is optional. As a guest everything works as before, and the Account and Start panels say that a guest's boards live only in this browser.
+- This browser stays the working copy, so a board runs offline and a wall screen never waits on the server. Wall screens keep using board links and never sign in.
+- If a board changed in two places before they synced, both versions are kept, the second with (copy) after its name.
+- The first time you sign in, boards made as a guest are offered up to the account. Signing out takes the account's boards out of that browser, so the next person on a shared computer does not see them.
+- Split-Flap has its own privacy page. The account keeps your Google account id, name, email and boards, in the EU, and nothing else. Export everything and Delete account are in the editor.
+
 ## v0.4.1 (2026-09-27): Fixes
 
 Two fixes to 0.4, found in a review.

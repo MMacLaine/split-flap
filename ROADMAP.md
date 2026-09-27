@@ -5,6 +5,8 @@ Companion to `DESIGN-HANDOVER.md` (how the board looks) and `DESIGN-HANDOVER-edi
 
 ## Where it stands
 
+0.5 adds optional accounts: sign in with Google, boards kept with the account and synced, local first, with guests working as before. A Cloudflare Worker in `worker/` with D1 in the EU jurisdiction and Better Auth. Its own privacy notice. The relay (wall screens following an account live) builds on this and is next.
+
 0.4 is the Letter clock: a grid of letters where the words for the time light up and the rest stay faint, with minute dots in the corners, in English and Swedish. The grids are this board's own layout. Faint flaps are a renderer feature now (`'~' + char`), so other channels could use them.
 
 0.3 is about when pages show. A page can have several times, a time can be a date once or every year, and Show alone gives a page its time to itself. It also adds a transition per page, the heart flap, stereo flap sound, the start-up and hourly rolls, `?bg=transparent` for OBS, and a wall screen that reloads itself when a new version is live. The two fixes under Fix first are in it. 61 tests.
@@ -83,7 +85,7 @@ All of these need a relay, an account, or both. None of them changes what is bui
 
 ### On accounts and Cloudflare
 
-- Start with board keys. A link with a write key is an account for one board and needs no sign in. Most people have one board and one screen.
+- Accounts shipped in 0.5 (Google only; passkeys or email could be added later without a migration, since identities are stored as provider plus account id). Board links stay the way a wall screen gets a board.
 - Add accounts when a board has several owners, or someone gets a new phone and wants their boards back. Passkeys on a Worker, or a magic link by email, both run on the free tier.
 - The free tier covers a lot. Workers allow a hundred thousand requests a day, but KV only allows a thousand writes a day, and writes are what a phone sending messages makes. That points at Durable Objects for board state, which are on the free plan now. A kiosk on a WebSocket with hibernation costs close to nothing. Polling every ten seconds would burn through the allowance with a dozen screens, so the kiosk should hold a socket.
 - Data stays small. A board is a few kilobytes of JSON. No images on the server, since photos become chips in the browser before anything is saved.

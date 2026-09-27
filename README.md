@@ -6,7 +6,7 @@ A free split-flap message board for any screen. Put a spare monitor on the wall,
 
 ![A split-flap board showing HELLO FROM A SPARE MONITOR above a row of colour chips](docs/board.png)
 
-A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like it charge a monthly fee for each screen. This runs in a browser for nothing, with no account and no server: every board lives in the browser that made it, and a board link carries it to another screen.
+A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like it charge a monthly fee for each screen. This runs in a browser for nothing and needs no account. Every board lives in the browser that made it, and a board link carries it to another screen. If you want your boards on every device, you can sign in with Google, and they are kept with your account as well.
 
 ## What it does
 
@@ -30,6 +30,14 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 ![A board showing the Swedish flag in blue and yellow colour chips, part of the Nordic flags pattern](docs/mosaic.png)
 
 ![The same board in the Solari Amber theme showing Stockholm weather and a countdown to midsummer](docs/solari.png)
+
+## Accounts
+
+An account is optional. Without one, boards live in the browser that made them, as they always have. Sign in with Google and they are kept with the account too, and come back on any device you sign in on. The browser stays the working copy, so the board runs offline and a wall screen never waits on the server. A board changed in two places keeps both versions. Wall screens use board links and never sign in.
+
+The account stores the Google account id, the name, the email and the boards, in a Cloudflare D1 database in the EU. It keeps no IP addresses, browser details or Google tokens, and there are no analytics. Export everything and Delete account are in the editor. The full notice is [privacy.html](privacy.html), at [maclaine.se/en/split-flap/privacy](https://maclaine.se/en/split-flap/privacy).
+
+The server is a Cloudflare Worker in [`worker/`](worker/), with its own dependencies and README. The app itself still has none.
 
 ## Put it on a monitor
 
@@ -70,7 +78,11 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `src/sound.js` | The four synthesised flap sounds. |
 | `src/schedule.js` | Page timers, time windows by day or date, Show alone, quiet hours. |
 | `src/live.js` | The fetchers (SL, Open-Meteo, electricity, exchange rates, Wikipedia, Follow a URL), station and city search. |
-| `src/store.js` | localStorage, board links, and the sanitizer every imported board goes through. |
+| `src/store.js` | localStorage, board links, and the sanitizer every imported board goes through (the Worker uses it too). |
+| `src/account.js` | Signing in, and keeping this browser's boards in step with the account. |
+| `src/sync.js` | The sync rules as pure functions: merging, deletes, and whose boards are whose. |
+| `worker/` | The accounts API: a Cloudflare Worker with D1 and Better Auth. |
+| `privacy.html` | The privacy notice (the Swedish one is in `site/`). |
 | `src/app.js` | Control bar, share, kiosk mode, and the board state the editor works on. |
 | `src/editor.js` | The editor drawer: playlist, page, content picker, options, board settings, templates. |
 | `src/catalogue.js` | The picker's tiles, their defaults and their option fields. |

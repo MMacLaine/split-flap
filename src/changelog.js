@@ -3,6 +3,32 @@
 
 export const CHANGELOG = [
   {
+    v: '0.5', date: '2026-09-27',
+    tag: { en: 'Accounts', sv: 'Konton' },
+    desc: {
+      en: 'Optional accounts. Sign in with Google and your boards come with you, and Split-Flap still needs no account.',
+      sv: 'Konton, om du vill. Logga in med Google så följer dina tavlor med, och Split-Flap kräver fortfarande inget konto.'
+    },
+    items: {
+      en: [
+        'You can sign in with Google now, under Account at the foot of the page list. Your boards are kept with the account and come back on any phone or computer you sign in on.',
+        'It is optional. As a guest everything works as before, and the Account and Start panels say that a guest\'s boards live only in this browser.',
+        'This browser stays the working copy, so a board runs offline and a wall screen never waits on the server. Wall screens keep using board links and never sign in.',
+        'If a board changed in two places before they synced, both versions are kept, the second with (copy) after its name.',
+        'The first time you sign in, boards made as a guest are offered up to the account. Signing out takes the account\'s boards out of that browser, so the next person on a shared computer does not see them.',
+        'Split-Flap has its own privacy page. The account keeps your Google account id, name, email and boards, in the EU, and nothing else. Export everything and Delete account are in the editor.'
+      ],
+      sv: [
+        'Du kan logga in med Google nu, under Konto längst ned i sidlistan. Dina tavlor sparas med kontot och finns kvar på alla telefoner och datorer där du loggar in.',
+        'Det är frivilligt. Som gäst fungerar allt som förut, och panelerna Konto och Start säger att en gästs tavlor bara finns i den här webbläsaren.',
+        'Webbläsaren är fortfarande arbetskopian, så en tavla går utan nät och en väggskärm väntar aldrig på servern. Väggskärmar använder tavellänkar som förut och loggar aldrig in.',
+        'Om en tavla ändrats på två ställen innan de hunnit synka sparas båda versionerna, den andra med (kopia) efter namnet.',
+        'Första gången du loggar in erbjuds tavlor du gjort som gäst att följa med till kontot. När du loggar ut tas kontots tavlor bort från den webbläsaren, så att nästa person på en delad dator inte ser dem.',
+        'Split-Flap har en egen integritetssida. Kontot sparar ditt Google-konto-id, namn, e-post och dina tavlor, i EU, och inget annat. Exportera allt och Radera kontot finns i redigeraren.'
+      ]
+    }
+  },
+  {
     v: '0.4.1', date: '2026-09-27',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

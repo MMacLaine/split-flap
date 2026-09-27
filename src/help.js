@@ -37,7 +37,8 @@ export const HELP = {
       'Opening the same link again replaces the board with the same one, so a screen that opens it at every start keeps one copy and stays up to date. The page below the board has steps for a Raspberry Pi, a cast tab and an old laptop.'
     ] },
     { h: 'Where boards are kept', p: [
-      ['Boards are kept in this browser and nowhere else. To move one, use its link, or export it from ', { k: 'start', t: 'Boards and templates' }, ' and import it in the other browser.']
+      ['As a guest, boards are kept in this browser and nowhere else. To move one, use its link, or export it from ', { k: 'start', t: 'Boards and templates' }, ' and import it in the other browser.'],
+      ['With an account, your boards are kept with it as well, and come back on any device you sign in on. ', { k: 'account', t: 'Account' }, ', at the foot of the page list, has signing in, export and delete, and the ', { href: 'privacy', t: 'privacy page' }, ' says what it stores.']
     ] },
     { h: 'Keys', keys: [['E', 'Open and close the editor'], ['F', 'Fullscreen'], ['S', 'Sound on and off'], ['Esc', 'Back one step'], ['Ctrl Z', 'Undo in a message, with Shift to redo']] }
   ],
@@ -69,7 +70,8 @@ export const HELP = {
       'Öppnar du samma länk igen ersätts tavlan med samma tavla, så en skärm som öppnar den vid varje start har en enda kopia som hålls uppdaterad. Sidan under tavlan har steg för en Raspberry Pi, en castad flik och en gammal laptop.'
     ] },
     { h: 'Var tavlorna sparas', p: [
-      ['Tavlorna sparas i den här webbläsaren och ingen annanstans. För att flytta en, använd dess länk, eller exportera den från ', { k: 'start', t: 'Tavlor och mallar' }, ' och importera den i den andra webbläsaren.']
+      ['Som gäst sparas tavlorna i den här webbläsaren och ingen annanstans. För att flytta en, använd dess länk, eller exportera den från ', { k: 'start', t: 'Tavlor och mallar' }, ' och importera den i den andra webbläsaren.'],
+      ['Med ett konto sparas tavlorna också med kontot, och finns kvar på alla enheter där du loggar in. ', { k: 'account', t: 'Konto' }, ', längst ned i sidlistan, har inloggning, export och radering, och ', { href: 'privacy', t: 'integritetssidan' }, ' säger vad det sparar.']
     ] },
     { h: 'Tangenter', keys: [['E', 'Öppna och stäng redigeraren'], ['F', 'Helskärm'], ['S', 'Ljud på och av'], ['Esc', 'Tillbaka ett steg'], ['Ctrl Z', 'Ångra i ett meddelande, med Skift för att göra om']] }
   ]

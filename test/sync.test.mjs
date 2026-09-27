@@ -40,14 +40,14 @@ test('server changed, this browser did not: the server version is taken, or remo
 });
 
 test('changed in both places: the server keeps the id, the local edit becomes a pushed copy', () => {
-  const r = merge([B('a', 'mine')], [R('a', 5, 'theirs')], st({ a: { rev: 4, dirty: true, owner: 'u1' } }), 'u1', { suffix: ' (other device)', newId });
-  assert.deepEqual(names(r), ['mine (other device)', 'theirs']);
+  const r = merge([B('a', 'mine')], [R('a', 5, 'theirs')], st({ a: { rev: 4, dirty: true, owner: 'u1' } }), 'u1', { suffix: ' (copy)', newId });
+  assert.deepEqual(names(r), ['mine (copy)', 'theirs']);
   const copy = r.boards.find(b => b.name.startsWith('mine'));
   assert.notEqual(copy.id, 'a');
   assert.deepEqual(r.push, [copy.id]);
   // deleted elsewhere while edited here: the edit survives as a copy
   const d = merge([B('a', 'mine')], [R('a', 5, 'a', true)], st({ a: { rev: 4, dirty: true, owner: 'u1' } }), 'u1', { newId });
-  assert.deepEqual(names(d), ['mine (other device)']);
+  assert.deepEqual(names(d), ['mine (copy)']);
 });
 
 test('a delete here is sent, unless the board was edited elsewhere since', () => {
@@ -60,8 +60,8 @@ test('a delete here is sent, unless the board was edited elsewhere since', () =>
 });
 
 test('a guest board with the same id as a server board becomes a copy', () => {
-  const r = merge([B('a', 'guest')], [R('a', 2, 'server')], emptyState(), 'u1', { suffix: ' (other device)', newId });
-  assert.deepEqual(names(r), ['guest (other device)', 'server']);
+  const r = merge([B('a', 'guest')], [R('a', 2, 'server')], emptyState(), 'u1', { suffix: ' (copy)', newId });
+  assert.deepEqual(names(r), ['guest (copy)', 'server']);
   assert.deepEqual(r.push, []);
 });
 

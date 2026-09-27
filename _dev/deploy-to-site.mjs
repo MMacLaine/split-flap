@@ -59,6 +59,7 @@ function page(lang) {
   else s = s.replace(/[ \t]*<!-- \/?sf:about -->\n/g, '');
   s = s.replace('<html lang="en">', `<html lang="${lang}">`);
   s = s.replace(/(href|src)="\.\/(src|fonts|icons)\//g, '$1="/split-flap/$2/');
+  s = s.replace(/href="\.\/privacy\.html"/g, `href="${lang === 'sv' ? '/split-flap/privacy' : '/en/split-flap/privacy'}"`);
   s = s.replace('data-sw="./sw.js"', `data-sw="/split-flap-sw.js?assets=/split-flap/" data-sw-scope="${lang === 'sv' ? '/split-flap' : '/en/split-flap'}"`);
   s = s.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<!-- GENERATED from github.com/MMacLaine/split-flap by _dev/deploy-to-site.mjs. Edit there, not here. -->');
   if (/="\.\//.test(s)) throw new Error(`relative path left in the ${lang} page`);
@@ -66,6 +67,16 @@ function page(lang) {
 }
 want.set(join(SITE, 'split-flap.html'), page('sv'));
 want.set(join(SITE, 'en', 'split-flap.html'), page('en'));
+
+// Split-Flap's own privacy notice (from 0.5): English from privacy.html in the repo root,
+// which also serves a standalone copy, and Swedish from site/privacy.sv.html.
+const privacy = readFileSync(join(SRC, 'privacy.html'), 'utf8')
+  .replace(/(href|src)="\.\/(src|fonts|icons)\//g, '$1="/split-flap/$2/')
+  .replace(/href="\.\/index\.html"/g, 'href="/en/split-flap"')
+  .replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<!-- GENERATED from github.com/MMacLaine/split-flap by _dev/deploy-to-site.mjs. Edit there, not here. -->');
+if (/="\.\//.test(privacy)) throw new Error('relative path left in the privacy page');
+want.set(join(SITE, 'en', 'split-flap', 'privacy.html'), privacy);
+want.set(join(ASSET_DIR, 'privacy.html'), readFileSync(join(SRC, 'site', 'privacy.sv.html')));
 
 // Diff against what is there now.
 const have = existsSync(ASSET_DIR) ? walk(ASSET_DIR).map(f => join(ASSET_DIR, f)) : [];
