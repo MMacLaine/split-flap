@@ -3,6 +3,30 @@
 
 export const CHANGELOG = [
   {
+    v: '0.6.0', date: '2026-09-27',
+    tag: { en: 'Groundwork', sv: 'Grundarbete' },
+    desc: {
+      en: 'Groundwork before wall screens can follow an account. Most of it is behind the scenes, but some of it you will notice.',
+      sv: 'Grundarbete innan skärmar på väggen kan följa ett konto. Det mesta sker bakom kulisserna, men en del märker du.'
+    },
+    items: {
+      en: [
+        'With a screen reader on, the board reads a page out once when it comes up, and again when you press R. Before, a clock or departures page was read out every minute, so it never stopped talking.',
+        'The editor, the board menu and Share work with the keyboard alone. Focus moves into each one when it opens and goes back to its button when it closes.',
+        'When a sync has made a copy of a board, the board menu shows when each board last changed, so you can tell which one is newer.',
+        'If I have to restore the accounts database to an earlier point, a board you changed after that point is kept in your browser as a copy. Before, the older copy from the server replaced it.',
+        'The tests run on every change to the code, and the server logs requests that fail, with nothing about you or your boards in the log.'
+      ],
+      sv: [
+        'Med en skärmläsare på läser tavlan upp en sida en gång när den kommer fram, och igen när du trycker R. Förut lästes en klocka eller avgångar upp varje minut, så den slutade aldrig prata.',
+        'Redigeraren, tavelmenyn och Dela går att använda med bara tangentbordet. Fokus flyttas in när de öppnas och tillbaka till knappen när de stängs.',
+        'När en synk har gjort en kopia av en tavla visar tavelmenyn när varje tavla ändrades senast, så du ser vilken som är nyast.',
+        'Om jag måste återställa kontodatabasen till en tidigare tidpunkt, finns en tavla du ändrade efter den tidpunkten kvar i din webbläsare som kopia. Förut ersatte den äldre kopian från servern den.',
+        'Testerna körs vid varje ändring av koden, och servern loggar förfrågningar som misslyckas, utan något om dig eller dina tavlor i loggen.'
+      ]
+    }
+  },
+  {
     v: '0.5.3', date: '2026-09-27',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

@@ -2,6 +2,16 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.6.0 (2026-09-27): Groundwork
+
+Groundwork before wall screens can follow an account. Most of it is behind the scenes, but some of it you will notice.
+
+- With a screen reader on, the board reads a page out once when it comes up, and again when you press R. Before, a clock or departures page was read out every minute, so it never stopped talking.
+- The editor, the board menu and Share work with the keyboard alone. Focus moves into each one when it opens and goes back to its button when it closes.
+- When a sync has made a copy of a board, the board menu shows when each board last changed, so you can tell which one is newer.
+- If I have to restore the accounts database to an earlier point, a board you changed after that point is kept in your browser as a copy. Before, the older copy from the server replaced it.
+- The tests run on every change to the code, and the server logs requests that fail, with nothing about you or your boards in the log.
+
 ## v0.5.3 (2026-09-27): Fixes
 
 Three small things left over from the 0.5.2 review.
