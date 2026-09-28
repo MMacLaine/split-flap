@@ -82,10 +82,11 @@ export function weekView(ed) {
     const blocks = blocksFor(b.pages, d).map(x => {
       const p = b.pages[x.page], w = pageWins(p)[x.win], lw = 100 / x.lanes;
       const label = x.cont === 'prev' ? t.fromYesterday : `${w.from} ${t.to} ${w.to}`;
-      return h('button', { class: 'sf-block' + (p.alone ? ' alone' : '') + (x.cont ? ' cont-' + x.cont : ''), style: `--hue:${hueOf(b, x.page)};top:${x.s / 60 * H}px;height:${Math.max(12, (x.e - x.s) / 60 * H - 2)}px;left:calc(${x.lane * lw}% + 2px);width:calc(${lw}% - 4px)`,
+      const px = (x.e - x.s) / 60 * H;
+      return h('button', { class: 'sf-block' + (p.alone ? ' alone' : '') + (x.cont ? ' cont-' + x.cont : '') + (px < 30 ? ' short' : ''), style: `--hue:${hueOf(b, x.page)};top:${x.s / 60 * H}px;height:${Math.max(12, (x.e - x.s) / 60 * H - 2)}px;left:calc(${x.lane * lw}% + 2px);width:calc(${lw}% - 4px)`,
         'data-k': `block-${x.page}-${x.win}-${k}${x.cont === 'prev' ? '-p' : ''}`, 'data-page': x.page, 'data-win': x.win, 'aria-label': `${name(t, p, x.page)}, ${ed.winLabel(w)}${p.alone ? ', ' + t.aloneTag : ''}`,
         onpointerdown: e => dragBlock(ed, e, x, k, H, phone), onkeydown: e => blockKey(ed, e, x) },
-        h('strong', null, name(t, p, x.page)), (x.e - x.s) >= 45 ? h('span', null, label) : null, p.alone && (x.e - x.s) >= 60 ? h('span', { class: 'sf-tag' }, t.aloneTag) : null);
+        h('strong', null, name(t, p, x.page)), px >= 30 ? h('span', null, label) : null, p.alone && px >= 48 ? h('span', { class: 'sf-tag' }, t.aloneTag) : null);
     });
     const nowMin = new Date(now).getHours() * 60 + new Date(now).getMinutes();
     return h('div', { class: 'sf-day-col' + (isToday ? ' today' : ''), 'data-day': k, style: `height:${24 * H}px`, onpointerdown: e => { if (e.target === e.currentTarget) dragNew(ed, e, k, H); } },

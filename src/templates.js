@@ -20,7 +20,7 @@ export const TEMPLATES = [
     id: 'demo',
     name: { en: 'Demo', sv: 'Demo' },
     desc: { en: 'A tour of everything: messages, big clock, departures, weather and colour.', sv: 'En rundtur: meddelanden, stor klocka, avgångar, väder och färg.' },
-    make: (sv, home) => base(sv ? 'Demotavla' : 'Demo board', { pages: [
+    make: (sv, home) => base('Demo', { pages: [
       page(sv ? 'Välkommen' : 'Welcome', 'full', 10, [z('message', { lines: ['', sv ? 'HEJ FRÅN' : 'HELLO FROM', sv ? 'EN LEDIG SKÄRM' : 'A SPARE MONITOR', '', 'roygbv', ''] })]),
       page(sv ? 'Stor klocka' : 'Big clock', 'full', 10, [z('bigclock', { fmt: '24', color: 'f' })]),
       page(sv ? 'Avgångar' : 'Departures', 'header', 14, [z('clock', { fmt: '24' }), sl(home, 9117, 'Odenplan', { modes: ['METRO', 'TRAIN'] })]),
