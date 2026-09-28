@@ -2,6 +2,17 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.7.1 (2026-09-28): My boards
+
+My boards, the fourth section, for boards you want to use again.
+
+- Save to my boards keeps a copy of any board, from a storyboard or a template. It is the first button on every board, and it is in the ⋯ menu too.
+- + Add a board on a storyboard can now take a board from My boards or from a template, and shows the copy on the big board at that storyboard's size before you add it. If flaps you typed or painted would be cut at the new size, it says how many first.
+- A copy stands on its own, so changing it, or the one in My boards, leaves the other as it was.
+- My boards can import a board file or a pasted Vestaboard message, one line per row, shown on the big board as you type.
+- Guests get My boards too, kept in the browser. With an account they sync like storyboards, and the first sign-in asks about them board by board, beside your storyboards.
+- Each board keeps its own colour in the week now, so moving boards around no longer changes their colours.
+
 ## v0.7.0 (2026-09-28): Structure
 
 A new structure for the editor, planned with Fable and Claude Design so there is room to grow. Nothing you made has changed, only where things are and what they are called.

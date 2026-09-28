@@ -461,7 +461,8 @@ export class Editor {
     } else {
       const upd = v => { S.vb = v; E.preview = Object.assign({ id: 'vb', name: '' }, vestaboard(v, d.rows, d.cols)); app.tick(true); };
       body = [h('p', { class: 'sf-note big' }, t.vbNote(d.rows, d.cols)),
-        h('textarea', { class: 'sf-input sf-vb', rows: 6, spellcheck: 'false', 'aria-label': t.fromVestaboard, 'data-k': 'imp-vb', value: S.vb || '', oninput: e => upd(e.target.value) }, S.vb || ''),
+        h('textarea', { class: 'sf-input sf-vb', rows: 6, spellcheck: 'false', 'aria-label': t.fromVestaboard, 'data-k': 'imp-vb', value: S.vb || '', oninput: e => { upd(e.target.value); const over = e.target.value.replace(/\s+$/, '').split('\n').length - d.rows, el = app.drawer.querySelector('[data-k=vb-over]'); if (el) { el.hidden = over <= 0; el.textContent = over > 0 ? t.vbTooMany(over) : ''; } } }, S.vb || ''),
+        h('span', { class: 'sf-hint warn', role: 'status', 'data-k': 'vb-over', hidden: true }),
         h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'imp-vb-save', disabled: app.blueprints.length >= MAX_MY,
           onclick: () => { const page = Object.assign({ id: newId('p'), name: (S.vb || '').split('\n')[0].trim().slice(0, 40) || t.page }, vestaboard(S.vb, d.rows, d.cols)); this.saveToMy(page, null, d); close(); } }, t.mSave))];
     }

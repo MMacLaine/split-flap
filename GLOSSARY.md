@@ -7,7 +7,7 @@ They come into the app with 0.7.0. Until then the app still says "board" for a s
 | English | Svenska | Is | In the code and stored data |
 |---|---|---|---|
 | Board | Tavla | One designed screen: a layout, its zones and their content. In a storyboard, that storyboard's own copy. | a page, `board.pages[i]` |
-| My boards | Mina tavlor | Your boards to start from, added to any storyboard as a copy. Kept in the browser for guests, and synced with an account. | from 0.7.1 |
+| My boards | Mina tavlor | Your boards to start from, added to any storyboard as a copy. Kept in the browser for guests, and synced with an account. | a blueprint, `sf_myboards`, the `blueprint` table |
 | Storyboard | Storyboard | The plan a display runs: boards in order, when each shows, each board's transition, and the display settings. | a board, `sf_boards`, the `board` table |
 | Today's playlist | Dagens spellista | What a storyboard plays on a given day, worked out from its plan. It is never edited directly. | worked out with `nextPage` in `src/schedule.js` |
 | Explore | Utforska | Templates, and later boards from other people. | `TEMPLATES` |
