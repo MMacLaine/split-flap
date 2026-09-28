@@ -4,7 +4,7 @@
 export const STR = {
   en: {
     // 0.7: the sections, the storyboard and the week. Words from GLOSSARY.md.
-    secStoryboards: 'Storyboards', secExplore: 'Explore', secAccount: 'Account', searchLater: 'Search, coming later',
+    secStoryboards: 'Storyboards', secExplore: 'Explore', secAccount: 'Account', secSettings: 'Settings', searchLater: 'Search, coming later',
     more: 'More', mOpen: 'Open', mRename: 'Rename', mDuplicate: 'Duplicate', mSave: 'Save to my boards', mCopyTo: 'Copy to', mShare: 'Share', mShareImage: 'Share as image', mExport: 'Export', mDelete: 'Delete', mDeleteAgain: 'Press again to delete',
     changedTitle: 'Some words have moved', changedBody: 'Nothing you made has changed, only what things are called.',
     changedRows: [['What was a board', 'is now a storyboard'], ['What was a page', 'is now a board'], ['The playlist', "is now worked out for you, as Today's playlist"]],
@@ -107,7 +107,7 @@ export const STR = {
   },
   sv: {
     // 0.7: sektionerna, storyboarden och veckan. Orden kommer från GLOSSARY.md.
-    secStoryboards: 'Storyboards', secExplore: 'Utforska', secAccount: 'Konto', searchLater: 'Sök, kommer senare',
+    secStoryboards: 'Storyboards', secExplore: 'Utforska', secAccount: 'Konto', secSettings: 'Inställningar', searchLater: 'Sök, kommer senare',
     more: 'Mer', mOpen: 'Öppna', mRename: 'Byt namn', mDuplicate: 'Duplicera', mSave: 'Spara i mina tavlor', mCopyTo: 'Kopiera till', mShare: 'Dela', mShareImage: 'Dela som bild', mExport: 'Exportera', mDelete: 'Radera', mDeleteAgain: 'Tryck igen för att radera',
     changedTitle: 'Några ord har flyttat', changedBody: 'Inget du har gjort har ändrats, bara vad saker heter.',
     changedRows: [['Det som var en tavla', 'är nu en storyboard'], ['Det som var en sida', 'är nu en tavla'], ['Spellistan', 'räknas nu ut åt dig, som Dagens spellista']],

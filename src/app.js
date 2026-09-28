@@ -10,7 +10,7 @@ import { TEMPLATES, fromTemplate } from './templates.js';
 import { RAINBOW } from './pixels.js';
 import { nextPage, inQuiet } from './schedule.js';
 import { STR } from './strings.js';
-import { loadBoards, saveBoards, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard } from './store.js';
+import { loadBoards, saveBoards, saveActiveOnly, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard } from './store.js';
 import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
@@ -69,11 +69,14 @@ export class App {
     const { boards, active } = loadBoards();
     this.boards = boards.length ? boards : [fromTemplate('demo', this.S.lang, this.live.data.home)];
     this.active = active;
-    // A first visit opens the Start panel on the first Edit. Picking a template then
-    // replaces the demo board made for this visit, as long as nothing on it was changed.
-    this.firstRun = !boards.length && getFlag('sf_started') !== '1';
-    this.hadBoards = boards.length > 0; if (!this.hadBoards) setFlag('sf_words_070', '1');
-    this.freshId = boards.length ? null : this.boards[0].id;
+    // A first visit opens Explore on the first Edit. Picking a template then replaces the
+    // demo made for this visit. The demo is saved at once (0.7.0 review), so its ids, and
+    // the editor's addresses that name them, stay the same across reloads.
+    const fresh = getFlag('sf_fresh'), started = getFlag('sf_started') === '1';
+    this.hadBoards = boards.length > 0 && !(boards.length === 1 && boards[0].id === fresh);
+    this.firstRun = !started && (!boards.length || (boards.length === 1 && boards[0].id === fresh));
+    this.freshId = this.firstRun ? this.boards[0].id : null;
+    if (!boards.length) { saveBoards(this.boards, 0); setFlag('sf_fresh', this.boards[0].id); setFlag('sf_words_070', '1'); }
     this.editor = new Editor(this);
     this.account = new Account(this);
     // ?template=home (the SL map links here): open that template's board, creating it
@@ -201,8 +204,8 @@ export class App {
   transitionNow() { const p = this.currentPage(); return (p && p.tr) || this.cur().transition; }
   quietMode() { const b = this.cur(); return !this.S.editing && inQuiet(b.quiet, Date.now()) ? b.quiet.mode : null; }
   // The big board holds the board being edited; anywhere else in the editor it plays on.
-  holding() { return this.S.editing && this.editor.onBoard(); }
-  saveActive() { saveBoards(this.boards, this.active); }
+  holding() { return this.S.editing && (this.editor.onBoard() || !!this.editor.E.card); }
+  saveActive() { saveActiveOnly(this.active); }   // which storyboard is showing, without rewriting them all
   currentPage() {
     const b = this.cur();
     if (this.holding()) return b.pages[this.selIdx()];
@@ -317,6 +320,7 @@ export class App {
     // The browser's back and forward move through the editor's levels (0.7). Back past the
     // first level closes the editor.
     addEventListener('popstate', () => {
+      if (this.editor.closing) { this.editor.closing = false; history.replaceState(null, '', location.pathname + location.search); return; }   // Done, landing before the editor
       const r = parseRoute(location.hash);
       if (r && !this.kioskStrict) { if (!this.S.editing) { this.S.editing = true; this.dismissCue(false); } this.editor.apply(r); }
       else if (this.S.editing && !/^#b=/.test(location.hash)) this.toggleEdit(true);

@@ -10,7 +10,7 @@ let tabs; for (let i = 0; i < 50 && !tabs; i++) { try { tabs = await (await fetc
 const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
 let id = 0; const pend = {}; ws.onmessage = e => { const m = JSON.parse(e.data); if (pend[m.id]) { pend[m.id](m.result); delete pend[m.id]; } };
 const send = (method, params = {}) => new Promise(r => { pend[++id] = r; ws.send(JSON.stringify({ id, method, params })); });
-const ev = async expr => { const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value; };
+const ev = async expr => { const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }); if (!r) return undefined; /* the page left mid-call */ if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value; };
 const go = async url => { await send('Page.navigate', { url }); await sleep(2500); };
 const results = []; const check = (label, ok, detail) => results.push(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail !== undefined ? '  ' + detail : ''}`);
 const key = async (k, mods = 0) => { const code = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, Enter: 13, Escape: 27, Delete: 46 }[k];
@@ -21,6 +21,13 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await go(URL0); await ev(`localStorage.setItem('sf_started','1'); localStorage.setItem('sf_cue_seen','1')`); await go(URL0);
   const sb = await ev('splitFlap.cur().id'), p0 = await ev('splitFlap.cur().pages[0].id');
+
+  // an untouched demo keeps its ids, so a reload inside it stays put (0.7.0 review, 3)
+  await ev('splitFlap.toggleEdit()'); await sleep(500);
+  const demoAt = await at();
+  await send('Page.reload'); await sleep(2500);
+  check('a reload inside the untouched demo keeps the level', (await at()) === demoAt && (await lv()) === 'sb:board', `${demoAt} then ${await at()}`);
+  await ev(`document.querySelector('[data-k=done]').click()`); await sleep(600);
 
   // Edit opens the board on the wall, at its address
   await ev('splitFlap.toggleEdit()'); await sleep(500);
@@ -51,6 +58,15 @@ try {
   check('a reload lands on the same board, editor open', (await lv()) === 'sb:board' && (await ev('splitFlap.editor.page().id')) === p1, await lv());
   await go(URL0 + '#/account/log');
   check('an address opens that level directly', (await lv()) === 'acc:log', await lv());
+
+  // after a reload, the app's Back and the browser's back never repeat a level (review, 2)
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${sb}', view: 'boards' })`); await sleep(300);
+  await ev(`document.querySelector('[data-k=page-1]').click()`); await sleep(400);
+  await send('Page.reload'); await sleep(2500);
+  await ev(`document.querySelector('[data-k=back]').click()`); await sleep(500);
+  const afterBack = await at();
+  await ev('history.back()'); await sleep(600);
+  check("after a reload, the app's Back then the browser's back never repeats a level", afterBack === `#/storyboards/${sb}/boards` && (await at()) !== afterBack, `${afterBack} then ${await at()}`);
 
   // tabs remember where you were in each section
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${sb}', view: 'display' })`); await sleep(300);
@@ -92,7 +108,22 @@ try {
   await key('Delete');
   check('Delete removes the time', (await ev('splitFlap.cur().pages[2].wins.length')) === 0);
 
+  // Done, then the browser's back, leaves the editor closed (review, 1). From a clean
+  // start, so the entry behind the app is another page, as for someone arriving at it.
+  await go('about:blank'); await go(URL0);
+  await ev('splitFlap.toggleEdit()'); await sleep(400);
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'list' })`); await sleep(300);
+  await ev(`document.querySelector('[data-k=sb-0]').click()`); await sleep(300);
+  await ev(`document.querySelector('[data-k=view-boards]').click()`); await sleep(300);
+  await ev(`document.querySelector('[data-k=page-0]').click()`); await sleep(300);
+  await ev(`document.querySelector('[data-k=done]').click()`); await sleep(800);
+  check('Done clears the address', (await lv()) === 'closed' && (await at()) === '', await at());
+  await ev('history.back()'); await sleep(2500);
+  const nav = await send('Page.getNavigationHistory'), here = nav.entries[nav.currentIndex].url;
+  check("and the browser's back after Done leaves the site, never reopening the editor", here === 'about:blank', here);
+
   // the phone: the same levels, one day of the week at a time
+  await go(URL0);
   await send('Emulation.setDeviceMetricsOverride', { width: 400, height: 860, deviceScaleFactor: 1, mobile: true });
   await go(URL0 + `#/storyboards/${sb}/week`);
   check('on a phone the week shows one day, with day chips', (await ev(`document.querySelectorAll('.sf-day-col').length`)) === 1 && (await ev(`document.querySelectorAll('[data-k^=day-chip]').length`)) === 7);
