@@ -10,7 +10,7 @@ import { TEMPLATES, fromTemplate } from './templates.js';
 import { RAINBOW } from './pixels.js';
 import { nextPage, inQuiet } from './schedule.js';
 import { STR } from './strings.js';
-import { loadBoards, saveBoards, saveActiveOnly, loadBlueprints, saveBlueprints, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard } from './store.js';
+import { loadBoards, saveBoards, saveActiveOnly, loadBlueprints, saveBlueprints, sanitizeBlueprint, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard } from './store.js';
 import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
@@ -104,7 +104,7 @@ export class App {
       this.wake(this.S.cue ? 12000 : 3000);
       this.iv = setInterval(() => this.tick(), 500);
       // Accounts: only where the Worker answers, never on a wall screen.
-      if (!this.kioskStrict) this.account.init().then(() => { if (this.account.offer.length) { Object.assign(this.S, { editing: true }); this.editor.go({ sec: 'acc', lv: 'main' }); this.refresh(); } });
+      if (!this.kioskStrict) this.account.init().then(() => { if (this.account.offerCount()) { Object.assign(this.S, { editing: true }); this.editor.go({ sec: 'acc', lv: 'main' }); this.refresh(); } });
       // A wall screen can run for weeks, so it looks for a new release once an hour. A
       // reload that reached its version clears the note of it.
       if (getFlag('sf_reload_for') === VERSION) setFlag('sf_reload_for', '');
@@ -190,11 +190,15 @@ export class App {
     if (b.id === this.freshId) this.freshId = null;
     this.refresh(quiet);
   }
-  updPage(fn, quiet) { this.upd(b => { const p = b.pages[this.selIdx(b)]; if (p) fn(p, b); }, quiet); }
+  updPage(fn, quiet) {
+    const bp = this.editor.bp();
+    if (bp) { const i = this.blueprints.indexOf(bp), c = clone(bp); fn(c.page, c); c.name = c.page.name || c.name; this.blueprints[i] = c; this.saveMy(); this.refresh(quiet); return; }
+    this.upd(b => { const p = b.pages[this.selIdx(b)]; if (p) fn(p, b); }, quiet);
+  }
   selIdx(b = this.cur()) { return Math.max(0, Math.min(this.S.sel, b.pages.length - 1)); }
   flash(msg) { clearTimeout(this.noticeT); this.S.notice = msg; this.paintNotice(); this.noticeT = setTimeout(() => { this.S.notice = ''; this.paintNotice(); }, 3200); }
 
-  dims() { return this.dimsOf(this.cur()); }
+  dims() { const bp = this.editor && this.editor.bp(); return bp ? { rows: bp.rows, cols: bp.cols } : this.dimsOf(this.cur()); }
   dimsOf(b) {
     if (b.size === 'fill') {
       // measured from the stage when this board is showing, else a full window
@@ -204,15 +208,18 @@ export class App {
     if (b.size === 'custom') return { rows: Math.max(1, Math.min(24, +b.rows || 6)), cols: Math.max(4, Math.min(60, +b.cols || 22)) };
     const [r, c] = b.size.split('x').map(Number); return { rows: r, cols: c };
   }
-  boardOpts() { const b = this.cur(), d = this.dims(); return { rows: d.rows, cols: d.cols, theme: b.theme, transition: this.transitionNow(), speed: b.speed }; }
+  boardOpts() { const b = this.cur(), d = this.dims(), bp = this.editor && this.editor.bp(); return { rows: d.rows, cols: d.cols, theme: bp ? bp.theme : b.theme, transition: this.transitionNow(), speed: b.speed }; }
   // The page showing (or being edited) may pick its own transition; else the board's.
   transitionNow() { const p = this.currentPage(); return (p && p.tr) || this.cur().transition; }
   quietMode() { const b = this.cur(); return !this.S.editing && inQuiet(b.quiet, Date.now()) ? b.quiet.mode : null; }
   // The big board holds the board being edited; anywhere else in the editor it plays on.
-  holding() { return this.S.editing && (this.editor.onBoard() || !!this.editor.E.card); }
+  holding() { return this.S.editing && (this.editor.onBoard() || this.editor.onBlueprint() || !!this.editor.E.card || !!this.editor.E.preview); }
   saveActive() { saveActiveOnly(this.active); }   // which storyboard is showing, without rewriting them all
   currentPage() {
     const b = this.cur();
+    const E = this.editor.E, bp = this.editor.bp();
+    if (this.S.editing && E.preview) return E.preview;            // a board about to be added, at this storyboard's size
+    if (this.S.editing && bp) return bp.page;
     if (this.holding()) return b.pages[this.selIdx()];
     return this.S.pageIdx >= 0 ? b.pages[this.S.pageIdx] : FALLBACK_PAGE;
   }
@@ -676,6 +683,28 @@ export class App {
     const b = this.boards[i], blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' });
     const a = h('a', { href: URL.createObjectURL(blob), download: (b.name || 'board').replace(/[^\wÀ-ɏ-]+/g, '_') + '.json' });
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  exportBlueprint(bp) {
+    const blob = new Blob([JSON.stringify(bp, null, 2)], { type: 'application/json' });
+    const a = h('a', { href: URL.createObjectURL(blob), download: (bp.name || 'board').replace(/[^\wÀ-ɏ-]+/g, '_') + '.json' });
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  // Import from My boards (0.7.1): a board file goes to My boards, a storyboard file to the
+  // storyboards, as the file says.
+  importAny(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    if (f.size > 262144) { e.target.value = ''; this.flash(this.t.importFail); return; }
+    f.text().then(txt => {
+      let x = null; try { x = JSON.parse(txt); } catch { x = null; }
+      const bp = x && x.page ? sanitizeBlueprint(x) : null;
+      if (bp) {
+        if (this.blueprints.length >= 100) { this.flash(this.t.myFull); return; }
+        if (this.blueprints.some(y => y.id === bp.id)) bp.id = newId('m');
+        this.blueprints.unshift(bp); this.saveMy(); this.flash(this.t.savedToMy(bp.name)); this.render(); return;
+      }
+      this.importFile({ target: { files: [f], value: '' } });
+    });
+    e.target.value = '';
   }
   importFile(e) {
     const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;

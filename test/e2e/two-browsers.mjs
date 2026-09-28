@@ -27,6 +27,7 @@ async function browser(name, shareWith) {
   return b;
 }
 const names = b => b.ev(`JSON.stringify(splitFlap.boards.map(x => x.name).sort())`);
+const serverMy = b => b.ev(`fetch('/split-flap/api/blueprints').then(r => r.json()).then(j => JSON.stringify(j.blueprints.filter(x => !x.deleted).map(x => x.board.name).sort()))`);
 const server = b => b.ev(`fetch('/split-flap/api/boards').then(r => r.json()).then(j => JSON.stringify(j.boards.filter(x => !x.deleted).map(x => x.board.name).sort()))`);
 const results = []; const check = (label, ok, detail) => { results.push(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '  ' + detail : ''}`); };
 
@@ -59,6 +60,16 @@ try {
   check('the server has both', sv.includes('A online edit') && sv.includes('B offline edit (copy)'), sv);
   await A.ev(`splitFlap.account.sync()`); await sleep(2000);
   check('A gets B\'s copy', (await names(A)).includes('B offline edit (copy)'), await names(A));
+  // My boards across two browsers, one offline (0.7.1): both edits survive
+  await A.ev(`(() => { const p = JSON.parse(JSON.stringify(splitFlap.cur().pages[0])); p.name = 'Shared sign'; splitFlap.editor.saveToMy(p, null); })()`); await sleep(3000);
+  await B.ev(`splitFlap.account.sync()`); await sleep(2000);
+  check('a blueprint saved in one browser reaches the other', (await B.ev(`JSON.stringify(splitFlap.blueprints.map(x => x.name))`)).includes('Shared sign'));
+  await B.offline(true);
+  await B.ev(`(() => { const x = splitFlap.blueprints.find(b => b.name === 'Shared sign'); x.name = 'B offline sign'; x.page.name = x.name; splitFlap.saveMy(); })()`); await sleep(2500);
+  await A.ev(`(() => { const x = splitFlap.blueprints.find(b => b.name === 'Shared sign'); x.name = 'A online sign'; x.page.name = x.name; splitFlap.saveMy(); })()`); await sleep(3000);
+  await B.offline(false); await B.ev(`splitFlap.account.sync()`); await sleep(3000); await B.ev(`splitFlap.account.sync()`); await sleep(2000);
+  const my = await serverMy(B);
+  check('back online, both versions of the blueprint are kept', my.includes('A online sign') && my.includes('B offline sign (copy)'), my);
   const menu = await B.ev(`(() => { splitFlap.set({ switcher: true }); const rows = [...document.querySelectorAll('.sf-menu-item')].map(x => x.textContent); splitFlap.set({ switcher: false }); return JSON.stringify(rows); })()`);
   check('the board menu shows when each account board changed', JSON.parse(menu).filter(r => /Changed \d\d:\d\d/.test(r)).length >= 2, menu);
 
@@ -89,6 +100,7 @@ try {
   const C = await browser('C'), emailC = `guest-${Date.now()}@example.com`;
   await C.go('http://localhost:8787/'); await C.ev(`localStorage.setItem('sf_started','1')`); await C.go('http://localhost:8787/');
   await C.ev(`(() => { splitFlap.duplicateBoard(0); splitFlap.upd(b => { b.name = 'Guest keep'; }); splitFlap.duplicateBoard(0); splitFlap.upd(b => { b.name = 'Guest leave'; }); })()`); await sleep(500);
+  await C.ev(`(() => { const p = JSON.parse(JSON.stringify(splitFlap.cur().pages[0])); p.name = 'Guest blueprint'; splitFlap.editor.saveToMy(p, null); })()`); await sleep(300);
   const prompt = await C.ev(`(() => { splitFlap.dismissCue(); splitFlap.renderOverlay(); const p = document.querySelector('[data-k=signin-prompt]'); return p ? p.textContent : ''; })()`);
   check('a guest with a second board sees the one sign-in prompt', /only in this browser/.test(prompt), prompt.slice(0, 60));
   // Chrome grants persistence by how much a site is used, so a fresh headless profile says
@@ -97,6 +109,7 @@ try {
   await C.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailC}', name: 'Guest Person' }) }).then(r => r.status)`);
   await C.go('http://localhost:8787/'); await sleep(2500);
   check('the offer shows on the first sign-in', (await C.ev(`splitFlap.account.offer.length`)) === 3);
+  check('and covers My boards as its second group', (await C.ev(`splitFlap.account.offerMy().length`)) === 1);
   check('a safety copy of the guest boards is kept', (await C.ev(`JSON.parse(localStorage.getItem('sf_guest_backup') || '{"boards":[]}').boards.length`)) === 3);
   await C.go('http://localhost:8787/'); await sleep(2500);   // the tab closed with the question showing
   check('closed during the offer and reopened, the offer is back', (await C.ev(`splitFlap.account.offer.length`)) === 3);
@@ -108,7 +121,8 @@ try {
   check('the unticked board stays here', (await names(C)).includes('Guest leave'));
   check('the safety copy is gone once the server has them', (await C.ev(`String(localStorage.getItem('sf_guest_backup'))`)) === 'null');
   const said = await C.ev(`splitFlap.flashes.join(' / ')`);
-  check('the count shown matches the server', said === `${cServer.length} storyboards are now in your account.`, said);
+  check('the count shown matches the server', said === `${cServer.length} storyboards and 1 board from My boards are now in your account.`, said);
+  check('the guest blueprint reached the account', (await serverMy(C)) === JSON.stringify(['Guest blueprint']), await serverMy(C));
 
   // 0.6.4: two tabs of one guest browser. A board made in one tab must survive an edit in
   // an older tab that was left open.

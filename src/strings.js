@@ -3,6 +3,17 @@
 
 export const STR = {
   en: {
+    // 0.7.1: My boards.
+    secMyBoards: 'My boards', templatesShort: 'Templates', myFull: 'My boards holds 100 boards, the most it can.', savedToMy: name => `${name} is saved to My boards.`,
+    bpSize: (r, c) => `Kept at ${r} × ${c}, the size it was made at. A copy fits the storyboard it goes into.`, onScreen: 'On screen', bpNoTimes: 'Times are set on the copy in a storyboard, since they belong to its plan.',
+    searchMy: 'Search My boards', myEmptyTitle: 'Your boards to start from', myEmptyBody: 'Save a board here from any storyboard or template, and add a copy of it to any storyboard later. Nothing goes here unless you save it.',
+    browseExplore: 'Browse Explore', importShort: 'Import', allSizes: 'All sizes', showAllSizes: n => `Show all sizes (${n})`, noneThisSize: 'None at this size yet.',
+    previewOnBoard: (r, c) => `Shown on the big board at this storyboard's size, ${r} × ${c}.`, cutWarn: n => `${n === 1 ? '1 typed or painted flap falls' : n + ' typed or painted flaps fall'} outside at this size and will be cut.`,
+    addHere: 'Add to this storyboard', addedTo: (name, sb) => `${name} is added to ${sb}.`,
+    fromFile: 'A file', fromVestaboard: 'A Vestaboard message', importFileNote: 'A board file goes to My boards, and a storyboard file becomes a storyboard.', chooseFile: 'Choose a file',
+    vbNote: (r, c) => `Paste the message, one line per row. It is centred, in capitals, at ${r} × ${c}, and shown on the big board as you type.`,
+    offerTitle2: (n, m) => { const a = n === 1 ? '1 storyboard' : `${n} storyboards`, b = m === 1 ? '1 board in My boards' : `${m} boards in My boards`; return `There ${n + m === 1 ? 'is' : 'are'} ${n && m ? `${a} and ${b}` : n ? a : b} in this browser from before you signed in.`; },
+    offerKeepN: n => `Keep with my account (${n})`,
     // 0.7: the sections, the storyboard and the week. Words from GLOSSARY.md.
     secStoryboards: 'Storyboards', secExplore: 'Explore', secAccount: 'Account', secSettings: 'Settings', searchLater: 'Search, coming later',
     more: 'More', mOpen: 'Open', mRename: 'Rename', mDuplicate: 'Duplicate', mSave: 'Save to my boards', mCopyTo: 'Copy to', mShare: 'Share', mShareImage: 'Share as image', mExport: 'Export', mDelete: 'Delete', mDeleteAgain: 'Press again to delete',
@@ -106,6 +117,17 @@ export const STR = {
     today: 'Today', yesterday: 'Yesterday', drafts: 'Earlier messages', draftsNote: 'Kept in this browser. A message is kept here when you leave the composer after changing it.', noDrafts: 'Nothing yet. A message is kept here when you leave the composer after changing it.', use: 'Use',
   },
   sv: {
+    // 0.7.1: Mina tavlor.
+    secMyBoards: 'Mina tavlor', templatesShort: 'Mallar', myFull: 'Mina tavlor rymmer 100 tavlor, så många som går.', savedToMy: name => `${name} är sparad i Mina tavlor.`,
+    bpSize: (r, c) => `Sparad i ${r} × ${c}, storleken den gjordes i. En kopia anpassas till storyboarden den läggs i.`, onScreen: 'På skärmen', bpNoTimes: 'Tider sätts på kopian i en storyboard, eftersom de hör till dess plan.',
+    searchMy: 'Sök i Mina tavlor', myEmptyTitle: 'Dina tavlor att utgå från', myEmptyBody: 'Spara en tavla här från en storyboard eller mall, och lägg senare en kopia av den i vilken storyboard som helst. Inget hamnar här om du inte sparar det.',
+    browseExplore: 'Titta i Utforska', importShort: 'Importera', allSizes: 'Alla storlekar', showAllSizes: n => `Visa alla storlekar (${n})`, noneThisSize: 'Inga i den här storleken än.',
+    previewOnBoard: (r, c) => `Visas på den stora tavlan i storyboardens storlek, ${r} × ${c}.`, cutWarn: n => `${n === 1 ? '1 skriven eller målad flapp hamnar' : n + ' skrivna eller målade flappar hamnar'} utanför i den här storleken och klipps bort.`,
+    addHere: 'Lägg till i den här storyboarden', addedTo: (name, sb) => `${name} är tillagd i ${sb}.`,
+    fromFile: 'En fil', fromVestaboard: 'Ett Vestaboard-meddelande', importFileNote: 'En tavelfil hamnar i Mina tavlor, och en storyboardfil blir en storyboard.', chooseFile: 'Välj en fil',
+    vbNote: (r, c) => `Klistra in meddelandet, en rad per rad. Det centreras, med versaler, i ${r} × ${c}, och visas på den stora tavlan medan du skriver.`,
+    offerTitle2: (n, m) => { const a = n === 1 ? '1 storyboard' : `${n} storyboards`, b = m === 1 ? '1 tavla i Mina tavlor' : `${m} tavlor i Mina tavlor`; return `Det finns ${n && m ? `${a} och ${b}` : n ? a : b} i den här webbläsaren från innan du loggade in.`; },
+    offerKeepN: n => `Spara med mitt konto (${n})`,
     // 0.7: sektionerna, storyboarden och veckan. Orden kommer från GLOSSARY.md.
     secStoryboards: 'Storyboards', secExplore: 'Utforska', secAccount: 'Konto', secSettings: 'Inställningar', searchLater: 'Sök, kommer senare',
     more: 'Mer', mOpen: 'Öppna', mRename: 'Byt namn', mDuplicate: 'Duplicera', mSave: 'Spara i mina tavlor', mCopyTo: 'Kopiera till', mShare: 'Dela', mShareImage: 'Dela som bild', mExport: 'Exportera', mDelete: 'Radera', mDeleteAgain: 'Tryck igen för att radera',
