@@ -72,7 +72,7 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-export const routeName = path => path.startsWith('/auth/') ? '/auth/' + path.split('/')[2] : path.replace(/^\/boards\/.+$/, '/boards/:id');
+export const routeName = path => path.startsWith('/auth/') ? '/auth/' + path.split('/')[2] : path.replace(/^\/(boards|blueprints)\/.+$/, '/$1/:id');
 
 async function route(req, env, url) {
   const path = url.pathname.slice(API.length) || '/', auth = authFor(env);

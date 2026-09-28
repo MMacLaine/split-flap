@@ -320,7 +320,7 @@ export class Editor {
   }
   pageVerbs(i) {
     const b = this.app.cur();
-    return { open: () => this.openBoard(i), save: this.app.blueprints.length < MAX_MY ? () => this.saveToMy(b.pages[i], { kind: 'storyboard', id: b.id }) : 'off', rename: () => { this.openBoard(i); const el = this.app.drawer.querySelector('[data-k="page-name"]'); if (el) { el.focus(); el.select(); } },
+    return { open: () => this.openBoard(i), save: this.app.blueprints.length < MAX_MY ? () => this.saveToMy(b.pages[i], this.originOf(b.pages[i], b)) : 'off', rename: () => { this.openBoard(i); const el = this.app.drawer.querySelector('[data-k="page-name"]'); if (el) { el.focus(); el.select(); } },
       duplicate: () => { this.app.S.sel = i; this.dupPage(true); }, copy: this.app.boards.length > 1 ? () => { this.E.sheet = { kind: 'copy', page: i }; this.app.render(); } : 'off',
       shareImage: () => { this.app.S.sel = i; this.app.saveImage(); }, delete: b.pages.length > 1 ? () => { this.app.S.sel = i; this.delPage(); } : 'off' };
   }
@@ -370,6 +370,10 @@ export class Editor {
     app.blueprints.unshift(bp); app.saveMy(); app.flash(this.t.savedToMy(bp.name)); app.render();
     return bp;
   }
+  // Where a saved board came from, followed back to where it first came from (a template,
+  // another blueprint, later the hub), so credit can reach its author. A board made from
+  // scratch points at its storyboard and itself.
+  originOf(page, sb) { return page.from ? clone(page.from) : { kind: 'storyboard', id: sb.id, board: page.id }; }
   bpVerbs(bp) {
     const app = this.app;
     return { open: () => this.go({ sec: 'my', lv: 'bp', bp: bp.id }),
@@ -541,7 +545,7 @@ export class Editor {
         this.more('bp-open', this.bpVerbs(bp)))
       : h('div', { class: 'sf-row between' },
         h('div', { class: 'sf-row' },
-          h('button', { class: 'sf-btn primary', 'data-k': 'save-my', disabled: full, title: full ? t.myFull : null, onclick: () => this.saveToMy(p, { kind: 'storyboard', id: b.id }) }, t.mSave),
+          h('button', { class: 'sf-btn primary', 'data-k': 'save-my', disabled: full, title: full ? t.myFull : null, onclick: () => this.saveToMy(p, this.originOf(p, b)) }, t.mSave),
           h('button', { class: 'sf-btn', 'data-k': 'see-week', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'week' }) }, t.seeInWeek)),
         this.more('pg-open', this.pageVerbs(this.app.selIdx()))),
       h('label', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.pageName),
