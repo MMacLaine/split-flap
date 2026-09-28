@@ -408,7 +408,7 @@ export class App {
     const tag = (e.target && e.target.tagName) || '', typing = /INPUT|TEXTAREA|SELECT/.test(tag);
     if (e.key === 'Escape') {
       if (this.S.share || this.S.switcher) this.set({ share: false, switcher: false });
-      else if (this.S.editing && !typing) this.editor.escape();
+      else if (this.S.editing && (!typing || this.editor.E.sheet)) this.editor.escape();   // a sheet closes even from its text box
       return;
     }
     // Undo and redo in the composer, when focus is not in some other text field.
@@ -470,7 +470,7 @@ export class App {
     document.documentElement.lang = S.lang;
     // drawer: rebuilt whole, scroll positions and focus carried over
     const old = this.drawer;
-    const scrolls = old ? [...old.querySelectorAll('.sf-panel-body, .sf-pls')].map(el => el.scrollTop) : [];
+    const scrolls = old ? [...old.querySelectorAll('.sf-panel-body, .sf-pls, .sf-week-scroll')].map(el => el.scrollTop) : [];
     const lvBefore = old && old.querySelector('.sf-panel-body') ? old.querySelector('.sf-panel-body').dataset.lv : null;
     const focusKey = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k;
     if (S.editing) {
@@ -478,7 +478,7 @@ export class App {
       if (old) old.replaceWith(this.drawer); else this.root.insertBefore(this.drawer, this.main);
       if (old) {
         this.drawer.style.animation = 'none';
-        const now = [...this.drawer.querySelectorAll('.sf-panel-body, .sf-pls')];
+        const now = [...this.drawer.querySelectorAll('.sf-panel-body, .sf-pls, .sf-week-scroll')];
         if (lvBefore === (now[0] && now[0].dataset.lv)) now.forEach((el, i) => { if (scrolls[i] != null) el.scrollTop = scrolls[i]; });
         else if (now[1] && scrolls[1] != null) now[1].scrollTop = scrolls[1];
       }
@@ -544,6 +544,8 @@ export class App {
       this.barWrap = wrap;
     }
     const focusKey = document.activeElement && this.overlay.contains(document.activeElement) && document.activeElement.dataset.k;
+    // Share from a storyboard's more menu, with the editor open: over the board (0.7.3)
+    if (S.editing && S.share) kids.push(h('div', { class: 'sf-share-float' }, this.renderShare()));
     // With the editor closed, one line at the top: what is on now, and what comes next.
     if (!S.editing && !this.kioskStrict && this.cur().pages.length > 1) {
       const line = nowShowing(this.cur(), Date.now(), t);

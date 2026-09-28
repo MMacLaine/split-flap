@@ -4,7 +4,7 @@
 export const STR = {
   en: {
     // 0.7.1: My boards.
-    secMyBoards: 'My boards', templatesShort: 'Templates', signInNotFinished: 'Sign-in did not finish, so nothing changed. Try again, and finish it in this same browser.', myFull: 'My boards holds 100 boards, the most it can.', savedToMy: name => `${name} is saved to My boards.`,
+    secMyBoards: 'My boards', templatesShort: 'Templates', sections: 'Sections', signInNotFinished: 'Sign-in did not finish, so nothing changed. Try again, and finish it in this same browser.', myFull: 'My boards holds 100 boards, the most it can.', savedToMy: name => `${name} is saved to My boards.`,
     bpSize: (r, c) => `Kept at ${r} × ${c}, the size it was made at. A copy fits the storyboard it goes into.`, onScreen: 'On screen', bpNoTimes: 'Times are set on the copy in a storyboard, since they belong to its plan.',
     searchMy: 'Search My boards', myEmptyTitle: 'Your boards to start from', myEmptyBody: 'Save a board here from any storyboard or template, and add a copy of it to any storyboard later. Nothing goes here unless you save it.',
     browseExplore: 'Browse Explore', importShort: 'Import', allSizes: 'All sizes', showAllSizes: n => `Show all sizes (${n})`, noneThisSize: 'None at this size yet.',
@@ -118,7 +118,7 @@ export const STR = {
   },
   sv: {
     // 0.7.1: Mina tavlor.
-    secMyBoards: 'Mina tavlor', templatesShort: 'Mallar', signInNotFinished: 'Inloggningen blev inte klar, så inget ändrades. Försök igen, och gör klart den i samma webbläsare.', myFull: 'Mina tavlor rymmer 100 tavlor, så många som går.', savedToMy: name => `${name} är sparad i Mina tavlor.`,
+    secMyBoards: 'Mina tavlor', templatesShort: 'Mallar', sections: 'Sektioner', signInNotFinished: 'Inloggningen blev inte klar, så inget ändrades. Försök igen, och gör klart den i samma webbläsare.', myFull: 'Mina tavlor rymmer 100 tavlor, så många som går.', savedToMy: name => `${name} är sparad i Mina tavlor.`,
     bpSize: (r, c) => `Sparad i ${r} × ${c}, storleken den gjordes i. En kopia anpassas till storyboarden den läggs i.`, onScreen: 'På skärmen', bpNoTimes: 'Tider sätts på kopian i en storyboard, eftersom de hör till dess plan.',
     searchMy: 'Sök i Mina tavlor', myEmptyTitle: 'Dina tavlor att utgå från', myEmptyBody: 'Spara en tavla här från en storyboard eller mall, och lägg senare en kopia av den i vilken storyboard som helst. Inget hamnar här om du inte sparar det.',
     browseExplore: 'Titta i Utforska', importShort: 'Importera', allSizes: 'Alla storlekar', showAllSizes: n => `Visa alla storlekar (${n})`, noneThisSize: 'Inga i den här storleken än.',

@@ -35,6 +35,8 @@ test('a failed request is logged with its route, status and code, and nothing ab
   } finally { console.warn = quiet; }
   assert.equal(routeName('/export'), '/export');
   assert.equal(routeName('/blueprints/m-secret'), '/blueprints/:id');   // blueprint ids are not logged either
+  assert.equal(routeName('/anything-typed/by-someone'), 'unknown');
+  assert.equal(routeName('/auth/sign-in'), '/auth/sign-in');
 });
 
 test('the production route is a top-level key, above every [table] in wrangler.toml', async () => {

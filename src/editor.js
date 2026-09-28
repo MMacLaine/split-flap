@@ -124,9 +124,9 @@ export class Editor {
   // A tab returns to where you last were in that section; the current tab goes to its top.
   tab(sec) { this.go(sec === this.E.sec ? this.top(sec) : this.E.last[sec] || this.top(sec)); }
   // Opening the editor: Explore on the very first edit, else the board on the wall now.
-  open() {
+  open(fresh) {
     this.E.drag = -1;
-    const r = parseRoute(location.hash);
+    const r = fresh ? null : parseRoute(location.hash);   // fresh: the level for the board on the wall, whatever the address
     if (r) {
       // opened at an address with no editor entries of this visit behind it: depth 0
       if (!(history.state && history.state.sf)) history.replaceState({ sf: 1, depth: 0, prev: '' }, '', location.href);
@@ -231,9 +231,9 @@ export class Editor {
   // The four sections, on every level, and the place for search.
   tabs() {
     const t = this.t, sec = this.E.sec;
-    const tab = (id, label) => h('button', { class: 'sf-tab', role: 'tab', 'aria-selected': String(sec === id), 'data-k': 'tab-' + id, onclick: () => this.tab(id) }, label,
+    const tab = (id, label) => h('button', { class: 'sf-tab', 'aria-current': sec === id ? 'page' : null, 'data-k': 'tab-' + id, onclick: () => this.tab(id) }, label,
       id === 'acc' ? h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark, 'data-sync-fail': '', hidden: this.app.account.status !== 'failed' }, ' !') : null);
-    return h('nav', { class: 'sf-tabs', role: 'tablist', 'aria-label': t.editor },
+    return h('nav', { class: 'sf-tabs', 'aria-label': t.sections },
       tab('sb', t.secStoryboards), tab('my', t.secMyBoards), tab('ex', t.secExplore), tab('acc', this.app.account.available ? t.secAccount : t.secSettings),
       h('span', { class: 'sf-grow' }),
       h('button', { class: 'sf-icon sf-search', disabled: true, title: t.searchLater, 'aria-label': t.searchLater, 'data-k': 'search' }, h('span', { 'aria-hidden': 'true' }, '⌕')));
@@ -291,12 +291,14 @@ export class Editor {
   sbVerbs(i) {
     const app = this.app;
     return { open: () => this.openStoryboard(i), rename: () => { this.openStoryboard(i); this.startRename(); }, duplicate: () => app.duplicateBoard(i),
-      share: () => { app.pickBoard(i); app.toggleEdit(); app.openShare(); }, export: () => app.exportJson(i), delete: app.boards.length > 1 ? () => app.deleteBoard(i) : 'off' };
+      // on a phone the board area is too small to hold the share panel, so the editor closes first
+      share: () => { if (i !== app.active) app.pickBoard(i); if (this.phone()) app.toggleEdit(); app.openShare(); },
+      export: () => app.exportJson(i), delete: app.boards.length > 1 ? () => app.deleteBoard(i) : 'off' };
   }
   storyboardLevel() {
     const t = this.t, E = this.E, b = this.app.cur();
-    const views = h('div', { class: 'sf-subtabs', role: 'tablist' }, [['week', t.viewWeek], ['boards', t.viewBoards], ['display', t.viewDisplay]].map(([v, label]) =>
-      h('button', { class: 'sf-seg', role: 'tab', 'aria-selected': String(E.view === v), 'aria-pressed': String(E.view === v), 'data-k': 'view-' + v, onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: v }, { replace: true }) }, label)));
+    const views = h('div', { class: 'sf-subtabs', role: 'group' }, [['week', t.viewWeek], ['boards', t.viewBoards], ['display', t.viewDisplay]].map(([v, label]) =>
+      h('button', { class: 'sf-seg', 'aria-pressed': String(E.view === v), 'data-k': 'view-' + v, onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: v }, { replace: true }) }, label)));
     const body = E.view === 'boards' ? this.boardsView() : E.view === 'display' ? this.settingsLevel() : weekView(this);
     return h('div', { class: 'sf-level' }, h('div', { class: 'sf-row between' }, views, this.more('sb-open', this.sbVerbs(this.app.active))), body);
   }
@@ -364,6 +366,8 @@ export class Editor {
   // Save a board as a blueprint: a copy with the size and theme it was made at, no times.
   saveToMy(page, from, dims, theme) {
     const app = this.app; if (app.blueprints.length >= MAX_MY) { app.flash(this.t.myFull); return null; }
+    const now = Date.now(); if (this.lastSave && this.lastSave.id === page.id && now - this.lastSave.at < 1500) return null;   // a double press saves once
+    this.lastSave = { id: page.id, at: now };
     const d = dims || app.dims(), c = clone(page);
     delete c.wins; delete c.win; delete c.alone; c.id = newId('p');
     const bp = { id: newId('m'), name: page.name || this.t.page, rows: d.rows, cols: d.cols, theme: theme || app.cur().theme, from, page: c };
@@ -410,8 +414,8 @@ export class Editor {
   // shows the copy on the big board at this storyboard's size before it is added.
   addSheet() {
     const t = this.t, S = this.E.sheet, app = this.app, b = app.cur(), d = app.dims(), now = Date.now(), key = `${d.rows}x${d.cols}`;
-    const tabs = h('div', { class: 'sf-subtabs', role: 'tablist' }, [['my', t.secMyBoards], ['tpl', t.templatesShort], ['new', t.newBoardShort]].map(([k, label]) =>
-      h('button', { class: 'sf-seg', role: 'tab', 'aria-selected': String(S.tab === k), 'aria-pressed': String(S.tab === k), 'data-k': 'add-tab-' + k, onclick: () => { if (k === 'new') { this.E.sheet = null; this.addPage(); return; } S.tab = k; S.src = null; this.E.preview = null; app.render(); app.tick(true); } }, label)));
+    const tabs = h('div', { class: 'sf-subtabs', role: 'group' }, [['my', t.secMyBoards], ['tpl', t.templatesShort], ['new', t.newBoardShort]].map(([k, label]) =>
+      h('button', { class: 'sf-seg', 'aria-pressed': String(S.tab === k), 'data-k': 'add-tab-' + k, onclick: () => { if (k === 'new') { this.E.sheet = null; this.addPage(); return; } S.tab = k; S.src = null; this.E.preview = null; app.render(); app.tick(true); } }, label)));
     const pick = src => { S.src = src; this.previewAdd(); app.render(); };
     const row = (src, name, rows, cols, theme, page, dim) => h('button', { class: 'sf-sb-open row' + (dim ? ' dim' : '') + (S.src && S.src.id === src.id && S.src.kind === src.kind && S.src.i === src.i ? ' on' : ''), 'data-k': `add-${src.kind}-${src.id}${src.i != null ? '-' + src.i : ''}`, onclick: () => pick(src) },
       this.thumb(`add-${src.kind}-${src.id}-${src.i}`, rows, cols, () => compose(page, rows, cols, now, this.lang, previewLive(app.live.data, now)), theme),
@@ -457,8 +461,8 @@ export class Editor {
   // Import into My boards: a file (a storyboard or a board), or a pasted Vestaboard message.
   importSheet() {
     const t = this.t, S = this.E.sheet, app = this.app, E = this.E, d = app.dimsOf(app.cur());
-    const tabs = h('div', { class: 'sf-subtabs', role: 'tablist' }, [['file', t.fromFile], ['vb', t.fromVestaboard]].map(([k, label]) =>
-      h('button', { class: 'sf-seg', role: 'tab', 'aria-selected': String(S.tab === k), 'aria-pressed': String(S.tab === k), 'data-k': 'imp-tab-' + k, onclick: () => { S.tab = k; E.preview = null; app.render(); app.tick(true); } }, label)));
+    const tabs = h('div', { class: 'sf-subtabs', role: 'group' }, [['file', t.fromFile], ['vb', t.fromVestaboard]].map(([k, label]) =>
+      h('button', { class: 'sf-seg', 'aria-pressed': String(S.tab === k), 'data-k': 'imp-tab-' + k, onclick: () => { S.tab = k; E.preview = null; app.render(); app.tick(true); } }, label)));
     const close = () => { E.sheet = null; E.preview = null; app.render(); app.tick(true); };
     let body;
     if (S.tab === 'file') {
@@ -916,7 +920,7 @@ export class Editor {
     return h('div', { class: 'sf-level' },
       h('div', { class: 'sf-start-head' }, h('h2', null, t.startTitle), h('p', null, t.exIntro)),
       app.account.available && !app.account.signedIn() ? h('div', { class: 'sf-guest' }, h('span', null, t.startGuest), h('button', { class: 'sf-btn', 'data-k': 'start-signin', onclick: () => app.account.signIn() }, t.signInGoogle)) : null,
-      first ? h('button', { class: 'sf-btn big', 'data-k': 'skip', onclick: () => { app.markStarted(); this.open(); } }, t.skip) : null,
+      first ? h('button', { class: 'sf-btn big', 'data-k': 'skip', onclick: () => { app.markStarted(); this.open(true); } }, t.skip) : null,
       tplGrid,
       h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.importTitle),
         h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'import', onclick: () => file.click() }, t.importB), file),

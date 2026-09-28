@@ -32,7 +32,7 @@ let cached = null;   // one Better Auth instance per Worker instance, not per re
 const authFor = env => cached || (cached = betterAuth(authOptions(env, env.DB)));
 
 const json = (body, status = 200, extra = {}) => new Response(JSON.stringify(body), {
-  status, headers: Object.assign({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, extra)
+  status, headers: Object.assign({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }, extra)
 });
 const fail = (status, error) => json({ error }, status);
 
@@ -66,13 +66,16 @@ export async function logFailure(req, url, res) {
   const failed = res.status >= 400 || (auth && /[?&]error=/.test(loc));
   if (!failed || (res.status === 401 && path === '/me')) return null;
   let error = null;
-  if (res.status >= 400) { try { error = (await res.clone().json()).error || null; } catch { error = null; } }
+  if (res.status >= 400) { try { const b = await res.clone().json(); error = b.error || b.code || null; } catch { error = null; } }   // ours say error, Better Auth's say code
   else error = new URL(loc, url).searchParams.get('error');
   const line = { failed: routeName(path), method: req.method, status: res.status, error };
   console.warn(JSON.stringify(line));
   return line;
 }
-export const routeName = path => path.startsWith('/auth/') ? '/auth/' + path.split('/')[2] : path.replace(/^\/(boards|blueprints)\/.+$/, '/$1/:id');
+const KNOWN = ['/', '/me', '/boards', '/blueprints', '/export', '/account', '/dev/session'];
+// Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
+export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
+  : /^\/(boards|blueprints)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
 
 async function route(req, env, url) {
   const path = url.pathname.slice(API.length) || '/', auth = authFor(env);
@@ -134,6 +137,7 @@ async function devSession(req, env, auth) {
 function withNoStore(res) {
   const r = new Response(res.body, res);
   r.headers.set('cache-control', 'no-store');
+  r.headers.set('x-content-type-options', 'nosniff');
   return r;
 }
 
