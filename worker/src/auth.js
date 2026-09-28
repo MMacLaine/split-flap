@@ -28,7 +28,7 @@ export function authOptions(env, database) {
       deleteUser: {
         enabled: true,
         // the boards go with the account
-        afterDelete: async user => { if (env.DB) await env.DB.prepare('DELETE FROM board WHERE user_id = ?').bind(user.id).run(); }
+        afterDelete: async user => { if (env.DB) { await env.DB.prepare('DELETE FROM board WHERE user_id = ?').bind(user.id).run(); await env.DB.prepare('DELETE FROM blueprint WHERE user_id = ?').bind(user.id).run(); } }
       }
     },
     // a phone should not have to sign in again every week
