@@ -80,7 +80,7 @@ try {
   // Escape closes a menu first, then the editor
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${sb}', view: 'boards' })`); await sleep(300);
   await ev(`document.querySelector('[data-k=more-pg-0]').click()`); await sleep(300);
-  check('the more menu opens with its verbs in order', (await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`)) === 'Open,Rename,Duplicate,Copy to,Share as image,Delete', await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`));
+  check('the more menu opens with its verbs in order', (await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`)) === 'Open,Rename,Duplicate,Save to my boards,Copy to,Share as image,Delete', await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`));
   await key('Escape');
   check('Escape closes the menu first', (await ev(`String(!!document.querySelector('.sf-more.open'))`)) === 'false' && (await lv()) === 'sb:sb:boards');
   await key('Escape');
