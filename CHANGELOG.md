@@ -2,6 +2,18 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.7.0 (2026-09-28): Structure
+
+A new structure for the editor, planned with Fable and Claude Design so there is room to grow. Nothing you made has changed, only where things are and what they are called.
+
+- What was a board is now a storyboard, and what was a page is now a board. A storyboard is what a screen plays, its boards in order and when each one shows.
+- The editor has its sections along the top: Storyboards, Explore for the templates, and Account, which now holds Help and the version log. They are the same on a phone and on a wide screen.
+- Week is a storyboard's main view, with every board's times as blocks. Drag down a day to give a board a time, and drag a block to move it or change how long it runs. Before, the times sat at the bottom of each page, where they were easy to miss.
+- Today's playlist shows what the storyboard plays today, worked out from the times. It sits beside the week, and in one line on the wall while the controls show.
+- Every level has its own address, so the browser's back button and the back gesture on a phone go up one level, and a reload lands in the same place.
+- Each storyboard and board has one ⋯ menu with the same actions in the same order, and Delete asks twice.
+- A board's content is chosen in place, under its zone, so a board is never more than two levels deep.
+
 ## v0.6.4 (2026-09-28): Fixes
 
 Two fixes from the review of 0.6.3, one of them to boards being lost as a guest.

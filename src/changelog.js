@@ -3,6 +3,34 @@
 
 export const CHANGELOG = [
   {
+    v: '0.7.0', date: '2026-09-28',
+    tag: { en: 'Structure', sv: 'Struktur' },
+    desc: {
+      en: 'A new structure for the editor, planned with Fable and Claude Design so there is room to grow. Nothing you made has changed, only where things are and what they are called.',
+      sv: 'En ny struktur för redigeraren, planerad med Fable och Claude Design så att det finns plats att växa. Inget du har gjort har ändrats, bara var saker finns och vad de heter.'
+    },
+    items: {
+      en: [
+        'What was a board is now a storyboard, and what was a page is now a board. A storyboard is what a screen plays, its boards in order and when each one shows.',
+        'The editor has its sections along the top: Storyboards, Explore for the templates, and Account, which now holds Help and the version log. They are the same on a phone and on a wide screen.',
+        "Week is a storyboard's main view, with every board's times as blocks. Drag down a day to give a board a time, and drag a block to move it or change how long it runs. Before, the times sat at the bottom of each page, where they were easy to miss.",
+        "Today's playlist shows what the storyboard plays today, worked out from the times. It sits beside the week, and in one line on the wall while the controls show.",
+        "Every level has its own address, so the browser's back button and the back gesture on a phone go up one level, and a reload lands in the same place.",
+        'Each storyboard and board has one ⋯ menu with the same actions in the same order, and Delete asks twice.',
+        "A board's content is chosen in place, under its zone, so a board is never more than two levels deep."
+      ],
+      sv: [
+        'Det som var en tavla är nu en storyboard, och det som var en sida är nu en tavla. En storyboard är det en skärm spelar, dess tavlor i ordning och när var och en visas.',
+        'Redigeraren har sina sektioner längst upp: Storyboards, Utforska för mallarna, och Konto, som nu också har Hjälp och versionsloggen. De är likadana på en telefon och på en bred skärm.',
+        'Vecka är storyboardens huvudvy, med varje tavlas tider som block. Dra nedåt i en dag för att ge en tavla en tid, och dra ett block för att flytta det eller ändra hur länge det pågår. Förut låg tiderna längst ned på varje sida, där de var lätta att missa.',
+        'Dagens spellista visar vad storyboarden spelar idag, uträknat från tiderna. Den ligger bredvid veckan, och på en rad på väggen medan kontrollerna syns.',
+        'Varje nivå har en egen adress, så webbläsarens bakåtknapp och bakåtgesten på en telefon går upp en nivå, och en omladdning hamnar på samma ställe.',
+        'Varje storyboard och tavla har en ⋯-meny med samma val i samma ordning, och Radera frågar två gånger.',
+        'En tavlas innehåll väljs på plats, under dess zon, så en tavla ligger aldrig mer än två nivåer ned.'
+      ]
+    }
+  },
+  {
     v: '0.6.4', date: '2026-09-28',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {
