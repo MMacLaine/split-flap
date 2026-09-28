@@ -79,3 +79,33 @@ test('export has the account and live boards; delete account removes everything'
   const again = await session(email);                                  // a new account with the same email starts empty
   assert.deepEqual((await call(again, 'GET', '/boards')).body.boards, []);
 });
+
+// My boards (0.7.1): blueprints follow the same rules in their own table.
+const blueprint = (id, name = 'Welcome sign') => ({ id, name, rows: 6, cols: 22, theme: 'black', page: { id: 'p1', name, layout: 'full', dur: 10, zones: [{ ch: 'clock', o: {} }] } });
+
+test('blueprints: create, update, stale update, delete, and kept apart from storyboards', async () => {
+  const c = await session(`bp-${run}@example.com`);
+  assert.deepEqual((await call(c, 'GET', '/blueprints')).body.blueprints, []);
+  const a = await call(c, 'PUT', '/blueprints/m1', { board: blueprint('m1'), baseRev: 0 });
+  assert.equal(a.status, 200); assert.equal(a.body.rev, 1);
+  assert.equal((await call(c, 'PUT', '/blueprints/m1', { board: blueprint('m1', 'Renamed'), baseRev: 1 })).body.rev, 2);
+  const stale = await call(c, 'PUT', '/blueprints/m1', { board: blueprint('m1', 'Old'), baseRev: 1 });
+  assert.equal(stale.status, 409); assert.equal(stale.body.current.board.name, 'Renamed');
+  assert.deepEqual((await call(c, 'GET', '/boards')).body.boards, []);                 // not a storyboard
+  assert.equal((await call(c, 'PUT', '/blueprints/m2', { board: board('m2'), baseRev: 0 })).status, 400);   // a storyboard is not a blueprint
+  assert.equal((await call(c, 'PUT', '/boards/m3', { board: blueprint('m3'), baseRev: 0 })).status, 400);   // and the other way round
+  assert.equal((await call(c, 'DELETE', '/blueprints/m1', { baseRev: 2 })).body.deleted, true);
+  const list = (await call(c, 'GET', '/blueprints')).body.blueprints;
+  assert.deepEqual(list.map(x => [x.id, x.deleted, x.rev]), [['m1', true, 3]]);
+});
+
+test('export includes live blueprints, and deleting the account removes them', async () => {
+  const email = `bpd-${run}@example.com`, c = await session(email);
+  await call(c, 'PUT', '/blueprints/m1', { board: blueprint('m1', 'Keep'), baseRev: 0 });
+  await call(c, 'PUT', '/blueprints/m2', { board: blueprint('m2', 'Gone'), baseRev: 0 });
+  await call(c, 'DELETE', '/blueprints/m2', { baseRev: 1 });
+  assert.deepEqual((await call(c, 'GET', '/export')).body.blueprints.map(b => b.name), ['Keep']);
+  assert.equal((await call(c, 'DELETE', '/account')).status, 200);
+  const again = await session(email);
+  assert.deepEqual((await call(again, 'GET', '/blueprints')).body.blueprints, []);
+});
