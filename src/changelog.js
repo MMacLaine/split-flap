@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.7.2', date: '2026-09-28',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'Three fixes from using 0.7.1 on a computer and a phone together.',
+      sv: 'Tre rättningar efter att ha använt 0.7.1 på en dator och en telefon samtidigt.'
+    },
+    items: {
+      en: [
+        'If signing in with Google does not finish, for example when a phone opens Google in another app, you come back to Split-Flap with a message saying so. Before, it stopped on a bare error page that said Mismatch.',
+        'On a new device, the demo made for a first visit no longer stays behind after you sign in. It goes if your account already has storyboards, and joins your account if it is empty.',
+        'The editor no longer redraws when a sync finds nothing new, so a menu you have open stays still while you use it.'
+      ],
+      sv: [
+        'Om inloggningen med Google inte blir klar, till exempel när en telefon öppnar Google i en annan app, kommer du tillbaka till Split-Flap med ett meddelande om det. Förut stannade den på en tom felsida där det stod Mismatch.',
+        'På en ny enhet ligger inte längre demon som gjordes vid första besöket kvar efter att du loggat in. Den försvinner om ditt konto redan har storyboards, och läggs i kontot om det är tomt.',
+        'Redigeraren ritas inte längre om när en synk inte hittar något nytt, så en meny du har öppen står still medan du använder den.'
+      ]
+    }
+  },
+  {
     v: '0.7.1', date: '2026-09-28',
     tag: { en: 'My boards', sv: 'Mina tavlor' },
     desc: {

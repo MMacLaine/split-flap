@@ -134,6 +134,14 @@ try {
   check('a board made in one tab survives an edit in another', stored.includes('Made in tab one') && stored.includes('Edited in tab two'), stored);
   check('and the other tab shows it', (await names(T2)).includes('Made in tab one'), await names(T2));
 
+  // A first visit on another device (only the untouched demo), signing in to an account that
+  // already has storyboards: the demo is not offered, and does not linger on that device
+  const D = await browser('D'); await D.go('http://localhost:8787/');
+  await D.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${email}', name: 'Two Browsers' }) }).then(r => r.status)`);
+  await D.go('http://localhost:8787/'); await sleep(4000);
+  check('a new device with only the untouched demo gets no sign-in question', (await D.ev('splitFlap.account.offerCount()')) === 0);
+  check('and shows only the account\'s storyboards', !(await names(D)).includes('Demo') && JSON.parse(await names(D)).length === JSON.parse(await server(D)).length, `${await names(D)} vs ${await server(D)}`);
+
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);
   await B.ev(`splitFlap.upd(b => { b.name = 'B unsynced at sign out'; })`); await sleep(2500);

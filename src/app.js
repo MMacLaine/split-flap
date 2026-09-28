@@ -45,6 +45,8 @@ export class App {
     this.alt = { en: document.querySelector('link[rel=alternate][hreflang=en]'), sv: document.querySelector('link[rel=alternate][hreflang=sv]') };
     // A language picked before wins over the page it lands on (0.6.1); a first visit keeps
     // the page's language. The link, query and #board all come along.
+    // back from a sign-in that did not finish (0.7.1): say so, and tidy the address
+    if (params.get('error')) { this.signInError = params.get('error'); params.delete('error'); history.replaceState(history.state, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); }
     const picked = getFlag('sf_lang');
     if (this.alt[docLang] && picked && picked !== docLang && this.alt[picked]) {
       const path = new URL(this.alt[picked].href).pathname;
@@ -102,6 +104,7 @@ export class App {
       else if (parseRoute(location.hash) && !this.kioskStrict) { this.S.editing = true; this.dismissCue(false); this.editor.open(); }   // a reload lands where it was
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
+      if (this.signInError) setTimeout(() => this.flash(this.t.signInNotFinished, 10000), 400);
       this.iv = setInterval(() => this.tick(), 500);
       // Accounts: only where the Worker answers, never on a wall screen.
       if (!this.kioskStrict) this.account.init().then(() => { if (this.account.offerCount()) { Object.assign(this.S, { editing: true }); this.editor.go({ sec: 'acc', lv: 'main' }); this.refresh(); } });
@@ -196,7 +199,7 @@ export class App {
     this.upd(b => { const p = b.pages[this.selIdx(b)]; if (p) fn(p, b); }, quiet);
   }
   selIdx(b = this.cur()) { return Math.max(0, Math.min(this.S.sel, b.pages.length - 1)); }
-  flash(msg) { clearTimeout(this.noticeT); this.S.notice = msg; this.paintNotice(); this.noticeT = setTimeout(() => { this.S.notice = ''; this.paintNotice(); }, 3200); }
+  flash(msg, ms = 3200) { clearTimeout(this.noticeT); this.S.notice = msg; this.paintNotice(); this.noticeT = setTimeout(() => { this.S.notice = ''; this.paintNotice(); }, ms); }
 
   dims() { const bp = this.editor && this.editor.bp(); return bp ? { rows: bp.rows, cols: bp.cols } : this.dimsOf(this.cur()); }
   dimsOf(b) {
