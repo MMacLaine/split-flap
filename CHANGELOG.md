@@ -2,6 +2,14 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.7.2 (2026-09-28): Fixes
+
+Three fixes from using 0.7.1 on a computer and a phone together.
+
+- If signing in with Google does not finish, for example when a phone opens Google in another app, you come back to Split-Flap with a message saying so. Before, it stopped on a bare error page that said Mismatch.
+- On a new device, the demo made for a first visit no longer stays behind after you sign in. It goes if your account already has storyboards, and joins your account if it is empty.
+- The editor no longer redraws when a sync finds nothing new, so a menu you have open stays still while you use it.
+
 ## v0.7.1 (2026-09-28): My boards
 
 My boards, the fourth section, for boards you want to use again.

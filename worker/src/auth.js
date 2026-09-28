@@ -14,6 +14,9 @@ export function authOptions(env, database) {
     database,
     baseURL: base,
     basePath: '/split-flap/api/auth',
+    // a sign-in that fails (the state cookie missing, say) goes back to the app with ?error=,
+    // where the app says so plainly, never to Better Auth's bare error page
+    onAPIError: { errorURL: base + '/split-flap/' },
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [base],
     socialProviders: {

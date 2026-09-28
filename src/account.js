@@ -44,7 +44,7 @@ class MySync {
     const m = merge(this.app.blueprints, res.data.blueprints, this.state, user, { suffix: this.app.t.otherDevice, newId: () => newId('m') });
     this.state = this.carry(m.state);
     this.state.offer = [...new Set((this.state.offer || []).concat(m.guests))];
-    this.app.replaceBlueprints(m.boards);
+    if (JSON.stringify(m.boards) !== JSON.stringify(this.app.blueprints)) this.app.replaceBlueprints(m.boards);
     this.remember();
     return this.push(m.push, user);
   }
@@ -143,7 +143,10 @@ export class Account {
     this.my.save();
     if (!this.state.user) {
       this.state.user = this.user.id;
-      this.offer = offerable(this.app.boards, this.state).map(x => x.id).filter(id => !this.state.declined.includes(id));
+      // the demo made for a first visit, never touched, is not the person's work: it is not
+      // offered, and the first pull drops it if the account already has storyboards
+      this.dropFresh = this.app.freshId || null;
+      this.offer = offerable(this.app.boards, this.state).map(x => x.id).filter(id => !this.state.declined.includes(id) && id !== this.dropFresh);
       // a safety copy of the guest boards before anything is merged or sent
       if (this.offer.length || (this.my.state.offer || []).length) setFlag(BACKUP, JSON.stringify({ at: Date.now(), boards: this.app.boards.filter(b => this.offer.includes(b.id)),
         blueprints: this.app.blueprints.filter(b => (this.my.state.offer || []).includes(b.id)) }));
@@ -169,7 +172,7 @@ export class Account {
     if (!this.user || this.running) return;
     this.running = true; this.status = 'syncing'; this.paint();
     try {
-      const stray = strays(this.app.boards, this.state, this.offer.concat(this.state.declined || []));
+      const stray = strays(this.app.boards, this.state, this.offer.concat(this.state.declined || [], this.dropFresh ? [this.dropFresh] : []));
       if (stray.length) this.state = Object.assign(adopt(this.state, stray, this.user.id), { declined: this.state.declined || [] });
       const res = await this.api('GET', '/boards');
       if (res.status === 401) { this.lostSession(); return; }
@@ -178,7 +181,12 @@ export class Account {
       this.state = this.carry(m.state);
       this.offer = [...new Set(this.offer.concat(m.guests))];   // guest boards that had to become copies: offered, not taken
       for (const r of res.data.boards) if (this.state.boards[r.id] && r.updated) this.state.boards[r.id].updated = r.updated;   // for the board menu
-      this.app.replaceBoards(m.boards);
+      if (this.dropFresh) {                                     // the untouched first-visit demo, once, on the first pull
+        const others = m.boards.filter(x => x.id !== this.dropFresh);
+        if (others.length) m.boards = others; else { this.state = adopt(this.state, [this.dropFresh], this.user.id); m.push.push(this.dropFresh); }
+        this.dropFresh = null; this.app.freshId = null;
+      }
+      if (JSON.stringify(m.boards) !== JSON.stringify(this.app.boards)) this.app.replaceBoards(m.boards);   // no redraw when nothing moved
       this.remember();
       await this.push(m.push);
       if (!this.user) return;                                  // signed out part way
@@ -303,7 +311,7 @@ export class Account {
 
   // Sign in with Google: to Google and back to the page this started from.
   async signIn() {
-    const res = await this.api('POST', '/auth/sign-in/social', { provider: 'google', callbackURL: location.pathname + location.search });
+    const res = await this.api('POST', '/auth/sign-in/social', { provider: 'google', callbackURL: location.pathname + location.search, errorCallbackURL: location.pathname + location.search });
     if (res.data && res.data.url) location.href = res.data.url;
     else this.app.flash(this.app.t.signInFailed);
   }
