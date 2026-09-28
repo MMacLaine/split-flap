@@ -32,7 +32,7 @@ try {
   await ev(`document.querySelector('[data-k=save-my]').click()`); await sleep(400);
   const bp = await ev('splitFlap.blueprints[0] && splitFlap.blueprints[0].id');
   check('Save to my boards makes a blueprint', !!bp && (await ev('splitFlap.blueprints[0].page.wins')) === undefined, bp);
-  check('it records where it came from', (await ev('JSON.stringify(splitFlap.blueprints[0].from)')) === JSON.stringify({ kind: 'storyboard', id: demo }));
+  check('it records where it came from: its storyboard and itself, since it was made from scratch', (await ev('JSON.stringify(splitFlap.blueprints[0].from)')) === JSON.stringify({ kind: 'storyboard', id: demo, board: await ev('splitFlap.cur().pages[0].id') }), await ev('JSON.stringify(splitFlap.blueprints[0].from)'));
   check('My boards is kept for a guest', (await ev(`JSON.parse(localStorage.getItem('sf_myboards')).length`)) === 1);
 
   // add it to the demo (same size): no warning; then to the café (3 x 15): a warning

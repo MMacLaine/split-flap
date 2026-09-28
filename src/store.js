@@ -115,7 +115,7 @@ const legacyWin = wins => { const w = wins.find(x => !x.date); return w ? { on: 
 // or later the community hub. Nothing reads it yet; it is kept for credit and for an
 // "update from my boards" later.
 const FROM_KINDS = ['template', 'blueprint', 'storyboard', 'community'];
-const origin = f => f && typeof f === 'object' && FROM_KINDS.includes(f.kind) && str(f.id, 64) ? { from: { kind: f.kind, id: str(f.id, 64) } } : {};
+const origin = f => f && typeof f === 'object' && FROM_KINDS.includes(f.kind) && str(f.id, 64) ? { from: Object.assign({ kind: f.kind, id: str(f.id, 64) }, str(f.board, 40) ? { board: str(f.board, 40) } : {}) } : {};
 const hueOf = h => Number.isInteger(h) && h >= 0 && h < 360 ? { hue: h } : {};
 // One board: a layout, its zones, how long it shows, its transition, and (in a storyboard)
 // its times. A blueprint's board has no times.
@@ -127,7 +127,7 @@ function sanitizePage(p, withTimes = true) {
   const extra = { ...(TRANSITIONS.includes(p && p.tr) ? { tr: p.tr } : {}), ...hueOf(p && p.hue), ...origin(p && p.from) };
   if (!withTimes) return Object.assign(base, extra, { zones });
   const wins = sanitizeWins(p);
-  return Object.assign(base, { wins, win: legacyWin(wins) }, p.alone === true && wins.length ? { alone: true } : {}, extra, { zones });
+  return Object.assign(base, { wins, win: legacyWin(wins) }, p && p.alone === true && wins.length ? { alone: true } : {}, extra, { zones });
 }
 // A blueprint in My boards (0.7.1): one board with the size and theme it was made at.
 export function sanitizeBlueprint(x) {
@@ -159,12 +159,15 @@ export function sanitizeBoard(b) {
 function ls() { try { return window.localStorage; } catch { return null; } }
 
 export function loadBlueprints() {
-  try { return (JSON.parse(ls().getItem(K.my)) || []).map(sanitizeBlueprint).filter(Boolean); } catch { return []; }
+  let raw; try { raw = JSON.parse(ls().getItem(K.my)) || []; } catch { return []; }
+  return (Array.isArray(raw) ? raw : []).map(x => { try { return sanitizeBlueprint(x); } catch { return null; } }).filter(Boolean);
 }
 export function saveBlueprints(list) { try { ls().setItem(K.my, JSON.stringify(list)); } catch { /* storage full or blocked */ } }
 export function loadBoards() {
   const s = ls(); let boards = [], active = 0;
-  try { boards = (JSON.parse(s.getItem(K.boards)) || []).map(sanitizeBoard).filter(Boolean); active = +s.getItem(K.active) || 0; } catch { boards = []; }
+  let raw = []; try { raw = JSON.parse(s.getItem(K.boards)) || []; active = +s.getItem(K.active) || 0; } catch { raw = []; }
+  // each board on its own, so one damaged entry is dropped and the rest still load
+  boards = (Array.isArray(raw) ? raw : []).map(b => { try { return sanitizeBoard(b); } catch { return null; } }).filter(Boolean);
   return { boards, active: boards[active] ? active : 0 };
 }
 export function saveBoards(boards, active) {

@@ -1,7 +1,7 @@
 // My boards (0.7.1): blueprints, copies of another size, and pasted Vestaboard messages.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeBlueprint, sanitizeBoard } from '../src/store.js';
+import { sanitizeBlueprint, sanitizeBoard, loadBoards, loadBlueprints } from '../src/store.js';
 import { fixedCut, vestaboard, blank } from '../src/content.js';
 
 test('a blueprint is one board with its size and theme, and no times', () => {
@@ -38,4 +38,19 @@ test('a pasted Vestaboard message becomes one centred line per row', () => {
   const p = vestaboard('back at 14:00\n\nkeys in the\nblue bowl\n\n', 6, 22);
   assert.deepEqual(p.zones[0].o.lines, ['BACK AT 14:00', '', 'KEYS IN THE', 'BLUE BOWL']);
   assert.equal(vestaboard('a\nb\nc\nd', 3, 15).zones[0].o.lines.length, 3);
+});
+
+test('one damaged entry is dropped on its own, and the rest still load', () => {
+  assert.equal(sanitizeBoard({ id: 'x', pages: [null] }).pages.length, 1);   // a null page no longer throws
+  const store = { sf_boards: JSON.stringify([{ id: 'bad', pages: [null, { id: 'p', layout: 'full', zones: [] }] }, { id: 'good', name: 'Good', pages: [{ id: 'q', layout: 'full', zones: [] }] }, 7]),
+    sf_myboards: JSON.stringify([null, { id: 'm1', name: 'Kept', page: { layout: 'full', zones: [] } }]) };
+  globalThis.window = { localStorage: { getItem: k => store[k] ?? null, setItem: () => {} } };
+  try {
+    assert.deepEqual(loadBoards().boards.map(b => b.id), ['bad', 'good']);
+    assert.deepEqual(loadBlueprints().map(b => b.name), ['Kept']);
+  } finally { delete globalThis.window; }
+});
+
+test('where a board came from keeps the board it names', () => {
+  assert.deepEqual(sanitizeBlueprint({ page: {}, from: { kind: 'storyboard', id: 'b1', board: 'p2' } }).from, { kind: 'storyboard', id: 'b1', board: 'p2' });
 });
