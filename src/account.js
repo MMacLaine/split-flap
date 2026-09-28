@@ -8,6 +8,8 @@ import { merge, adopt, markDirty, markDeleted, pushed, refused, unrefuse, unsync
 import { newId } from './content.js';
 import { getFlag, setFlag } from './store.js';
 
+const MY_KEY = 'sf_sync_my';   // My boards' sync state (0.7.1), apart from the storyboards'
+
 const BACKUP = 'sf_guest_backup';   // the guest boards as they were at the first sign-in, until the server has them
 
 const API = '/split-flap/api';
@@ -16,6 +18,74 @@ const KEY = 'sf_sync';
 export function loadState() {
   try { const s = JSON.parse(getFlag(KEY)); if (s && typeof s === 'object' && s.boards) return Object.assign({ declined: [], offer: [], confirming: [] }, s); } catch { /* bad or missing */ }
   return Object.assign(emptyState(), { declined: [], offer: [], confirming: [] });
+}
+
+export function loadMyState() {
+  try { const s = JSON.parse(getFlag(MY_KEY)); if (s && typeof s === 'object' && s.boards) return Object.assign({ declined: [], offer: [], confirming: [] }, s); } catch { /* bad or missing */ }
+  return Object.assign(emptyState(), { declined: [], offer: [], confirming: [] });
+}
+
+// My boards (0.7.1): blueprints sync by the same rules as storyboards (sync.js), with their
+// own state and their own place on the server. Kept apart so the storyboards' well-tested
+// path is untouched; the account drives both.
+class MySync {
+  constructor(acc) { this.acc = acc; this.state = loadMyState(); this.seen = new Map(); }
+  get app() { return this.acc.app; }
+  save() { setFlag(MY_KEY, JSON.stringify(this.state)); }
+  carry(st) { return Object.assign(st, { declined: this.state.declined || [], offer: this.state.offer || [], confirming: this.state.confirming || [] }); }
+  remember() { this.seen = new Map(this.app.blueprints.map(b => [b.id, JSON.stringify(b)])); }
+  // Returns 'lost' if the session ran out, 'retry' after a 429, else nothing.
+  async sync(user) {
+    const stray = strays(this.app.blueprints, this.state, (this.state.offer || []).concat(this.state.declined || []));
+    if (stray.length) this.state = adopt(this.state, stray, user);
+    const res = await this.acc.api('GET', '/blueprints');
+    if (res.status === 401) return 'lost';
+    if (res.status !== 200) throw new Error(res.status);
+    const m = merge(this.app.blueprints, res.data.blueprints, this.state, user, { suffix: this.app.t.otherDevice, newId: () => newId('m') });
+    this.state = this.carry(m.state);
+    this.state.offer = [...new Set((this.state.offer || []).concat(m.guests))];
+    this.app.replaceBlueprints(m.boards);
+    this.remember();
+    return this.push(m.push, user);
+  }
+  async push(ids, user) {
+    for (const id of ids) {
+      const e = this.state.boards[id]; if (!e || e.owner !== user) continue;
+      const bp = this.app.blueprints.find(x => x.id === id);
+      const res = e.deleted || !bp
+        ? await this.acc.api('DELETE', '/blueprints/' + encodeURIComponent(id), { baseRev: e.rev })
+        : await this.acc.api('PUT', '/blueprints/' + encodeURIComponent(id), { board: bp, baseRev: e.rev });
+      if (res.status === 200) {
+        this.state = pushed(this.state, id, res.data.rev);
+        if (e.deleted && Object.values(this.state.boards).some(x => x.error === 'too_many_blueprints')) { this.state = unrefuse(this.state, 'too_many_blueprints'); this.acc.again = true; }
+        continue;
+      }
+      if (res.status === 409) { this.acc.again = true; continue; }
+      if (res.status === 413 || res.status === 400) { this.state = refused(this.state, id, (res.data && res.data.error) || 'bad_board'); continue; }
+      if (res.status === 401) return 'lost';
+      if (res.status === 429) return 'retry';
+      throw new Error(res.status);
+    }
+  }
+  changed(owner, signedIn) {
+    if (!owner || this.replacing) return false;
+    let st = this.state;
+    for (const b of this.app.blueprints) {
+      const known = st.boards[b.id];
+      if (!known) {
+        if (!signedIn || (st.offer || []).includes(b.id) || (st.declined || []).includes(b.id)) continue;
+        st = adopt(st, [b.id], owner);
+      } else if (known.owner === owner && this.seen.get(b.id) !== JSON.stringify(b)) st = markDirty(st, b.id);
+    }
+    this.state = st; this.remember(); this.save();
+    return true;
+  }
+  deleted(id, owner) {
+    const e = this.state.boards[id];
+    if (!owner || !e || e.owner !== owner || e.deleted) return;
+    this.state = markDeleted(this.state, id); this.save();
+  }
+  dirty(user) { return Object.values(this.state.boards).some(e => e.dirty && !e.error && e.owner === user); }
 }
 
 export class Account {
@@ -28,6 +98,7 @@ export class Account {
     this.state = loadState();
     this.seen = new Map();    // board id to its JSON when last known in step
     this.timer = 0;
+    this.my = new MySync(this);
   }
   saveState() { setFlag(KEY, JSON.stringify(this.state)); }
   // The first sign-in offer is kept in sf_sync (0.6.3), so closing the tab while it shows
@@ -61,11 +132,21 @@ export class Account {
       const sw = switchUser(b, this.state, this.user.id);
       this.app.replaceBoards(sw.boards); this.state = Object.assign(sw.state, { declined: [] });
     }
+    if (this.my.state.user && this.my.state.user !== this.user.id) {
+      const sw = switchUser(this.app.blueprints, this.my.state, this.user.id);
+      this.app.replaceBlueprints(sw.boards); this.my.state = Object.assign(sw.state, { declined: [], offer: [], confirming: [] });
+    }
+    if (!this.my.state.user) {
+      this.my.state.user = this.user.id;
+      this.my.state.offer = offerable(this.app.blueprints, this.my.state).map(x => x.id).filter(id => !(this.my.state.declined || []).includes(id));
+    }
+    this.my.save();
     if (!this.state.user) {
       this.state.user = this.user.id;
       this.offer = offerable(this.app.boards, this.state).map(x => x.id).filter(id => !this.state.declined.includes(id));
       // a safety copy of the guest boards before anything is merged or sent
-      if (this.offer.length) setFlag(BACKUP, JSON.stringify({ at: Date.now(), boards: this.app.boards.filter(b => this.offer.includes(b.id)) }));
+      if (this.offer.length || (this.my.state.offer || []).length) setFlag(BACKUP, JSON.stringify({ at: Date.now(), boards: this.app.boards.filter(b => this.offer.includes(b.id)),
+        blueprints: this.app.blueprints.filter(b => (this.my.state.offer || []).includes(b.id)) }));
     }
     this.saveState();
     addEventListener('online', () => this.sync());
@@ -101,12 +182,16 @@ export class Account {
       this.remember();
       await this.push(m.push);
       if (!this.user) return;                                  // signed out part way
+      const my = await this.my.sync(this.user.id);
+      if (my === 'lost') { this.lostSession(); return; }
+      if (my === 'retry') { clearTimeout(this.retry); this.retry = setTimeout(() => this.sync(), 60000); }
+      if (this.again) { this.again = false; setTimeout(() => this.sync(), 50); }
       this.confirmAdopted();
-      this.status = Object.values(this.state.boards).some(e => e.dirty && !e.error && e.owner === this.user.id) ? 'waiting' : 'idle';
+      this.status = Object.values(this.state.boards).some(e => e.dirty && !e.error && e.owner === this.user.id) || this.my.dirty(this.user.id) ? 'waiting' : 'idle';
     } catch {
       if (this.user) this.status = 'failed';
     } finally {
-      this.running = false; this.saveState(); this.paint();
+      this.running = false; this.saveState(); this.my.save(); this.paint();
     }
   }
 
@@ -131,7 +216,6 @@ export class Account {
       if (res.status === 429) { clearTimeout(this.retry); this.retry = setTimeout(() => this.sync(), 60000); return; }   // too many writes: try again in a minute
       throw new Error(res.status);
     }
-    if (this.again) { this.again = false; this.running = false; setTimeout(() => this.sync(), 50); }
   }
 
   // What each board looked like when last in step, so changed() can tell what moved.
@@ -165,6 +249,14 @@ export class Account {
     this.status = 'waiting'; this.paint();
     clearTimeout(this.timer); this.timer = setTimeout(() => this.sync(), 2000);
   }
+  // After every change to My boards: the same rules as changed(), for blueprints.
+  changedMy() {
+    const owner = this.user ? this.user.id : this.state.user;
+    if (!this.my.changed(owner, !!this.user) || !this.user) { this.paint(); return; }
+    this.status = 'waiting'; this.paint();
+    clearTimeout(this.timer); this.timer = setTimeout(() => this.sync(), 2000);
+  }
+  deletedMy(id) { this.my.deleted(id, this.user ? this.user.id : this.state.user); }
   // A person deleted this board, in this page. The one way a delete reaches the account.
   deleted(id) {
     const owner = this.user ? this.user.id : this.state.user, e = this.state.boards[id];
@@ -182,24 +274,31 @@ export class Account {
   // The first sign-in offer, board by board: every board ticked to start with. Keep takes
   // the ticked ones into the account and leaves the rest here; Leave here leaves them all.
   toggleOffer(id) { if (this.unticked.has(id)) this.unticked.delete(id); else this.unticked.add(id); this.app.render(); }
+  offerMy() { return this.my.state.offer || []; }
+  offerCount() { return this.offer.length + this.offerMy().length; }
   answerOffer(keep) {
-    const take = keep ? this.offer.filter(id => !this.unticked.has(id)) : [];
-    const leave = this.offer.filter(id => !take.includes(id));
-    if (take.length) this.state = adopt(this.state, take, this.user.id);
-    this.state.declined = [...new Set((this.state.declined || []).concat(leave))];
-    this.state.confirming = [...new Set((this.state.confirming || []).concat(take))];
-    this.offer = []; this.unticked = new Set(); this.saveState(); this.app.render();
-    if (take.length) this.sync(); else this.confirmAdopted();
+    const one = (st, list) => {
+      const take = keep ? list.filter(id => !this.unticked.has(id)) : [], leave = list.filter(id => !take.includes(id));
+      if (take.length) st = adopt(st, take, this.user.id);
+      st.declined = [...new Set((st.declined || []).concat(leave))];
+      st.confirming = [...new Set((st.confirming || []).concat(take))];
+      st.offer = [];
+      return [st, take.length];
+    };
+    const [a, na] = one(this.state, this.offer), [b, nb] = one(this.my.state, this.offerMy());
+    this.state = a; this.my.state = b;
+    this.unticked = new Set(); this.saveState(); this.my.save(); this.app.render();
+    if (na + nb) this.sync(); else this.confirmAdopted();
   }
   // Once the server has every board taken from the offer: say how many, from the server's
   // own answers, and drop the safety copy. A refused board keeps the copy in place.
   confirmAdopted() {
-    if (this.offer.length) return;
-    const { done, open } = settled(this.state, this.state.confirming || []);
-    if (open.length) return;
-    this.state.confirming = []; this.saveState();
+    if (this.offerCount()) return;
+    const a = settled(this.state, this.state.confirming || []), b = settled(this.my.state, this.my.state.confirming || []);
+    if (a.open.length || b.open.length) return;
+    this.state.confirming = []; this.my.state.confirming = []; this.saveState(); this.my.save();
     try { localStorage.removeItem(BACKUP); } catch { /* storage blocked */ }
-    if (done.length) this.app.flash(this.app.t.offerDone(done.length));
+    if (a.done.length || b.done.length) this.app.flash(this.app.t.offerDone(a.done.length, b.done.length));
   }
 
   // Sign in with Google: to Google and back to the page this started from.
@@ -224,6 +323,8 @@ export class Account {
     const r = signOut(this.app.boards, this.state);
     this.app.replaceBoards(r.boards.length ? r.boards : null);
     this.state = Object.assign(r.state, { declined: [] }); this.saveState();
+    const rm = signOut(this.app.blueprints, this.my.state);
+    this.app.replaceBlueprints(rm.boards); this.my.state = Object.assign(rm.state, { declined: [], offer: [], confirming: [] }); this.my.save();
     this.user = null; this.offer = []; this.status = 'idle'; this.app.render();
   }
 
