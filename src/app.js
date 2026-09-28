@@ -10,12 +10,12 @@ import { TEMPLATES, fromTemplate } from './templates.js';
 import { RAINBOW } from './pixels.js';
 import { nextPage, inQuiet } from './schedule.js';
 import { STR } from './strings.js';
-import { loadBoards, saveBoards, saveActiveOnly, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard } from './store.js';
+import { loadBoards, saveBoards, saveActiveOnly, loadBlueprints, saveBlueprints, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard } from './store.js';
 import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
-import { Account, loadState } from './account.js';
+import { Account, loadState, loadMyState } from './account.js';
 import { parseRoute } from './route.js';
 import { nowShowing, playlistPanel } from './week.js';
 import { h, clone } from './dom.js';
@@ -77,6 +77,7 @@ export class App {
     this.firstRun = !started && (!boards.length || (boards.length === 1 && boards[0].id === fresh));
     this.freshId = this.firstRun ? this.boards[0].id : null;
     if (!boards.length) { saveBoards(this.boards, 0); setFlag('sf_fresh', this.boards[0].id); setFlag('sf_words_070', '1'); }
+    this.blueprints = loadBlueprints();   // My boards (0.7.1)
     this.editor = new Editor(this);
     this.account = new Account(this);
     // ?template=home (the SL map links here): open that template's board, creating it
@@ -133,6 +134,10 @@ export class App {
     return this.boards.length >= 2 || (+getFlag('sf_edit_ms') || 0) >= 180000;
   }
   dismissPrompt() { setFlag('sf_signin_prompt', 'done'); this.renderOverlay(); }
+  // My boards (0.7.1). Saved and synced like storyboards, as their own list.
+  saveMy() { saveBlueprints(this.blueprints); if (this.account) { this.account.changedMy(); if (!this.account.state.user) this.keepStorage(); } }
+  replaceBlueprints(list) { this.account.my.replacing = true; this.blueprints = list || []; saveBlueprints(this.blueprints); this.account.my.replacing = false; }
+  deleteBlueprint(id) { const i = this.blueprints.findIndex(x => x.id === id); if (i < 0) return; this.blueprints.splice(i, 1); this.account.deletedMy(id); this.saveMy(); this.render(); }
   // Another tab saved (0.6.4). Its list and its sync state are newer than this tab's, so
   // they are taken as they are, before this tab's next save could write an older list
   // over them. Nothing is saved here, so the tabs never echo each other.
@@ -313,6 +318,7 @@ export class App {
     addEventListener('storage', e => {
       if (e.key === 'slmap_home' && this.readHome()) this.refresh();
       if (e.key === 'sf_boards' || e.key === 'sf_sync') this.fromOtherTab();
+      if (e.key === 'sf_myboards' || e.key === 'sf_sync_my') { this.blueprints = loadBlueprints(); this.account.my.state = loadMyState(); this.account.my.remember(); this.render(); }
     });
     addEventListener('hashchange', () => { if (location.hash === '#log') return this.openLog(); if (parseRoute(location.hash)) return; this.openLink().then(() => this.refresh()); });
     // A click anywhere else closes an open more menu.
