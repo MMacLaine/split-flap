@@ -284,7 +284,9 @@ export class Editor {
       h('p', { class: 'sf-note big' }, t.sbIntro),
       h('div', { class: 'sf-sb-list' }, cards),
       h('div', { class: 'sf-row' }, h('button', { class: 'sf-add', 'data-k': 'new-sb', disabled: app.boards.length >= 50, onclick: () => this.go({ sec: 'ex', lv: 'list' }) }, '+ ' + t.newStoryboard),
-        h('span', { class: 'sf-count' }, `${app.boards.length} / 50`)));
+        h('span', { class: 'sf-count' }, `${app.boards.length} / 50`)),
+      // the version line, as the page list had before 0.7: quiet, and one tap to the log
+      h('button', { class: 'sf-version', 'data-k': 'version-line', onclick: () => this.go({ sec: 'acc', lv: 'log' }) }, `v${VERSION}`, h('span', { 'aria-hidden': 'true' }, ' · '), t.versionLog));
   }
   sbVerbs(i) {
     const app = this.app;
