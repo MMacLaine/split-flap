@@ -524,3 +524,12 @@ html[data-chrome="light"] .sf-block.alone { background: oklch(0.8 0.1 var(--hue)
 .sf-nowline { position: absolute; left: 16px; top: 14px; z-index: 4; display: flex; gap: 10px; align-items: baseline; font-size: 12px; color: var(--pale); transition: opacity 420ms ease-in; pointer-events: none; }
 .sf-nowline:not(.on) { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .sf-more-pop, .sf-card { animation-duration: 1ms; } }
+
+/* 0.7.1: My boards and the add flow */
+.sf-sb-open.row:has(canvas) { grid-template-columns: 112px minmax(0,1fr); }
+.sf-sb-open.row.dim { opacity: 0.55; }
+.sf-sb-open.row.on { border-color: var(--accent-line); background: var(--accent-soft); }
+.sf-card.static { position: static; box-shadow: none; animation: none; background: var(--bg-2); border: 1px solid var(--accent-line); }
+.sf-vb { min-height: 132px; padding: 10px 12px; font-family: var(--mono); font-size: 14px; text-transform: uppercase; resize: vertical; }
+.sf-offer-list .sf-eyebrow { margin-top: 6px; }
+.sf-sb-list .sf-field { gap: 6px; }

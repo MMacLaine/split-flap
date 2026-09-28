@@ -8,7 +8,8 @@
   "scripts": {
     "test": "TZ=Europe/Stockholm node --test test/*.test.mjs",
     "serve": "node _dev/serve.mjs",
-    "e2e": "node test/e2e/two-browsers.mjs && node test/e2e/navigation.mjs",
+    "e2e": "node test/e2e/two-browsers.mjs && node test/e2e/navigation.mjs && node test/e2e/myboards.mjs",
+    "e2e:my": "node test/e2e/myboards.mjs",
     "e2e:nav": "node test/e2e/navigation.mjs"
   }
 }

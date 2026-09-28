@@ -5,7 +5,7 @@ import { parseRoute, routeHash, parentRoute } from '../src/route.js';
 
 test('every level has an address that reads back as the same level', () => {
   for (const h of ['#/storyboards', '#/storyboards/b-1x/week', '#/storyboards/b-1x/boards', '#/storyboards/b-1x/display', '#/storyboards/b-1x/boards/p9',
-    '#/explore', '#/explore/cafe', '#/account', '#/account/help', '#/account/log']) assert.equal(routeHash(parseRoute(h)), h, h);
+    '#/my-boards', '#/my-boards/m1x', '#/explore', '#/explore/cafe', '#/account', '#/account/help', '#/account/log']) assert.equal(routeHash(parseRoute(h)), h, h);
 });
 
 test('board links and anything else are not editor addresses', () => {
@@ -19,7 +19,8 @@ test('Back goes up one level, and a section top has no Back', () => {
   assert.equal(up('#/storyboards/b1/boards/p2'), '#/storyboards/b1/boards');
   assert.equal(up('#/storyboards/b1/week'), '#/storyboards');
   assert.equal(up('#/explore/cafe'), '#/explore');
+  assert.equal(up('#/my-boards/m1'), '#/my-boards');
   assert.equal(up('#/account/log'), '#/account');
-  for (const h of ['#/storyboards', '#/explore', '#/account']) assert.equal(parentRoute(parseRoute(h)), null, h);
+  for (const h of ['#/storyboards', '#/my-boards', '#/explore', '#/account']) assert.equal(parentRoute(parseRoute(h)), null, h);
   assert.equal(routeHash(parentRoute(Object.assign(parseRoute('#/storyboards/b1/boards/p2'), { from: 'week' }))), '#/storyboards/b1/week');   // back to the week it was opened from
 });

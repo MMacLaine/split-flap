@@ -7,7 +7,10 @@ import { h } from './dom.js';
 import { pageWins, blocksFor, dayPlaylist, comingDates, shiftWin, toMin } from './schedule.js';
 
 const HUES = [250, 190, 145, 35, 300, 0, 85, 110];
-export const hueOf = (b, i) => HUES[i % HUES.length];
+// A board's colour: its own hue (0.7.1), or for boards from before, the colour of its place.
+export const hueOf = (b, i) => { const p = b.pages && b.pages[i]; return p && Number.isInteger(p.hue) ? p.hue : HUES[i % HUES.length]; };
+// The first colour no board in the storyboard has yet, for a board being added.
+export function nextHue(b) { const used = new Set((b.pages || []).map((p, i) => hueOf(b, i))); return HUES.find(x => !used.has(x)) ?? HUES[(b.pages || []).length % HUES.length]; }
 const SNAP = 15, DAY = 1440;
 const hm = m => { m = ((Math.round(m) % DAY) + DAY) % DAY; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 const snap = m => Math.round(m / SNAP) * SNAP;
