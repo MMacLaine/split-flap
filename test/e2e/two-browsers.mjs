@@ -108,7 +108,7 @@ try {
   check('the unticked board stays here', (await names(C)).includes('Guest leave'));
   check('the safety copy is gone once the server has them', (await C.ev(`String(localStorage.getItem('sf_guest_backup'))`)) === 'null');
   const said = await C.ev(`splitFlap.flashes.join(' / ')`);
-  check('the count shown matches the server', said === `${cServer.length} boards are now in your account.`, said);
+  check('the count shown matches the server', said === `${cServer.length} storyboards are now in your account.`, said);
 
   // 0.6.4: two tabs of one guest browser. A board made in one tab must survive an edit in
   // an older tab that was left open.
