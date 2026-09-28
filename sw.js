@@ -33,6 +33,10 @@ self.addEventListener('fetch', e => {
       const res = req.mode === 'navigate'
         ? await fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
         : await fetch(req, { cache: 'no-cache' });
+      // A page load that the server redirected (/split-flap/ to /split-flap, say) must be
+      // answered as a redirect: a followed redirect handed back as the page is refused by
+      // the browser, which then shows its own error page (0.7.3).
+      if (req.mode === 'navigate' && res.redirected) return Response.redirect(res.url, 302);
       if (res.ok) cache.put(req, res.clone());
       return res;
     } catch {

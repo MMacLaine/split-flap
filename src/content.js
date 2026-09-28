@@ -496,7 +496,12 @@ function weatherLines(o, city, d, z, W, lang, w) {
   }
   // now: the detail view
   const lines = [city, [weatherChip(d.code), ' ', ...`${deg(d.t)} ${word}`]];
-  if (d.feels != null && z.h >= 4) lines.push(o.wind === false ? `${w.feels} ${deg(d.feels)}` : `${w.feels} ${deg(d.feels)}  ${w.wind} ${Math.round(d.wind)} M/S`);
+  if (d.feels != null && z.h >= 4) {
+    // "FEELS 9°  WIND 4 M/S" is a flap too long for 6 x 22 once the margins are off: close
+    // the gap first, then drop the unit, never cut it in half
+    const a = `${w.feels} ${deg(d.feels)}`, b = `${w.wind} ${Math.round(d.wind)}`;
+    lines.push(o.wind === false ? a : [`${a}  ${b} M/S`, `${a} ${b} M/S`, `${a}  ${b}`, `${a} ${b}`].find(s => s.length <= W) || a);
+  }
   if (z.h >= 5) lines.push(today.pp != null ? `${w.rain} ${today.pp}%  ${(today.sum || 0).toFixed(1)} MM` : w.dry);
   if (z.h >= 6 && today.sunrise) lines.push(`${w.sun} ${today.sunrise.slice(11, 16)} / ${today.sunset.slice(11, 16)}`);
   if (z.h < 4) lines.length = Math.min(lines.length, z.h);
@@ -515,12 +520,19 @@ export function compose(page, R, C, now, lang, live) {
     // Pixel glyphs are 5 flaps tall; in a shorter zone the big channels print normally.
     if (DRAWN.has(zd.ch) && (zd.ch === 'art' || z.h >= 5)) { drawChannel(g, zd.ch, o, z, now); return; }
     const ch = zd.ch === 'bigclock' ? 'clock' : zd.ch === 'bigtext' ? 'message' : zd.ch;
-    const res = channelLines(ch, o, z, now, lang, live);
+    // a one-row zone (the ticker) asks the channel for a few rows' worth, then pages through them
+    const res = channelLines(ch, o, z.h === 1 ? Object.assign({}, z, { h: 4 }) : z, now, lang, live);
     if (res.cells) { for (let r = 0; r < z.h; r++) for (let c = 0; c < z.w; c++) g[z.r + r][z.c + c] = res.cells[r][c]; return; }
     if (res.exact != null) { put(g, z.r, z.c + (z.w > 8 ? 1 : 0), z.w > 8 ? z.w - 2 : z.w, res.exact, 'left'); return; }
-    if (z.h === 1) {  // ticker rows page through word-wrapped segments; flaps cannot scroll smoothly
-      const flat = res.lines.map(l => Array.isArray(l) ? l.map(c => isChip(c) ? ' ' : c).join('').trim() : l);
-      const segs = wrap(flat.filter(Boolean).join('   '), z.w);
+    if (z.h === 1) {  // ticker rows page through segments; flaps cannot scroll smoothly
+      // Lines are packed whole, so an item keeps its price and a label its value; only a line
+      // wider than the row is wrapped (0.7.3).
+      const flat = res.lines.map(l => (Array.isArray(l) ? l.map(c => isChip(c) ? ' ' : c).join('') : l).replace(/\s{2,}/g, ' ').trim()).filter(Boolean);
+      const segs = []; let cur = '';
+      for (const l of flat) for (const part of (l.length > z.w ? wrap(l, z.w) : [l])) {
+        if (!cur) cur = part; else if (cur.length + 3 + part.length <= z.w) cur += '   ' + part; else { segs.push(cur); cur = part; }
+      }
+      if (cur) segs.push(cur);
       put(g, z.r, z.c, z.w, segs[Math.floor(now / 3500) % Math.max(1, segs.length)] || '', 'center'); return;
     }
     block(g, z, res.lines, res.align);
