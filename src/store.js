@@ -10,7 +10,7 @@ import { cellChar, CHIP_KEYS } from './charset.js';
 import { PATTERNS } from './pixels.js';
 import { PROFILE_IDS } from './sound.js';
 
-const K = { boards: 'sf_boards', active: 'sf_active' };
+const K = { boards: 'sf_boards', active: 'sf_active', my: 'sf_myboards' };
 const SIZES = ['6x22', '3x15', 'fill', 'custom'];
 const THEMES = ['black', 'white', 'solari'];
 const SPEEDS = ['fast', 'gentle', 'authentic'];
@@ -111,18 +111,36 @@ function sanitizeWins(p) {
 // only dated windows shows at any time on such a screen until it reloads.
 const legacyWin = wins => { const w = wins.find(x => !x.date); return w ? { on: true, from: w.from, to: w.to, days: w.days } : null; };
 
+// Where a copy came from (0.7.1): a template, a blueprint in My boards, a storyboard,
+// or later the community hub. Nothing reads it yet; it is kept for credit and for an
+// "update from my boards" later.
+const FROM_KINDS = ['template', 'blueprint', 'storyboard', 'community'];
+const origin = f => f && typeof f === 'object' && FROM_KINDS.includes(f.kind) && str(f.id, 64) ? { from: { kind: f.kind, id: str(f.id, 64) } } : {};
+const hueOf = h => Number.isInteger(h) && h >= 0 && h < 360 ? { hue: h } : {};
+// One board: a layout, its zones, how long it shows, its transition, and (in a storyboard)
+// its times. A blueprint's board has no times.
+function sanitizePage(p, withTimes = true) {
+  const layout = pick(p && p.layout, LAYOUTS, 'full'), need = layout === 'full' ? 1 : 2;
+  const zones = (Array.isArray(p && p.zones) ? p.zones : []).slice(0, need).map(sanitizeZone);
+  while (zones.length < need) zones.push({ ch: 'message', o: {} });
+  const base = { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10) };
+  const extra = { ...(TRANSITIONS.includes(p && p.tr) ? { tr: p.tr } : {}), ...hueOf(p && p.hue), ...origin(p && p.from) };
+  if (!withTimes) return Object.assign(base, extra, { zones });
+  const wins = sanitizeWins(p);
+  return Object.assign(base, { wins, win: legacyWin(wins) }, p.alone === true && wins.length ? { alone: true } : {}, extra, { zones });
+}
+// A blueprint in My boards (0.7.1): one board with the size and theme it was made at.
+export function sanitizeBlueprint(x) {
+  if (!x || typeof x !== 'object' || !x.page || typeof x.page !== 'object') return null;
+  return { id: str(x.id, 40) || newId('m'), name: str(x.name, 80) || str(x.page.name, 80) || 'Board',
+    rows: int(x.rows, 1, 24, 6), cols: int(x.cols, 4, 60, 22), theme: pick(x.theme, THEMES, 'black'),
+    ...origin(x.from), page: sanitizePage(x.page, false) };
+}
 export function sanitizeBoard(b) {
   if (!b || typeof b !== 'object' || !Array.isArray(b.pages)) return null;
   const d = defaultBoard();
   const q = (b.quiet && typeof b.quiet === 'object') ? b.quiet : {};
-  const pages = b.pages.slice(0, 50).map(p => {
-    const layout = pick(p && p.layout, LAYOUTS, 'full'), need = layout === 'full' ? 1 : 2;
-    const zones = (Array.isArray(p && p.zones) ? p.zones : []).slice(0, need).map(sanitizeZone);
-    while (zones.length < need) zones.push({ ch: 'message', o: {} });
-    const wins = sanitizeWins(p);
-    return { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10), wins, win: legacyWin(wins),
-      ...(p.alone === true && wins.length ? { alone: true } : {}), ...(TRANSITIONS.includes(p.tr) ? { tr: p.tr } : {}), zones };
-  });
+  const pages = b.pages.slice(0, 50).map(p => sanitizePage(p));
   if (!pages.length) return null;
   return {
     id: str(b.id, 40) || newId('b'), name: str(b.name, 80) || d.name,
@@ -140,6 +158,10 @@ export function sanitizeBoard(b) {
 // --- localStorage ---
 function ls() { try { return window.localStorage; } catch { return null; } }
 
+export function loadBlueprints() {
+  try { return (JSON.parse(ls().getItem(K.my)) || []).map(sanitizeBlueprint).filter(Boolean); } catch { return []; }
+}
+export function saveBlueprints(list) { try { ls().setItem(K.my, JSON.stringify(list)); } catch { /* storage full or blocked */ } }
 export function loadBoards() {
   const s = ls(); let boards = [], active = 0;
   try { boards = (JSON.parse(s.getItem(K.boards)) || []).map(sanitizeBoard).filter(Boolean); active = +s.getItem(K.active) || 0; } catch { boards = []; }
