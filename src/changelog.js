@@ -16,7 +16,8 @@ export const CHANGELOG = [
         'A copy stands on its own, so changing it, or the one in My boards, leaves the other as it was.',
         'My boards can import a board file or a pasted Vestaboard message, one line per row, shown on the big board as you type.',
         'Guests get My boards too, kept in the browser. With an account they sync like storyboards, and the first sign-in asks about them board by board, beside your storyboards.',
-        'Each board keeps its own colour in the week now, so moving boards around no longer changes their colours.'
+        'Each board keeps its own colour in the week now, so moving boards around no longer changes their colours.',
+        'The version line is back at the foot of Storyboards, one tap from this log. In 0.7.0 the log was only under Account.'
       ],
       sv: [
         'Spara i mina tavlor behåller en kopia av vilken tavla som helst, från en storyboard eller en mall. Det är den första knappen på varje tavla, och finns också i ⋯-menyn.',
@@ -24,7 +25,8 @@ export const CHANGELOG = [
         'En kopia står för sig själv, så om du ändrar den, eller den i Mina tavlor, är den andra som förut.',
         'Mina tavlor kan importera en tavelfil eller ett inklistrat Vestaboard-meddelande, en rad per rad, som visas på den stora tavlan medan du skriver.',
         'Gäster får också Mina tavlor, sparade i webbläsaren. Med ett konto synkas de som storyboards, och första inloggningen frågar om dem tavla för tavla, bredvid dina storyboards.',
-        'Varje tavla behåller nu sin egen färg i veckan, så att flytta runt tavlor ändrar inte längre deras färger.'
+        'Varje tavla behåller nu sin egen färg i veckan, så att flytta runt tavlor ändrar inte längre deras färger.',
+        'Versionsraden är tillbaka längst ned under Storyboards, ett tryck från den här loggen. I 0.7.0 fanns loggen bara under Konto.'
       ]
     }
   },

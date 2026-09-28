@@ -12,6 +12,7 @@ My boards, the fourth section, for boards you want to use again.
 - My boards can import a board file or a pasted Vestaboard message, one line per row, shown on the big board as you type.
 - Guests get My boards too, kept in the browser. With an account they sync like storyboards, and the first sign-in asks about them board by board, beside your storyboards.
 - Each board keeps its own colour in the week now, so moving boards around no longer changes their colours.
+- The version line is back at the foot of Storyboards, one tap from this log. In 0.7.0 the log was only under Account.
 
 ## v0.7.0 (2026-09-28): Structure
 
