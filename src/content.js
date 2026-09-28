@@ -567,3 +567,29 @@ export function defaultBoard(name, lang) {
     quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, pages: demoPages(lang)
   };
 }
+
+// ---------- My boards (0.7.1) ----------
+// A board copied to a storyboard of another size: channels are laid out again when drawn,
+// so only cells typed, painted or photographed on the grid are fixed. They are centred in
+// the new zone, and whatever falls outside is cut. Returns the zones for the new size and
+// how many non-blank cells were lost, so the add flow can warn only when it is above zero.
+export function fixedCut(page, fr, fc, tr, tc) {
+  const from = zonesFor(page.layout, fr, fc), to = zonesFor(page.layout, tr, tc);
+  let lost = 0;
+  const zones = page.zones.map((z, i) => {
+    if (!z || z.ch !== 'message' || !z.o || !Array.isArray(z.o.cells) || !from[i] || !to[i]) return JSON.parse(JSON.stringify(z));
+    const a = from[i], b = to[i], out = blank(b.h, b.w), oy = Math.floor((a.h - b.h) / 2), ox = Math.floor((a.w - b.w) / 2);
+    for (let r = 0; r < a.h; r++) for (let c = 0; c < a.w; c++) {
+      const ch = (z.o.cells[r] && z.o.cells[r][c]) || ' ', rr = r - oy, cc = c - ox;
+      if (rr >= 0 && rr < b.h && cc >= 0 && cc < b.w) out[rr][cc] = ch; else if (ch !== ' ') lost++;
+    }
+    return { ch: z.ch, o: Object.assign({}, z.o, { cells: out }) };
+  });
+  return { lost, zones };
+}
+// A Vestaboard message pasted as text: one line per row, in capitals, centred.
+export function vestaboard(text, rows, cols) {
+  const lines = String(text || '').toUpperCase().split(/\r?\n/).map(l => l.trim().slice(0, cols)).slice(0, rows);
+  while (lines.length && !lines[lines.length - 1]) lines.pop();
+  return { layout: 'full', dur: 10, zones: [{ ch: 'message', o: { lines } }] };
+}
