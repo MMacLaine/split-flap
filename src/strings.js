@@ -13,7 +13,7 @@ export const STR = {
     fromFile: 'A file', fromVestaboard: 'A Vestaboard message', importFileNote: 'A board file goes to My boards, and a storyboard file becomes a storyboard.', chooseFile: 'Choose a file',
     vbNote: (r, c) => `Paste the message, one line per row. It is centred, in capitals, at ${r} × ${c}, and shown on the big board as you type.`,
     offerTitle2: (n, m) => { const a = n === 1 ? '1 storyboard' : `${n} storyboards`, b = m === 1 ? '1 board in My boards' : `${m} boards in My boards`; return `There ${n + m === 1 ? 'is' : 'are'} ${n && m ? `${a} and ${b}` : n ? a : b} in this browser from before you signed in.`; },
-    offerKeepN: n => `Keep with my account (${n})`,
+    offerKeepN: n => `Keep with my account (${n})`, vbTooMany: n => `${n === 1 ? 'The last line does' : `The last ${n} lines do`} not fit and will be left out.`,
     // 0.7: the sections, the storyboard and the week. Words from GLOSSARY.md.
     secStoryboards: 'Storyboards', secExplore: 'Explore', secAccount: 'Account', secSettings: 'Settings', searchLater: 'Search, coming later',
     more: 'More', mOpen: 'Open', mRename: 'Rename', mDuplicate: 'Duplicate', mSave: 'Save to my boards', mCopyTo: 'Copy to', mShare: 'Share', mShareImage: 'Share as image', mExport: 'Export', mDelete: 'Delete', mDeleteAgain: 'Press again to delete',
@@ -127,7 +127,7 @@ export const STR = {
     fromFile: 'En fil', fromVestaboard: 'Ett Vestaboard-meddelande', importFileNote: 'En tavelfil hamnar i Mina tavlor, och en storyboardfil blir en storyboard.', chooseFile: 'Välj en fil',
     vbNote: (r, c) => `Klistra in meddelandet, en rad per rad. Det centreras, med versaler, i ${r} × ${c}, och visas på den stora tavlan medan du skriver.`,
     offerTitle2: (n, m) => { const a = n === 1 ? '1 storyboard' : `${n} storyboards`, b = m === 1 ? '1 tavla i Mina tavlor' : `${m} tavlor i Mina tavlor`; return `Det finns ${n && m ? `${a} och ${b}` : n ? a : b} i den här webbläsaren från innan du loggade in.`; },
-    offerKeepN: n => `Spara med mitt konto (${n})`,
+    offerKeepN: n => `Spara med mitt konto (${n})`, vbTooMany: n => `${n === 1 ? 'Sista raden får' : `De sista ${n} raderna får`} inte plats och tas bort.`,
     // 0.7: sektionerna, storyboarden och veckan. Orden kommer från GLOSSARY.md.
     secStoryboards: 'Storyboards', secExplore: 'Utforska', secAccount: 'Konto', secSettings: 'Inställningar', searchLater: 'Sök, kommer senare',
     more: 'Mer', mOpen: 'Öppna', mRename: 'Byt namn', mDuplicate: 'Duplicera', mSave: 'Spara i mina tavlor', mCopyTo: 'Kopiera till', mShare: 'Dela', mShareImage: 'Dela som bild', mExport: 'Exportera', mDelete: 'Radera', mDeleteAgain: 'Tryck igen för att radera',

@@ -13,12 +13,16 @@ export const HELP = {
     { h: 'Storyboards and boards', fig: 'board', p: [
       'A storyboard is what a screen plays. It holds boards in order, and says when each one shows.',
       'A board is one screen at a time: a layout of one or two zones, and in each zone one kind of content, like a message, the clock, departures or the weather.',
-      'The editor has its sections along the top: Storyboards, Explore for the templates, and Account.'
+      'The editor has its sections along the top: Storyboards, My boards, Explore for the templates, and Account.'
     ] },
     { h: 'Making a board', fig: 'layouts', p: [
       'Open a storyboard, go to Boards and press Add a board, then pick what it shows. The tiles are drawn at the shape of the zone, so what you see on a tile is what the screen will print.',
       'Pick a layout to split the board into two zones, then tap a zone to choose its content. The zone you are working on is outlined on the big board.',
       'Each kind of content has its options under it, and the less used ones are behind More options.'
+    ] },
+    { h: 'My boards', p: [
+      "Save to my boards keeps a copy of any board, from a storyboard or a template, to use again. Add it to any storyboard with + Add a board, and the copy is fitted to that storyboard's size. Only flaps typed or painted on the grid can be cut, and the app says how many before you add it.",
+      'A copy stands on its own, so changing it, or the one in My boards, leaves the other as it was. My boards can also import a board file or a pasted Vestaboard message.'
     ] },
     { h: 'Messages', fig: 'message', p: [
       'Messages are made straight on the grid, so you see where every letter lands. Type puts letters where you click, Paint drags colour flaps across the grid, and Photo turns a picture into colour flaps.',
@@ -48,12 +52,16 @@ export const HELP = {
     { h: 'Storyboards och tavlor', fig: 'board', p: [
       'En storyboard är det en skärm spelar. Den har tavlor i ordning, och säger när var och en visas.',
       'En tavla är en skärm i taget: en layout med en eller två zoner, och i varje zon en sorts innehåll, som ett meddelande, klockan, avgångar eller vädret.',
-      'Redigeraren har sina sektioner längst upp: Storyboards, Utforska för mallarna, och Konto.'
+      'Redigeraren har sina sektioner längst upp: Storyboards, Mina tavlor, Utforska för mallarna, och Konto.'
     ] },
     { h: 'Göra en tavla', fig: 'layouts', p: [
       'Öppna en storyboard, gå till Tavlor och tryck Lägg till en tavla, och välj sedan vad den visar. Rutorna ritas i zonens form, så det du ser på en ruta är det skärmen skriver ut.',
       'Välj en layout för att dela tavlan i två zoner, och tryck sedan på en zon för att välja dess innehåll. Zonen du arbetar med ramas in på den stora tavlan.',
       'Varje sorts innehåll har sina val under sig, och de som används mer sällan ligger under Fler val.'
+    ] },
+    { h: 'Mina tavlor', p: [
+      'Spara i mina tavlor behåller en kopia av vilken tavla som helst, från en storyboard eller en mall, att använda igen. Lägg till den i en storyboard med + Lägg till en tavla, så anpassas kopian till storyboardens storlek. Bara flappar som skrivits eller målats på rutnätet kan klippas bort, och appen säger hur många innan du lägger till den.',
+      'En kopia står för sig själv, så om du ändrar den, eller den i Mina tavlor, är den andra som förut. Mina tavlor kan också importera en tavelfil eller ett inklistrat Vestaboard-meddelande.'
     ] },
     { h: 'Meddelanden', fig: 'message', p: [
       'Meddelanden görs direkt på rutnätet, så du ser var varje bokstav hamnar. Skriv sätter bokstäver där du klickar, Måla drar färgblad över rutnätet, och Foto gör om en bild till färgblad.',
