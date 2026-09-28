@@ -16,13 +16,13 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 - **Live:** SL departures for up to six stops in Storstockholms Lokaltrafik, or the home station you starred on the [Stockholm SL map](https://maclaine.se/en/stockholm-sl-map). Weather from Open-Meteo, electricity spot prices by price area, exchange rates, On this day from Wikipedia, and Follow a URL, which prints lines from any JSON or text address that lets other sites read it.
 - **Pictures:** paint with the colour chips, turn a photo into chips in the browser, or run an animated pattern (Nordic flags, rain, waves, confetti).
 - **Templates:** ten to start from, including Home dashboard, Station board, Café, Office lobby, Letter clock and Everything at once, which fills the screen and rolls every flap the long way round.
-- **Layouts:** a page can be one zone or two (header and body, split, ticker row, or stacked halves for portrait screens), each showing a different channel.
-- **Playlist:** pages rotate on their own timers. A page can have several times, by days of the week or on a date once or every year, and Show alone gives a page its time to itself (the train times on weekday mornings). Each page can have its own transition. Quiet hours dim or blank the board overnight.
+- **Storyboards and boards:** a storyboard is what a screen plays, its boards in order and when each one shows. A board is one screen at a time, one zone or two (header and body, split, ticker row, or stacked halves for portrait screens), each showing a different channel. `GLOSSARY.md` has the words.
+- **The week:** a storyboard's main view. Boards take turns on their own timers, and a board can have several times, by days of the week or on a date once or every year, which you drag in the week or set on the board. Show alone gives a board its time to itself (the train times on weekday mornings). Today's playlist, beside the week, is what that adds up to. Quiet hours dim or blank the screen overnight.
 - **Three themes** (Vestaboard Black, Vestaboard White, Solari Amber), any grid from 1 × 4 to 24 × 60, and four transitions at three speeds, previewed on the board as you pick them. Authentic rolls every flap the whole way round.
 - **Four flap sounds** (Clack, Heavy, Soft, Tick), synthesised: a plastic tick for each flap and a ka-chunk when the last one lands.
-- **The editor.** Each kind of content is a tile drawn as a small board in the shape of the zone it fills, so you see it before you pick it. On a wide screen the pages stay beside the editor as thumbnails you can drag to reorder. On a phone it goes one step at a time with the board above.
+- **The editor.** Three sections along the top, Storyboards, Explore and Account, the same on a phone and a wide screen, and every level has its own address, so the browser's back button goes up one level. Each kind of content is a tile drawn as a small board in the shape of the zone it fills, so you see it before you pick it.
 - **Messages are made on the grid** in Type, Paint or Photo mode, with undo and redo. A message you change is kept under Earlier messages in this browser.
-- **Share by link or QR (Quick Response) code.** The link holds the whole board, compressed into the part of the URL after `#`, which browsers never send to a server. Save as image downloads the page as a PNG.
+- **Share by link or QR (Quick Response) code.** The link holds the whole storyboard, compressed into the part of the URL after `#`, which browsers never send to a server. Share as image downloads the board as a PNG.
 - **Made for walls:** kiosk mode (`?kiosk=1`), screen wake lock, a one pixel drift against burn-in, offline support, a small note when live data is getting old, and a reload in quiet hours when a new version is live. Every flap can roll once at start up and on the hour. `?bg=transparent` draws the board on nothing, for OBS.
 - **Stereo flaps:** each flap's sound is panned by its column.
 - English and Swedish. Å Ä Ö Æ Ø Ü É each have their own flap, and so does ♥.
@@ -35,7 +35,7 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 
 An account is optional. Without one, boards live in the browser that made them, as they always have. Sign in with Google and they are kept with the account too, and come back on any device you sign in on. The browser stays the working copy, so the board runs offline and a wall screen never waits on the server. A board changed in two places keeps both versions. Wall screens use board links and never sign in.
 
-The account stores the Google account id, the name, the email and the boards, in a Cloudflare D1 database in the EU. It keeps no IP addresses, browser details or Google tokens, and there are no analytics. Export my account and Delete account are in the editor. The full notice is [privacy.html](privacy.html), at [maclaine.se/en/split-flap/privacy](https://maclaine.se/en/split-flap/privacy).
+The account stores the Google account id, the name, the email and the storyboards, in a Cloudflare D1 database in the EU. It keeps no IP addresses, browser details or Google tokens, and there are no analytics. Export my account and Delete account are in the editor. The full notice is [privacy.html](privacy.html), at [maclaine.se/en/split-flap/privacy](https://maclaine.se/en/split-flap/privacy).
 
 The server is a Cloudflare Worker in [`worker/`](worker/), with its own dependencies and README. The app itself still has none.
 
@@ -76,7 +76,9 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `src/pixels.js` | The 3 × 5 pixel font and the animated colour patterns. |
 | `src/templates.js` | The ready-made boards. |
 | `src/sound.js` | The four synthesised flap sounds. |
-| `src/schedule.js` | Page timers, time windows by day or date, Show alone, quiet hours. |
+| `src/schedule.js` | Board timers, times by day or date, Show alone, quiet hours, and the week and Today's playlist from the same rule. |
+| `src/week.js` | The week view and Today's playlist. |
+| `src/route.js` | The editor's addresses after `#`, and Back as one level up. |
 | `src/live.js` | The fetchers (SL, Open-Meteo, electricity, exchange rates, Wikipedia, Follow a URL), station and city search. |
 | `src/store.js` | localStorage, board links, and the sanitizer every imported board goes through (the Worker uses it too). |
 | `src/account.js` | Signing in, and keeping this browser's boards in step with the account. |
@@ -84,12 +86,12 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `worker/` | The accounts API: a Cloudflare Worker with D1 and Better Auth. |
 | `privacy.html` | The privacy notice (the Swedish one is in `site/`). |
 | `src/app.js` | Control bar, share, kiosk mode, and the board state the editor works on. |
-| `src/editor.js` | The editor drawer: playlist, page, content picker, options, board settings, templates. |
+| `src/editor.js` | The editor drawer: the sections, storyboards, a board with its content, Explore, Account, and the more menu. |
 | `src/catalogue.js` | The picker's tiles, their defaults and their option fields. |
 | `src/composer.js` | Type, Paint and Photo on the grid, undo and redo, earlier messages. |
 | `src/photo.js` | A photo to colour chips, with dithering. |
 
-The visual design (tile anatomy, fold shading, themes, timing) came from a design pass documented in [`DESIGN-HANDOVER.md`](DESIGN-HANDOVER.md), with the prototype and spec sheet in [`design/`](design/). The editor came from a second pass, in [`DESIGN-HANDOVER-editor.md`](DESIGN-HANDOVER-editor.md) and [`design/editor/`](design/editor/). What might come next is in [`ROADMAP.md`](ROADMAP.md).
+The visual design (tile anatomy, fold shading, themes, timing) came from a design pass documented in [`DESIGN-HANDOVER.md`](DESIGN-HANDOVER.md), with the prototype and spec sheet in [`design/`](design/). The editor came from a second pass, in [`DESIGN-HANDOVER-editor.md`](DESIGN-HANDOVER-editor.md) and [`design/editor/`](design/editor/), and its structure from a third, in [`DESIGN-HANDOVER-0.7.md`](DESIGN-HANDOVER-0.7.md) and [`design/0.7/`](design/0.7/). What might come next is in [`ROADMAP.md`](ROADMAP.md).
 
 ## Data and credits
 

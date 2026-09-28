@@ -562,7 +562,7 @@ export function newId(prefix) { return prefix + Date.now().toString(36) + Math.r
 
 export function defaultBoard(name, lang) {
   return {
-    id: newId('b'), name: name || (lang === 'sv' ? 'Demotavla' : 'Demo board'),
+    id: newId('b'), name: name || 'Demo',
     size: '6x22', rows: 6, cols: 22, theme: 'black', transition: 'classic', speed: 'fast', sound: false,
     quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, pages: demoPages(lang)
   };
