@@ -16,6 +16,8 @@ import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
 import { Account, loadState } from './account.js';
+import { parseRoute } from './route.js';
+import { nowShowing, playlistPanel } from './week.js';
 import { h, clone } from './dom.js';
 import { VERSION, versionIn, shouldReload } from './changelog.js';
 
@@ -70,6 +72,7 @@ export class App {
     // A first visit opens the Start panel on the first Edit. Picking a template then
     // replaces the demo board made for this visit, as long as nothing on it was changed.
     this.firstRun = !boards.length && getFlag('sf_started') !== '1';
+    this.hadBoards = boards.length > 0; if (!this.hadBoards) setFlag('sf_words_070', '1');
     this.freshId = boards.length ? null : this.boards[0].id;
     this.editor = new Editor(this);
     this.account = new Account(this);
@@ -92,11 +95,12 @@ export class App {
     this.bind();
     this.openLink().then(() => {
       if (location.hash === '#log') this.openLog();
+      else if (parseRoute(location.hash) && !this.kioskStrict) { this.S.editing = true; this.dismissCue(false); this.editor.open(); }   // a reload lands where it was
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
       this.iv = setInterval(() => this.tick(), 500);
       // Accounts: only where the Worker answers, never on a wall screen.
-      if (!this.kioskStrict) this.account.init().then(() => { if (this.account.offer.length) { Object.assign(this.S, { editing: true }); this.editor.go('account'); this.refresh(); } });
+      if (!this.kioskStrict) this.account.init().then(() => { if (this.account.offer.length) { Object.assign(this.S, { editing: true }); this.editor.go({ sec: 'acc', lv: 'main' }); this.refresh(); } });
       // A wall screen can run for weeks, so it looks for a new release once an hour. A
       // reload that reached its version clears the note of it.
       if (getFlag('sf_reload_for') === VERSION) setFlag('sf_reload_for', '');
@@ -164,8 +168,8 @@ export class App {
   // The bar's account button: opens the Account panel, which explains guest or signed in.
   openAccount() {
     this.S.switcher = false;
-    if (!this.S.editing) this.toggleEdit();
-    this.editor.prevLv = 'playlist'; this.editor.go('account');
+    if (!this.S.editing) { this.S.editing = true; this.dismissCue(false); }
+    this.editor.go({ sec: 'acc', lv: 'main' });
   }
   // Rename the board in place: the playlist header turns into a text field.
   renameBoard() {
@@ -196,9 +200,12 @@ export class App {
   // The page showing (or being edited) may pick its own transition; else the board's.
   transitionNow() { const p = this.currentPage(); return (p && p.tr) || this.cur().transition; }
   quietMode() { const b = this.cur(); return !this.S.editing && inQuiet(b.quiet, Date.now()) ? b.quiet.mode : null; }
+  // The big board holds the board being edited; anywhere else in the editor it plays on.
+  holding() { return this.S.editing && this.editor.onBoard(); }
+  saveActive() { saveBoards(this.boards, this.active); }
   currentPage() {
     const b = this.cur();
-    if (this.S.editing) return b.pages[this.selIdx()];
+    if (this.holding()) return b.pages[this.selIdx()];
     return this.S.pageIdx >= 0 ? b.pages[this.S.pageIdx] : FALLBACK_PAGE;
   }
   grid() {
@@ -219,7 +226,7 @@ export class App {
 
   tick(force) {
     const b = this.cur(), now = Date.now();
-    if (!this.S.editing) {
+    if (!this.holding()) {
       const n = nextPage(b.pages, this.S.pageIdx, this.S.pageStart, now);
       this.S.pageIdx = n.idx; this.S.pageStart = n.start;
     }
@@ -238,14 +245,16 @@ export class App {
     this.wrap.style.opacity = this.quietMode() === 'dim' ? '0.22' : '1';
     const text = g.map(r => r.map(c => isChip(c) || isDim(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
     if (text !== this.lastAria) { this.lastAria = text; this.twin.textContent = text; }
-    const pageKey = [b.id, this.S.editing ? 'e' + this.selIdx() : this.S.pageIdx, this.S.lang].join(':');
+    const pageKey = [b.id, this.holding() ? 'e' + this.selIdx() : this.S.pageIdx, this.S.lang].join(':');
     if (pageKey !== this.lastPageKey) {
       this.lastPageKey = pageKey; this.stage.setAttribute('aria-label', this.stageLabel()); this.stage.setAttribute('aria-roledescription', this.t.stageRole);
       // Spoken only when a person caused the change: the first load, a board picked, the
       // editor closed, a page chosen in the editor. A playlist rotating by itself stays
       // silent, or it would talk every few seconds all day. R reads the board at any time.
-      if (this.sayNext !== false || this.S.editing) { this.sayNext = false; clearTimeout(this.sayT); this.sayT = setTimeout(() => this.announce(), 1200); }   // after live data has had a moment to arrive
+      if (this.sayNext !== false || this.holding()) { this.sayNext = false; clearTimeout(this.sayT); this.sayT = setTimeout(() => this.announce(), 1200); }   // after live data has had a moment to arrive
     }
+    const minute = Math.floor(now / 60000);
+    if (this.nowEl && minute !== this.nowMinute) { this.nowMinute = minute; this.nowEl.lastChild.textContent = nowShowing(b, now, this.t); }
     const stale = this.S.editing ? 0 : this.live.staleMinutes(this.currentPage());
     if (stale !== this.lastStale) { this.lastStale = stale; this.renderOverlay(); }
     if (force && this.S.editing) this.editor.composer.paintGrid();
@@ -302,7 +311,16 @@ export class App {
       if (e.key === 'slmap_home' && this.readHome()) this.refresh();
       if (e.key === 'sf_boards' || e.key === 'sf_sync') this.fromOtherTab();
     });
-    addEventListener('hashchange', () => { if (location.hash === '#log') return this.openLog(); this.openLink().then(() => this.refresh()); });
+    addEventListener('hashchange', () => { if (location.hash === '#log') return this.openLog(); if (parseRoute(location.hash)) return; this.openLink().then(() => this.refresh()); });
+    // A click anywhere else closes an open more menu.
+    addEventListener('click', e => { const E = this.editor.E; if (E.menu && !(e.target.closest && e.target.closest('.sf-more'))) { E.menu = null; E.confirm = null; this.render(); } });
+    // The browser's back and forward move through the editor's levels (0.7). Back past the
+    // first level closes the editor.
+    addEventListener('popstate', () => {
+      const r = parseRoute(location.hash);
+      if (r && !this.kioskStrict) { if (!this.S.editing) { this.S.editing = true; this.dismissCue(false); } this.editor.apply(r); }
+      else if (this.S.editing && !/^#b=/.test(location.hash)) this.toggleEdit(true);
+    });
     matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => this.chromeTheme());
     this.lock();
   }
@@ -343,14 +361,13 @@ export class App {
     history.replaceState(null, '', location.pathname + location.search);
     if (this.kioskStrict) return;
     Object.assign(this.S, { editing: true, share: false, switcher: false });
-    this.editor.prevLv = 'playlist';
     scrollTo(0, 0);
-    this.editor.go('log');
+    this.editor.go({ sec: 'acc', lv: 'log' });
     this.refresh();
   }
   // The board's name for screen readers: which board, which page of how many.
   stageLabel() {
-    const b = this.cur(), t = this.t, i = this.S.editing ? this.selIdx() : this.S.pageIdx, p = b.pages[i];
+    const b = this.cur(), t = this.t, i = this.holding() ? this.selIdx() : this.S.pageIdx, p = b.pages[i];
     return i >= 0 && p ? t.stageLabel(b.name, i + 1, b.pages.length, p.name) : t.stageLabel(b.name);
   }
   // Says the page once. Cleared first, so pressing R twice on the same text speaks again.
@@ -385,9 +402,9 @@ export class App {
     if (this.kioskStrict) return;
     if (k === 'e') this.toggleEdit(); else if (k === 'f') this.toggleFull(); else if (k === 's') this.toggleSound();
   }
-  toggleEdit() {
+  toggleEdit(fromHistory) {
     const editing = !this.S.editing;
-    if (editing) this.dismissCue(false); else this.editor.composer.leave();
+    if (editing) this.dismissCue(false); else { this.editor.composer.leave(); if (!fromHistory) this.editor.close(); }
     const b = this.cur();
     this.S.editing = editing; this.S.share = false; this.S.switcher = false; this.S.cz = -1;
     if (editing) this.S.sel = this.S.pageIdx >= 0 ? this.S.pageIdx % b.pages.length : 0;
@@ -450,11 +467,17 @@ export class App {
       this.editor.after();
       if (focusKey) { const el = this.drawer.querySelector(`[data-k="${focusKey}"]`); if (el) el.focus({ preventScroll: true }); }
     } else { this.root.querySelectorAll('.sf-drawer').forEach(d => d.remove()); this.drawer = null; }
+    // Today's playlist, under the board beside the week on a wide screen (the phone has it
+    // as a card above the week, inside the drawer).
+    const E = this.editor.E, pl = S.editing && !mobile && E.sec === 'sb' && E.lv === 'sb' ? playlistPanel(this.editor, new Date()) : null;
+    if (pl) { if (this.plEl) this.plEl.replaceWith(pl); else this.main.append(pl); this.plEl = pl; }
+    else if (this.plEl) { this.plEl.remove(); this.plEl = null; }
     this.renderOverlay();
   }
 
   paintBar() {
     if (this.barWrap) this.barWrap.classList.toggle('on', this.S.bar);
+    if (this.nowEl) this.nowEl.classList.toggle('on', this.S.bar);
     this.stage.classList.toggle('sf-hide-cursor', !this.S.bar && !this.S.editing);
   }
   paintNotice() {
@@ -501,6 +524,11 @@ export class App {
       this.barWrap = wrap;
     }
     const focusKey = document.activeElement && this.overlay.contains(document.activeElement) && document.activeElement.dataset.k;
+    // With the editor closed, one line at the top: what is on now, and what comes next.
+    if (!S.editing && !this.kioskStrict && this.cur().pages.length > 1) {
+      const line = nowShowing(this.cur(), Date.now(), t);
+      if (line) { this.nowEl = h('div', { class: 'sf-nowline' + (S.bar ? ' on' : ''), 'aria-hidden': 'true' }, h('span', { class: 'sf-eyebrow' }, t.todaysPlaylist), h('span', null, line)); kids.push(this.nowEl); }
+    } else this.nowEl = null;
     this.overlay.replaceChildren(...kids);
     const inPop = focusKey == null && this.popWas && document.activeElement === document.body;
     if (focusKey) { const el = this.overlay.querySelector(`[data-k="${focusKey}"]`); if (el) el.focus({ preventScroll: true }); }
@@ -546,7 +574,8 @@ export class App {
         h('button', { class: 'sf-menu-item', role: 'menuitem', 'aria-current': String(i === this.active), onclick: () => this.pickBoard(i), ondblclick: () => { this.pickBoard(i); this.renameBoard(); } },
           h('span', null, bd.name), h('span', null, this.showChanged() && this.changedAt(bd) ? this.changedAt(bd) : this.sizeLabel(bd))),
         i === this.active ? h('button', { class: 'sf-menu-rename', role: 'menuitem', 'data-k': 'menu-rename', title: t.renameBoard, 'aria-label': t.renameBoard, onclick: () => this.renameBoard() }, '✎') : null)),
-      h('button', { class: 'sf-menu-new', role: 'menuitem', onclick: () => this.newBoard() }, '+ ' + t.newBoard));
+      h('button', { class: 'sf-menu-new', role: 'menuitem', 'data-k': 'menu-all', onclick: () => this.allStoryboards() }, t.allStoryboards),
+      h('button', { class: 'sf-menu-new', role: 'menuitem', 'data-k': 'menu-new', onclick: () => this.newBoard() }, '+ ' + t.newStoryboard));
   }
   // While a "(copy)" from a sync conflict is here, the menu shows when each account board
   // last changed on the server instead of its size, so it is clear which copy is newer.
@@ -563,7 +592,11 @@ export class App {
   // New board, from the board switcher: the Start panel, where a template adds a board.
   newBoard() {
     Object.assign(this.S, { switcher: false, editing: true, cz: -1 });
-    this.dismissCue(false); this.editor.go('start'); this.refresh();
+    this.dismissCue(false); this.editor.go({ sec: 'ex', lv: 'list' }); this.refresh();
+  }
+  allStoryboards() {
+    Object.assign(this.S, { switcher: false, editing: true, cz: -1 });
+    this.dismissCue(false); this.editor.go({ sec: 'sb', lv: 'list' }); this.refresh();
   }
   startPending() { return this.firstRun && getFlag('sf_started') !== '1'; }
   markStarted() { setFlag('sf_started', '1'); this.firstRun = false; }
@@ -572,8 +605,8 @@ export class App {
     if (this.startPending() && this.freshId === this.cur().id) this.boards[this.active] = nb;
     else { this.boards.push(nb); this.active = this.boards.length - 1; }
     this.freshId = null; this.markStarted(); this.save();
-    Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), cz: -1 });
-    this.editor.go(this.isMobile() ? 'playlist' : 'page'); this.refresh();
+    Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), cz: -1, editing: true });
+    this.editor.go({ sec: 'sb', lv: 'sb', sb: nb.id, view: 'week' }); this.refresh();
   }
   duplicateBoard(i) {
     const nb = clone(this.boards[i]); nb.id = newId('b'); nb.name = this.boards[i].name + this.t.copySuffix; delete nb.from;

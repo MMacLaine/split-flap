@@ -1,8 +1,8 @@
-// The editor drawer, from the editor handoff (DESIGN-HANDOVER-editor.md). Three levels,
-// drilled with a back control: Playlist, Page, Content. Board settings, Boards and
-// templates, and the version log are secondary levels reached from the playlist.
-// From 1024 px wide the playlist stays beside the panel as a rail, so Page and Content
-// always sit next to the list of pages; narrower, one level shows at a time.
+// The editor drawer. Its look is the editor handoff (DESIGN-HANDOVER-editor.md) and its
+// structure is 0.7's (DESIGN-HANDOVER-0.7.md): three sections in a tab row (Storyboards,
+// Explore, Account; My boards joins in 0.7.1), at most two levels below each, with an
+// address per level so the browser's back goes up one. The same on phone and desktop.
+// Words follow GLOSSARY.md: a storyboard is a stored board, a board is one of its pages.
 //
 // Like the rest of the app it is plain DOM, rebuilt whole on structural changes. Typing
 // updates the board in place (app.upd with quiet) so inputs keep focus.
@@ -17,7 +17,10 @@ import { GROUPS, TILES, tileFor, previewLive, SAMPLE_FEED } from './catalogue.js
 import { sampleImage, mapImage, stamp, HEART } from './photo.js';
 import { Composer } from './composer.js';
 import { CHANGELOG, VERSION } from './changelog.js';
-import { pageWins } from './schedule.js';
+import { pageWins, dayPlaylist } from './schedule.js';
+import { parseRoute, routeHash, parentRoute } from './route.js';
+import { weekView, hueOf } from './week.js';
+import { getFlag, setFlag } from './store.js';
 import { HELP, INTRO } from './help.js';
 import * as sound from './sound.js';
 
@@ -29,50 +32,106 @@ const aspect = (rows, cols, pad) => { const g = staticGeom(rows, cols, pad); ret
 export class Editor {
   constructor(app) {
     this.app = app;
-    this.E = { lv: 'playlist', zone: 0, picking: false, search: '', adv: {}, hover: null, navKey: 0, fx: 'in', drag: -1 };
+    // Where the editor is (0.7): a section (sb storyboards, ex explore, acc account), a level
+    // in it, and the ids that level shows. It is mirrored in the address, see route.js.
+    this.E = { sec: 'sb', lv: 'list', sb: null, bd: null, view: 'week', tpl: null, from: 'boards',
+      zone: 0, zoneOpen: false, picking: false, search: '', adv: {}, hover: null, navKey: 0, fx: 'in', drag: -1,
+      menu: null, sheet: null, last: {} };
     this.specs = new Map();
     this.lastNav = -1;
+    this.stack = [];
     this.composer = new Composer(app, this);
   }
   get t() { return this.app.t; }
   get lang() { return this.app.S.lang; }
   L(x) { return x ? x[this.lang] || x.en : ''; }
   phone() { return this.app.isMobile(); }
-  // The level shown in the panel. On a wide screen the playlist is the rail, so the
-  // panel shows the page being edited instead.
-  panelLv() { const lv = this.E.lv; return !this.phone() && lv === 'playlist' ? 'page' : lv; }
+  panelLv() { return this.E.lv; }
+  onBoard() { return this.E.sec === 'sb' && this.E.lv === 'board'; }
 
   // ---------- navigation ----------
-  go(lv, extra, back) {
-    this.composer.leave(); this.E.confirm = null;
-    Object.assign(this.E, { lv, fx: back ? 'back' : 'in', navKey: this.E.navKey + 1, hover: null, search: '' }, extra || {});
+  route() { const E = this.E; return { sec: E.sec, lv: E.lv, sb: E.sb, bd: E.bd, view: E.view, tpl: E.tpl, from: E.from }; }
+  // Move to a level. Each move is a history entry, so browser Back goes up the way it came.
+  go(r, opts = {}) {
+    const E = this.E, prevSec = E.sec;
+    this.composer.leave(); E.confirm = null; E.menu = null; E.sheet = null; E.card = null;
+    if (typeof r === 'string') r = { account: { sec: 'acc', lv: 'main' }, help: { sec: 'acc', lv: 'help' }, log: { sec: 'acc', lv: 'log' }, start: { sec: 'ex', lv: 'list' },
+      settings: { sec: 'sb', lv: 'sb', sb: this.app.cur().id, view: 'display' } }[r] || { sec: 'sb', lv: 'list' };   // named levels, from Help's links
+    r = this.resolve(Object.assign({}, r));
+    Object.assign(E, { sec: r.sec, lv: r.lv, sb: r.sb || null, bd: r.bd || null, view: r.view || E.view || 'week', tpl: r.tpl || null, from: r.from || E.from,
+      fx: opts.back ? 'back' : 'in', navKey: E.navKey + 1, hover: null, search: '' });
+    if (!opts.keepZone) Object.assign(E, { zone: 0, zoneOpen: false, picking: false, fresh: false }, opts.zone || {});
+    E.last[r.sec] = this.route();
+    if (!opts.silent) {
+      const hash = routeHash(r), url = location.pathname + location.search + hash;
+      if (opts.replace || location.hash === hash) { history.replaceState({ sf: 1 }, '', url); this.stack[this.stack.length - 1] = hash; }
+      else { history.pushState({ sf: 1 }, '', url); this.stack.push(hash); }
+    }
     this.app.S.cz = -1;
     this.app.render(); this.app.tick(true);
-    const body = this.app.drawer && this.app.drawer.querySelector('.sf-panel-body'); if (body) body.scrollTop = 0;
-    // Keyboard and screen reader users land on the new level's title. Going back keeps focus
-    // where it was if that is still in the drawer (the Back button, say).
+    const body = this.app.drawer && this.app.drawer.querySelector('.sf-panel-body'); if (body && (!opts.back || prevSec !== r.sec)) body.scrollTop = 0;
+    // Keyboard and screen reader users land on the new level's title.
     const d = this.app.drawer, title = d && d.querySelector('.sf-panel-title');
-    if (title && (!back || !d.contains(document.activeElement))) title.focus({ preventScroll: true });
+    if (title && (!opts.back || !d.contains(document.activeElement))) title.focus({ preventScroll: true });
   }
-  backTarget() {
-    const lv = this.E.lv;
-    if (lv === 'log' || lv === 'help' || lv === 'account') return this.prevLv || 'playlist';
-    return this.phone() ? { page: 'playlist', content: 'page', settings: 'playlist', start: 'playlist' }[lv] : { content: 'page', settings: 'playlist', start: 'playlist' }[lv];
+  // A route names storyboards and boards by id; the app's list is by index. A missing id
+  // (deleted, or a link from another browser) lands on the nearest level that exists.
+  resolve(r) {
+    const app = this.app;
+    if (r.sec === 'sb' && (r.lv === 'sb' || r.lv === 'board')) {
+      const i = app.boards.findIndex(b => b.id === r.sb);
+      if (i < 0) return { sec: 'sb', lv: 'list' };
+      if (i !== app.active) { app.active = i; app.saveActive(); app.S.pageIdx = 0; app.S.pageStart = Date.now(); app.refresh(true); }
+      if (r.lv === 'board') {
+        const j = app.boards[i].pages.findIndex(p => p.id === r.bd);
+        if (j < 0) return { sec: 'sb', lv: 'sb', sb: r.sb, view: r.from || 'boards' };
+        app.S.sel = j;
+      }
+    }
+    if (r.sec === 'ex' && r.lv === 'tpl' && !TEMPLATES.some(x => x.id === r.tpl)) return { sec: 'ex', lv: 'list' };
+    return r;
   }
-  back() { const b = this.backTarget(); if (b) this.go(b, {}, true); else this.app.toggleEdit(); }
-  // Escape: out of the picker when the zone already had content, else up one level.
+  // The browser moved (back, forward, or an address typed in): show that level, no new entry.
+  apply(r) {
+    const i = this.stack.lastIndexOf(routeHash(r));
+    this.stack = i >= 0 ? this.stack.slice(0, i + 1) : [routeHash(r)];
+    this.go(r, { silent: true, back: true });
+  }
+  backTarget() { return parentRoute(this.route()); }
+  // Back is up one level. When the level above is the one we came from, it is the
+  // browser's own back, so the history does not grow.
+  back() {
+    const up = this.backTarget(); if (!up) return;
+    const h = routeHash(up);
+    if (this.stack.length > 1 && this.stack[this.stack.length - 2] === h) { this.stack.pop(); history.back(); return; }
+    this.go(up, { back: true, replace: true });
+  }
+  // Escape: a menu or sheet first, then the content picker if the zone had content, and
+  // otherwise it closes the editor.
   escape() {
-    if (this.E.lv === 'content' && this.E.picking && !this.E.fresh) { this.E.picking = false; this.app.render(); return; }
-    this.back();
+    const E = this.E;
+    if (E.menu || E.sheet || E.card) { E.menu = null; E.sheet = null; E.card = null; E.confirm = null; this.app.render(); return; }
+    if (E.picking && !E.fresh && this.onBoard()) { E.picking = false; this.app.render(); return; }
+    this.app.toggleEdit();
   }
-  // Opening the editor: the Start panel on the very first edit, else the playlist.
+  top(sec) { return sec === 'ex' ? { sec: 'ex', lv: 'list' } : sec === 'acc' ? { sec: 'acc', lv: 'main' } : { sec: 'sb', lv: 'list' }; }
+  // A tab returns to where you last were in that section; the current tab goes to its top.
+  tab(sec) { this.go(sec === this.E.sec ? this.top(sec) : this.E.last[sec] || this.top(sec)); }
+  // Opening the editor: Explore on the very first edit, else the board on the wall now.
   open() {
     this.E.drag = -1;
-    if (this.app.startPending()) { this.go('start'); return; }
-    this.go(this.phone() ? 'playlist' : 'page');
+    const r = parseRoute(location.hash);
+    if (r) { this.go(r, { replace: true }); return; }
+    if (this.app.startPending()) { this.go({ sec: 'ex', lv: 'list' }); return; }
+    const b = this.app.cur(), p = b.pages[this.app.selIdx(b)];
+    this.go(p ? { sec: 'sb', lv: 'board', sb: b.id, bd: p.id, from: 'boards' } : { sec: 'sb', lv: 'sb', sb: b.id, view: 'week' });
   }
-  openPage(i) { this.app.S.sel = i; this.go('page'); }
-  openZone(k) { this.go('content', { zone: k, picking: false, fresh: false }); }
+  close() { this.stack = []; history.replaceState(null, '', location.pathname + location.search); }
+  openBoard(i, from) { const b = this.app.cur(), p = b.pages[i]; if (p) this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: p.id, from: from || (this.E.lv === 'sb' ? this.E.view : 'boards') }); }
+  openPage(i) { this.openBoard(i); }
+  openStoryboard(i, view) { const b = this.app.boards[i]; if (b) this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: view || 'week' }); }
+  openZone(k) { Object.assign(this.E, { zone: k, zoneOpen: true, picking: !tileFor(this.page() && this.page().zones[k]), fresh: false, landKey: (this.E.landKey || 0) + 1 }); this.app.render(); this.app.paintHighlight();
+    const el = this.app.drawer && this.app.drawer.querySelector('.sf-zone-open'); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 
   zones() { const p = this.page(), d = this.app.dims(); return p ? zonesFor(p.layout, d.rows, d.cols) : []; }
   page() { const b = this.app.cur(); return b.pages[this.app.selIdx(b)]; }
@@ -82,19 +141,18 @@ export class Editor {
   updZone(fn, quiet) { const k = this.zi(); this.app.updPage(p => { while (p.zones.length <= k) p.zones.push({ ch: 'message', o: {} }); fn(p.zones[k]); }, quiet); }
   setO(fn, quiet) { this.updZone(z => { z.o = Object.assign({}, z.o); fn(z.o); }, quiet); if (quiet) this.refreshThumbs(true); }
 
-  // The zone outlined on the big board: the one hovered, else the one being edited.
+  // The zone outlined on the big board: the one hovered, else the one open.
   hlRect() {
-    if (!this.app.S.editing) return null;
-    const lv = this.panelLv(); if (lv !== 'page' && lv !== 'content') return null;
+    if (!this.app.S.editing || !this.onBoard()) return null;
     const zs = this.zones(); if (zs.length < 2) return null;
-    const k = this.E.hover != null ? this.E.hover : lv === 'content' ? this.zi() : null;
+    const k = this.E.hover != null ? this.E.hover : this.E.zoneOpen ? this.zi() : null;
     return k == null ? null : zs[k] || null;
   }
   hover(k) { this.E.hover = k; this.app.paintHighlight(); this.paintDiagram(); }
 
   // ---------- thumbnails ----------
   // A canvas that the static renderer fills once the drawer is on the page. fn returns
-  // the grid, so live pages (a clock) can be redrawn without rebuilding the drawer.
+  // the grid, so live boards (a clock) can be redrawn without rebuilding the drawer.
   thumb(key, rows, cols, fn, theme, extra) {
     this.specs.set(key, { rows, cols, fn, theme, pad: 0.35 });
     return h('canvas', Object.assign({ class: 'sf-thumb', 'data-thumb': key, style: `aspect-ratio:${aspect(rows, cols)}`, 'aria-hidden': 'true' }, extra || {}));
@@ -113,87 +171,166 @@ export class Editor {
     if (soon) { clearTimeout(this.thT); this.thT = setTimeout(() => this.paintThumbs(), 60); return; }
     this.paintThumbs();
   }
-  pageGrid(p, b) { const d = this.app.dims(); return () => compose(p, d.rows, d.cols, Date.now(), this.lang, this.app.live.data); }
+  pageGrid(p, b) { const d = b ? this.app.dimsOf(b) : this.app.dims(); return () => compose(p, d.rows, d.cols, Date.now(), this.lang, this.app.live.data); }
 
   // ---------- the drawer ----------
   render() {
     this.specs = new Map();
-    const t = this.t, lv = this.E.lv, plv = this.panelLv(), rail = !this.phone() && lv !== 'start' && lv !== 'log' && lv !== 'help' && lv !== 'account';
-    const anim = this.E.navKey !== this.lastNav ? (this.E.fx === 'back' ? ' sf-nav-back' : ' sf-nav-in') : '';
-    this.lastNav = this.E.navKey;
-    const body = { playlist: () => this.playlistLevel(), page: () => this.pageLevel(), content: () => this.contentLevel(), settings: () => this.settingsLevel(), start: () => this.startLevel(), log: () => this.logLevel(), help: () => this.helpLevel(), account: () => this.accountLevel() }[plv]();
-    return h('aside', { class: 'sf-drawer' + (rail ? ' with-rail' : ''), 'aria-label': t.editor },
-      rail ? this.rail() : null,
-      h('section', { class: 'sf-panel-col' }, this.head(plv), h('div', { class: 'sf-panel-body' + anim, 'data-lv': plv }, body)));
+    const t = this.t, E = this.E;
+    const anim = E.navKey !== this.lastNav ? (E.fx === 'back' ? ' sf-nav-back' : ' sf-nav-in') : '';
+    this.lastNav = E.navKey;
+    const body = E.sheet ? this.sheet() : {
+      'sb:list': () => this.storyboardsLevel(), 'sb:sb': () => this.storyboardLevel(), 'sb:board': () => this.pageLevel(),
+      'ex:list': () => this.exploreLevel(), 'ex:tpl': () => this.templateLevel(),
+      'acc:main': () => this.accountLevel(), 'acc:help': () => this.helpLevel(), 'acc:log': () => this.logLevel()
+    }[E.sec + ':' + E.lv]();
+    return h('aside', { class: 'sf-drawer', 'aria-label': t.editor },
+      h('section', { class: 'sf-panel-col' }, this.head(), this.tabs(), h('div', { class: 'sf-panel-body' + anim, 'data-lv': E.sec + '-' + E.lv }, body)));
   }
-  after() { this.paintThumbs(true); this.composer.after(); }
+  after() {
+    this.paintThumbs(true); this.composer.after();
+    // the week opens on the morning, once per visit to it
+    const wk = this.app.drawer && this.app.drawer.querySelector('[data-week]');
+    if (wk && this.weekScrolled !== this.E.navKey) { this.weekScrolled = this.E.navKey; wk.scrollTop = wk.scrollHeight / 24 * 6; }
+  }
 
-  head(plv) {
-    const t = this.t, b = this.app.cur(), back = this.backTarget(), p = this.page();
-    const backLabel = { playlist: t.playlist, page: p ? p.name || t.page : t.page }[back] || t.back;
-    const tile = tileFor(this.zone());
+  head() {
+    const t = this.t, E = this.E, b = this.app.cur(), p = this.page(), up = this.backTarget();
+    const upLabel = !up ? '' : up.lv === 'sb' ? b.name : up.sec === 'sb' ? t.secStoryboards : up.sec === 'ex' ? t.secExplore : t.secAccount;
+    const tpl = E.tpl && TEMPLATES.find(x => x.id === E.tpl);
     const [kicker, title] = {
-      playlist: [t.playlist, b.name],
-      page: [t.pageOf(this.app.selIdx() + 1, b.pages.length), p ? p.name || t.page : ''],
-      content: [`${p ? p.name || t.page : ''} · ${this.zoneName(this.zi())}`, this.E.picking || !tile ? t.chooseContent : this.L(tile.name)],
-      settings: [b.name, t.boardSettings], start: [t.boardsTemplates, t.startTitle], log: [`v${VERSION}`, t.versionLog], help: ['Split-Flap', t.help], account: ['Split-Flap', this.app.account.available ? t.account : t.lang]
-    }[plv];
+      'sb:list': ['Split-Flap', t.secStoryboards], 'sb:sb': [t.secStoryboards, b.name], 'sb:board': [b.name, p ? p.name || t.page : ''],
+      'ex:list': ['Split-Flap', t.secExplore], 'ex:tpl': [t.secExplore, tpl ? tpl.name[this.lang] : ''],
+      'acc:main': ['Split-Flap', this.app.account.available ? t.account : t.lang], 'acc:help': [t.secAccount, t.help], 'acc:log': [`v${VERSION}`, t.versionLog]
+    }[E.sec + ':' + E.lv];
     return h('header', { class: 'sf-panel-head' },
-      back ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, backLabel)) : null,
-      h('div', { class: 'sf-panel-title', role: 'heading', 'aria-level': '2', tabindex: '-1' }, h('span', { class: 'sf-eyebrow' }, kicker), plv === 'playlist' ? this.boardName() : h('strong', null, title)),
+      up ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, upLabel)) : null,
+      h('div', { class: 'sf-panel-title', role: 'heading', 'aria-level': '2', tabindex: '-1' }, h('span', { class: 'sf-eyebrow' }, kicker),
+        E.sec === 'sb' && E.lv === 'sb' ? this.boardName() : h('strong', null, title)),
       h('button', { class: 'sf-btn primary caps', 'data-k': 'done', 'aria-keyshortcuts': 'E', onclick: () => this.app.toggleEdit() }, t.done));
   }
+  // The four sections (My boards joins in 0.7.1), on every level, and the place for search.
+  tabs() {
+    const t = this.t, sec = this.E.sec;
+    const tab = (id, label) => h('button', { class: 'sf-tab', role: 'tab', 'aria-selected': String(sec === id), 'data-k': 'tab-' + id, onclick: () => this.tab(id) }, label,
+      id === 'acc' ? h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark, 'data-sync-fail': '', hidden: this.app.account.status !== 'failed' }, ' !') : null);
+    return h('nav', { class: 'sf-tabs', role: 'tablist', 'aria-label': t.editor },
+      tab('sb', t.secStoryboards), tab('ex', t.secExplore), tab('acc', this.app.account.available ? t.secAccount : t.lang),
+      h('span', { class: 'sf-grow' }),
+      h('button', { class: 'sf-icon sf-search', disabled: true, title: t.searchLater, 'aria-label': t.searchLater, 'data-k': 'search' }, h('span', { 'aria-hidden': 'true' }, '⌕')));
+  }
+  dayLabel(d) { return `${this.t.dayShort[d.getDay()]} ${d.getDate()} ${this.t.monthShort[d.getMonth()]}`; }
   zoneName(k) { const p = this.page(); return p ? (this.t.zoneNames[p.layout] || [])[k] || '' : ''; }
 
-  // ---------- playlist ----------
-  pageItems(compact) {
-    const t = this.t, b = this.app.cur(), d = this.app.dims(), sel = this.app.selIdx(), plv = this.panelLv();
+  // ---------- the more menu ----------
+  // One pattern everywhere: a ⋯ button, then the verbs in one fixed order. Verbs that do
+  // not apply are left out; the order never changes. Delete sits under a rule, in red,
+  // and asks twice.
+  more(key, verbs) {
+    const t = this.t, open = this.E.menu === key;
+    const ORDER = ['open', 'rename', 'duplicate', 'save', 'copy', 'share', 'shareImage', 'export', 'delete'];
+    const label = { open: t.mOpen, rename: t.mRename, duplicate: t.mDuplicate, save: t.mSave, copy: t.mCopyTo, share: t.mShare, shareImage: t.mShareImage, export: t.mExport, delete: t.mDelete };
+    const items = ORDER.filter(v => verbs[v]).map(v => {
+      const armed = v === 'delete' && this.E.confirm === 'menu-del-' + key;
+      return [v === 'delete' ? h('hr', { class: 'sf-menu-rule' }) : null,
+        h('button', { class: 'sf-more-item' + (v === 'delete' ? ' danger' : ''), role: 'menuitem', 'data-k': `more-${v}`, disabled: verbs[v] === 'off',
+          onclick: e => { e.stopPropagation();
+            if (v === 'delete' && !armed) { this.E.confirm = 'menu-del-' + key; this.app.render(); const el = this.app.drawer.querySelector('[data-k="more-delete"]'); if (el) el.focus(); return; }
+            this.E.menu = null; this.E.confirm = null; verbs[v](); } }, armed ? t.mDeleteAgain : label[v])];
+    });
+    return h('div', { class: 'sf-more' + (open ? ' open' : '') },
+      h('button', { class: 'sf-icon sf-more-btn', 'aria-haspopup': 'menu', 'aria-expanded': String(open), 'aria-label': t.more, title: t.more, 'data-k': 'more-' + key,
+        onclick: e => { e.stopPropagation(); this.E.menu = open ? null : key; this.E.confirm = null; this.app.render(); if (!open) { const el = this.app.drawer.querySelector('.sf-more.open .sf-more-item'); if (el) el.focus(); } } }, '⋯'),
+      open ? h('div', { class: 'sf-more-pop sf-pop', role: 'menu' }, items) : null);
+  }
+
+  // ---------- storyboards ----------
+  storyboardsLevel() {
+    const t = this.t, app = this.app, now = Date.now();
+    const changed = getFlag('sf_words_070') !== '1' && app.hadBoards ? h('section', { class: 'sf-field sf-changed', role: 'note' },
+      h('strong', null, t.changedTitle), h('span', { class: 'sf-hint' }, t.changedBody),
+      h('dl', { class: 'sf-changed-rows' }, t.changedRows.map(([a, b]) => h('div', null, h('dt', null, a), h('dd', null, b)))),
+      h('div', null, h('button', { class: 'sf-btn', 'data-k': 'changed-ok', onclick: () => { setFlag('sf_words_070', '1'); app.render(); } }, t.gotIt))) : null;
+    const cards = app.boards.map((bd, i) => {
+      const d = app.dimsOf(bd), here = i === app.active, seg = dayPlaylist(bd.pages, new Date(now)).find(s => now >= s.from && now < s.to);
+      const nowNames = seg && seg.list.length ? seg.list.map(k => bd.pages[k].name || `${t.page} ${k + 1}`).join(', ') : t.clockOnly;
+      return h('div', { class: 'sf-sb-card' + (here ? ' current' : ''), 'data-sb': i },
+        h('button', { class: 'sf-sb-open', 'data-k': 'sb-' + i, onclick: () => this.openStoryboard(i) },
+          this.thumb('sb-' + bd.id, d.rows, d.cols, () => compose(bd.pages[0], d.rows, d.cols, now, this.lang, app.live.data), bd.theme),
+          h('span', { class: 'sf-board-text' }, h('strong', null, bd.name), h('span', { class: 'sf-meta' }, t.sbMeta(app.sizeLabel(bd), THEMES[bd.theme].label, bd.pages.length)),
+            h('span', null, t.nowPlays(nowNames)), here ? h('span', { class: 'sf-tag' }, t.playingHere) : null)),
+        this.more('sb-' + i, this.sbVerbs(i)));
+    });
+    return h('div', { class: 'sf-level' }, changed,
+      h('p', { class: 'sf-note big' }, t.sbIntro),
+      h('div', { class: 'sf-sb-list' }, cards),
+      h('div', { class: 'sf-row' }, h('button', { class: 'sf-add', 'data-k': 'new-sb', disabled: app.boards.length >= 50, onclick: () => this.go({ sec: 'ex', lv: 'list' }) }, '+ ' + t.newStoryboard),
+        h('span', { class: 'sf-count' }, `${app.boards.length} / 50`)));
+  }
+  sbVerbs(i) {
+    const app = this.app;
+    return { open: () => this.openStoryboard(i), rename: () => { this.openStoryboard(i); this.startRename(); }, duplicate: () => app.duplicateBoard(i),
+      share: () => { app.pickBoard(i); app.toggleEdit(); app.openShare(); }, export: () => app.exportJson(i), delete: app.boards.length > 1 ? () => app.deleteBoard(i) : 'off' };
+  }
+  storyboardLevel() {
+    const t = this.t, E = this.E, b = this.app.cur();
+    const views = h('div', { class: 'sf-subtabs', role: 'tablist' }, [['week', t.viewWeek], ['boards', t.viewBoards], ['display', t.viewDisplay]].map(([v, label]) =>
+      h('button', { class: 'sf-seg', role: 'tab', 'aria-selected': String(E.view === v), 'aria-pressed': String(E.view === v), 'data-k': 'view-' + v, onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: v }, { replace: true }) }, label)));
+    const body = E.view === 'boards' ? this.boardsView() : E.view === 'display' ? this.settingsLevel() : weekView(this);
+    return h('div', { class: 'sf-level' }, h('div', { class: 'sf-row between' }, views, this.more('sb-open', this.sbVerbs(this.app.active))), body);
+  }
+
+  // ---------- a storyboard's boards ----------
+  pageItems() {
+    const t = this.t, b = this.app.cur(), d = this.app.dims();
     return b.pages.map((p, i) => {
-      const cur = i === sel && (plv === 'page' || plv === 'content'), wins = pageWins(p);
-      const badge = wins.length ? this.winLabel(wins[0]) + (wins.length > 1 ? ` +${wins.length - 1}` : '') : null;
-      return h('li', { class: 'sf-pl' + (cur ? ' current' : '') + (this.E.drag === i ? ' drag' : ''), 'data-pl': i },
-        h('button', { class: 'sf-pl-open', 'aria-current': cur ? 'page' : null, 'data-k': 'page-' + i, onclick: () => this.openPage(i) },
+      const wins = pageWins(p), when = wins.length ? this.winLabel(wins[0]) + (wins.length > 1 ? ` +${wins.length - 1}` : '') : t.anyTime;
+      return h('li', { class: 'sf-pl' + (this.E.drag === i ? ' drag' : ''), 'data-pl': i, style: `--hue:${hueOf(b, i)}` },
+        h('button', { class: 'sf-pl-open', 'data-k': 'page-' + i, onclick: () => this.openBoard(i, 'boards') },
           this.thumb('pg-' + p.id, d.rows, d.cols, this.pageGrid(p, b), b.theme),
           h('span', { class: 'sf-pl-text' },
-            h('span', { class: 'sf-pl-name' }, compact ? h('span', { class: 'sf-pl-num' }, String(i + 1).padStart(2, '0')) : null, p.name || `${t.page} ${i + 1}`),
-            h('span', { class: 'sf-pl-meta' }, `${p.dur} s`, badge ? h('span', { class: 'sf-badge', title: t.window }, compact ? '◷' : badge) : null))),
+            h('span', { class: 'sf-pl-name' }, p.name || `${t.page} ${i + 1}`),
+            h('span', { class: 'sf-pl-meta' }, when, p.alone && wins.length ? h('span', { class: 'sf-tag' }, t.aloneTag) : null),
+            h('span', { class: 'sf-pl-meta' }, `${p.dur} s`))),
         h('button', { class: 'sf-handle', 'data-handle': i, 'data-k': 'handle-' + i, 'aria-label': t.moveNamed(p.name || `${t.page} ${i + 1}`), title: t.reorderHint,
-          onpointerdown: e => this.dragStart(e, i), onkeydown: e => this.handleKey(e, i) }, '⋮⋮'));
+          onpointerdown: e => this.dragStart(e, i), onkeydown: e => this.handleKey(e, i) }, '⋮⋮'),
+        this.more('pg-' + i, this.pageVerbs(i)));
     });
   }
-  secondary(compact) {
-    const t = this.t, b = this.app.cur();
-    const row = (k, label, sub, lv) => h('button', { class: 'sf-sec' + (this.E.lv === lv ? ' on' : ''), 'data-k': k, onclick: () => this.go(lv) },
-      h('span', null, h('strong', null, label), h('span', null, sub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›'));
-    return h('div', { class: 'sf-secs' },
-      row('open-settings', t.boardSettings, `${this.app.sizeLabel(b)} · ${THEMES[b.theme].label}`, 'settings'),
-      row('open-start', t.boardsTemplates, `${t.boardsCount(this.app.boards.length)} · ${t.templatesCount(TEMPLATES.length)}`, 'start'),
-      h('button', { class: 'sf-sec' + (this.E.lv === 'help' ? ' on' : ''), 'data-k': 'open-help', onclick: () => { this.prevLv = this.E.lv; this.go('help'); } },
-        h('span', null, h('strong', null, t.help), h('span', null, t.helpSub)), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')),
-      h('button', { class: 'sf-sec' + (this.E.lv === 'account' ? ' on' : ''), 'data-k': 'open-account', onclick: () => { this.prevLv = this.E.lv; this.go('account'); } },
-        h('span', null, h('strong', null, this.app.account.available ? t.account : t.lang), h('span', { 'data-account-sub': '' }, this.app.account.available ? this.accountSub() : this.lang === 'sv' ? 'Svenska' : 'English')), compact ? null : h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›')));
+  pageVerbs(i) {
+    const b = this.app.cur();
+    return { open: () => this.openBoard(i), rename: () => { this.openBoard(i); const el = this.app.drawer.querySelector('[data-k="page-name"]'); if (el) { el.focus(); el.select(); } },
+      duplicate: () => { this.app.S.sel = i; this.dupPage(true); }, copy: this.app.boards.length > 1 ? () => { this.E.sheet = { kind: 'copy', page: i }; this.app.render(); } : 'off',
+      shareImage: () => { this.app.S.sel = i; this.app.saveImage(); }, delete: b.pages.length > 1 ? () => { this.app.S.sel = i; this.delPage(); } : 'off' };
   }
-  rail() {
-    const t = this.t, b = this.app.cur();
-    return h('nav', { class: 'sf-rail', 'aria-label': t.playlist },
-      h('div', { class: 'sf-rail-head' }, h('span', { class: 'sf-eyebrow' }, t.playlist, h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark, 'data-sync-fail': '', hidden: this.app.account.status !== 'failed' }, ' !')), this.boardName()),
-      h('ol', { class: 'sf-pls compact' }, this.pageItems(true), h('li', null, h('button', { class: 'sf-add', 'data-k': 'add-page', onclick: () => this.addPage() }, '+ ' + t.addPage))),
-      h('div', { class: 'sf-rail-foot' }, this.secondary(true),
-        h('button', { class: 'sf-version', 'data-k': 'version', onclick: () => { this.prevLv = this.E.lv; this.go('log'); } }, `v${VERSION}`, h('span', { 'aria-hidden': 'true' }, ' · '), t.versionLog)));
-  }
-  playlistLevel() {
+  boardsView() {
     const t = this.t;
-    return h('div', { class: 'sf-level' },
-      h('ol', { class: 'sf-pls' }, this.pageItems(false)),
-      h('button', { class: 'sf-add big', 'data-k': 'add-page', onclick: () => this.addPage() }, '+ ' + t.addPage),
-      this.secondary(false),
-      h('button', { class: 'sf-version', 'data-k': 'version', onclick: () => { this.prevLv = this.E.lv; this.go('log'); } }, `v${VERSION}`, h('span', { 'aria-hidden': 'true' }, ' · '), t.versionLog));
+    return h('div', { class: 'sf-field' },
+      h('ol', { class: 'sf-pls' }, this.pageItems()),
+      h('button', { class: 'sf-add big', 'data-k': 'add-page', onclick: () => this.addPage() }, '+ ' + t.addPage));
   }
   addPage() {
-    const t = this.t, b = this.app.cur(), n = b.pages.length;
-    this.app.upd(bb => { bb.pages.push({ id: newId('p'), name: `${t.page} ${n + 1}`, layout: 'full', dur: 10, wins: [], zones: [{ ch: 'message', o: {} }] }); }, true);
-    this.app.S.sel = n;
-    this.go('content', { zone: 0, picking: true, fresh: true });
+    const t = this.t, b = this.app.cur(), n = b.pages.length, id = newId('p');
+    this.app.upd(bb => { bb.pages.push({ id, name: `${t.page} ${n + 1}`, layout: 'full', dur: 10, wins: [], zones: [{ ch: 'message', o: {} }] }); }, true);
+    this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: id, from: this.E.lv === 'sb' ? this.E.view : 'boards' }, { zone: { zone: 0, zoneOpen: true, picking: true, fresh: true } });
+  }
+  // Copy a board into another storyboard: what it shows, not its times.
+  sheet() {
+    const t = this.t, S = this.E.sheet, app = this.app;
+    if (S.kind === 'copy') {
+      const src = S.tplPage ? S.tplPage : app.cur().pages[S.page];
+      return h('div', { class: 'sf-level sf-sheet' },
+        h('div', { class: 'sf-row between' }, h('strong', null, t.copyToTitle), h('button', { class: 'sf-btn', 'data-k': 'sheet-close', onclick: () => { this.E.sheet = null; app.render(); } }, t.cancel)),
+        h('p', { class: 'sf-note big' }, t.copyToNote),
+        h('div', { class: 'sf-sb-list' }, app.boards.map((bd, i) => (S.tplPage || i !== app.active) ? h('button', { class: 'sf-sb-open row', 'data-k': 'copy-to-' + i, onclick: () => this.copyTo(src, i) },
+          h('span', { class: 'sf-board-text' }, h('strong', null, bd.name), h('span', { class: 'sf-meta' }, t.sbMeta(app.sizeLabel(bd), THEMES[bd.theme].label, bd.pages.length)))) : null)));
+    }
+    return h('div', { class: 'sf-level' });
+  }
+  copyTo(src, i) {
+    const app = this.app, target = app.boards[i];
+    const c = clone(src); c.id = newId('p'); c.wins = []; delete c.win; delete c.alone;
+    target.pages.push(c); app.save(); this.E.sheet = null; app.flash(this.t.copiedTo(target.name)); app.render();
   }
   movePage(i, j) {
     const b = this.app.cur(); if (j < 0 || j >= b.pages.length || i === j) return false;
@@ -201,7 +338,7 @@ export class Editor {
     const s = this.app.S.sel; this.app.S.sel = s === i ? j : i < s && j >= s ? s - 1 : i > s && j <= s ? s + 1 : s;
     return true;
   }
-  // Keyboard reorder: focus the handle and use the arrow keys. Focus follows the page.
+  // Keyboard reorder: focus the handle and use the arrow keys. Focus follows the board.
   handleKey(e, i) {
     const j = e.key === 'ArrowUp' ? i - 1 : e.key === 'ArrowDown' ? i + 1 : null; if (j == null) return;
     e.preventDefault();
@@ -236,11 +373,13 @@ export class Editor {
     }));
     const zoneRows = h('div', { class: 'sf-zone-rows' }, zs.map((z, k) => {
       const tile = tileFor(p.zones[k]);
-      return h('button', { class: 'sf-zone-row' + (this.E.hover === k ? ' on' : ''), 'data-k': 'zone-' + k, onclick: () => this.openZone(k),
+      const open = this.E.zoneOpen && this.zi() === k;
+      return [h('button', { class: 'sf-zone-row' + (this.E.hover === k || open ? ' on' : ''), 'aria-expanded': String(open), 'data-k': 'zone-' + k, onclick: () => open ? (this.E.zoneOpen = false, this.app.render(), this.app.paintHighlight()) : this.openZone(k),
         onmouseenter: () => this.hover(k), onmouseleave: () => this.hover(null), onfocus: () => this.hover(k), onblur: () => this.hover(null) },
         h('span', { class: 'sf-zone-mark', 'aria-hidden': 'true' }),
         h('span', { class: 'sf-zone-text' }, h('span', null, `${this.zoneName(k)} · ${z.h} × ${z.w}`), h('strong', null, tile ? this.L(tile.name) : t.chooseContent)),
-        h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›'));
+        h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, open ? '⌄' : '›')),
+        open ? h('div', { class: 'sf-zone-open' }, this.contentLevel()) : null];
     }));
     let diagram = null;
     if (zs.length > 1) {
@@ -256,23 +395,23 @@ export class Editor {
     }
     const di = DURS.findIndex(x => x >= p.dur), durStep = dir => this.app.updPage(pp => { const i = DURS.findIndex(x => x >= pp.dur); pp.dur = DURS[Math.max(0, Math.min(DURS.length - 1, (i < 0 ? DURS.length - 1 : i) + dir))]; });
     return h('div', { class: 'sf-level' },
+      h('div', { class: 'sf-row between' },
+        h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'see-week', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'week' }) }, t.seeInWeek)),
+        this.more('pg-open', this.pageVerbs(this.app.selIdx()))),
       h('label', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.pageName),
         h('input', { class: 'sf-input big', value: p.name, 'data-k': 'page-name', oninput: e => { this.app.updPage(pp => { pp.name = e.target.value.slice(0, 80); }, true); }, onchange: () => this.app.render() })),
       h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.layout), layouts,
-        h('span', { class: 'sf-hint' }, t.gridIs(d.rows, d.cols), ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'grid-size', onclick: () => this.go('settings') }, t.changeSize))),
+        h('span', { class: 'sf-hint' }, t.gridIs(d.rows, d.cols), ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'grid-size', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'display' }) }, t.changeSize))),
       h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.zones), h('span', { class: 'sf-sub' }, zs.length > 1 ? t.tapZone : t.tapZoneOne), diagram, zoneRows),
-      h('div', { class: 'sf-field gap' }, h('span', { class: 'sf-eyebrow' }, t.timing),
+      h('div', { class: 'sf-field gap ruled' }, h('span', { class: 'sf-eyebrow' }, t.whenShows),
+        this.windowsEl(p),
         h('div', { class: 'sf-row between' }, h('span', { class: 'sf-label' }, t.showFor),
           this.stepper(`${p.dur} s`, () => durStep(-1), () => durStep(1), 'dur', di <= 0, p.dur >= DURS[DURS.length - 1])),
-        this.windowsEl(p),
         h('div', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.pageTransition),
           h('div', { class: 'sf-row' }, [['', t.boardDefault(t.transitions[b.transition])], ...Object.entries(t.transitions)].map(([id, label]) =>
             h('button', { class: 'sf-seg', 'aria-pressed': String((p.tr || '') === id), 'data-k': 'ptr-' + (id || 'board'),
               onclick: () => { this.app.updPage(pp => { if (id) pp.tr = id; else delete pp.tr; }); this.app.previewTransition(); } }, label))))),
-      h('div', { class: 'sf-row ruled' },
-        h('button', { class: 'sf-btn', 'data-k': 'dup-page', onclick: () => this.dupPage() }, t.dupPage),
-        h('button', { class: 'sf-btn', 'data-k': 'save-image', onclick: () => this.app.saveImage() }, t.saveImage),
-        h('button', { class: 'sf-btn danger', 'data-k': 'del-page', disabled: b.pages.length < 2, onclick: () => this.delPage() }, t.delPage)));
+      );
   }
   // A page's time windows: the tick is the way in, then one card per window.
   windowsEl(p) {
@@ -305,15 +444,12 @@ export class Editor {
           h('button', { class: 'sf-icon', 'aria-label': t.removeTime, title: t.removeTime, 'data-k': `win-rm-${i}`, onclick: () => setWins(list => { list.splice(i, 1); }) }, '×')));
     };
     return [
-      h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: wins.length > 0, 'data-k': 'win-on',
-        onchange: e => setWins(list => { if (e.target.checked) { if (!list.length) list.push(...(this.E.lastWins && this.E.lastWins[p.id] || [{ from: '07:00', to: '09:00', days: [] }])); } else { this.E.lastWins = Object.assign({}, this.E.lastWins, { [p.id]: clone(list) }); list.length = 0; } }) }),
-        h('span', null, t.window)),
-      wins.length ? h('div', { class: 'sf-indent' },
-        wins.map(card),
-        wins.length < 8 ? h('button', { class: 'sf-link-btn', 'data-k': 'win-add', onclick: () => setWins(list => { const last = list[list.length - 1]; list.push({ from: last.from, to: last.to, days: [] }); }) }, '+ ' + t.addTime) : null,
-        h('div', { class: 'sf-field' },
-          h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!p.alone, 'data-k': 'win-alone', onchange: e => this.app.updPage(pp => { if (e.target.checked) pp.alone = true; else delete pp.alone; }) }), h('span', null, t.showAlone)),
-          h('span', { class: 'sf-hint' }, t.showAloneHint))) : null
+      wins.length ? null : h('span', { class: 'sf-hint' }, t.anyTimeHint),
+      wins.map(card),
+      wins.length < 8 ? h('div', null, h('button', { class: 'sf-link-btn', 'data-k': 'win-add', onclick: () => setWins(list => { const last = list[list.length - 1]; list.push(last ? { from: last.from, to: last.to, days: [] } : { from: '07:00', to: '09:00', days: [] }); }) }, '+ ' + t.addTime)) : null,
+      wins.length ? h('div', { class: 'sf-field' },
+        h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!p.alone, 'data-k': 'win-alone', onchange: e => this.app.updPage(pp => { if (e.target.checked) pp.alone = true; else delete pp.alone; }) }), h('span', null, t.showAlone)),
+        h('span', { class: 'sf-hint' }, t.showAloneHint)) : null
     ];
   }
   winLabel(w) {
@@ -338,18 +474,22 @@ export class Editor {
       p.zones.length = need;
     });
   }
-  dupPage() {
-    const b = this.app.cur(), i = this.app.selIdx(b);
-    this.app.upd(bb => { const c = clone(bb.pages[i]); c.id = newId('p'); c.name = (c.name || this.t.page) + this.t.copySuffix; bb.pages.splice(i + 1, 0, c); }, true);
-    this.app.S.sel = i + 1; this.go('page');
+  dupPage(stay) {
+    const b = this.app.cur(), i = this.app.selIdx(b), id = newId('p');
+    this.app.upd(bb => { const c = clone(bb.pages[i]); c.id = id; c.name = (c.name || this.t.page) + this.t.copySuffix; bb.pages.splice(i + 1, 0, c); }, true);
+    this.app.S.sel = i + 1;
+    if (stay) this.app.render(); else this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: id, from: this.E.from });
   }
   delPage() {
     const b = this.app.cur(), i = this.app.selIdx(b); if (b.pages.length < 2) return;
+    const wasOpen = this.onBoard();
     this.app.upd(bb => { bb.pages.splice(i, 1); }, true);
-    this.app.S.sel = Math.max(0, i - 1); this.go(this.phone() ? 'playlist' : 'page', {}, true);
+    this.app.S.sel = Math.max(0, i - 1);
+    if (wasOpen) this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: this.E.from || 'boards' }, { back: true, replace: true }); else this.app.render();
   }
 
   // ---------- content ----------
+  // A zone's content, shown in place under its row on the board's level (0.7).
   contentLevel() {
     const t = this.t, zone = this.zone(), tile = tileFor(zone);
     if (this.E.picking || !tile) return h('div', { class: 'sf-level' }, this.picker());
@@ -383,7 +523,7 @@ export class Editor {
       oninput: e => { this.E.search = e.target.value; groups.replaceWith(groups = this.pickerGroups(zd, cur)); this.paintThumbs(); } });
     let groups = this.pickerGroups(zd, cur);
     return h('div', { class: 'sf-picker' },
-      h('div', { class: 'sf-field' }, input, h('span', { class: 'sf-sub' }, t.shapeNote(zd.h, zd.w), ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'grid-size', onclick: () => this.go('settings') }, t.changeSize))),
+      h('div', { class: 'sf-field' }, input, h('span', { class: 'sf-sub' }, t.shapeNote(zd.h, zd.w), ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'grid-size', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: this.app.cur().id, view: 'display' }) }, t.changeSize))),
       groups);
   }
   pickerGroups(zd, cur) {
@@ -490,7 +630,7 @@ export class Editor {
       case 'locnote': {
         const loc = this.app.cur().loc;
         if (loc && loc.lat != null) return h('p', { class: 'sf-note' }, t.sunFrom(loc.city));
-        return h('p', { class: 'sf-note' }, t.sunNeedsLoc, ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'to-settings', onclick: () => this.go('settings') }, t.boardSettings));
+        return h('p', { class: 'sf-note' }, t.sunNeedsLoc, ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'to-settings', onclick: () => this.go('settings') }, t.viewDisplay));
       }
       case 'slhome': return this.slHome(o);
       default: return null;
@@ -574,9 +714,7 @@ export class Editor {
       this.thumb('th-' + th.id, 4, 9, () => sample(th, { rows: 4, cols: 9 }), th.id), h('span', null, th.label))));
     const loc = b.loc;
     return h('div', { class: 'sf-level' },
-      h('label', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.boardName),
-        h('input', { class: 'sf-input big', value: b.name, 'data-k': 'board-name', oninput: e => app.upd(bb => { bb.name = e.target.value.slice(0, 80); }, true), onchange: () => app.render() }),
-        h('span', { class: 'sf-hint' }, t.saved)),
+      h('p', { class: 'sf-note' }, t.displayNote),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.theme), themes),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.size),
         h('div', { class: 'sf-row' }, seg([['6x22', '6 × 22'], ['3x15', '3 × 15'], ['fill', t.fill], ['custom', t.custom]], b.size, v => app.upd(bb => { if (v === 'custom' && bb.size !== 'custom') { const d = app.dims(); bb.rows = d.rows; bb.cols = d.cols; } bb.size = v; }), 'size')),
@@ -610,35 +748,37 @@ export class Editor {
         h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'ss-preview', onclick: () => sound.preview(b.soundStyle || 'clack') }, t.previewSound))));
   }
 
-  // ---------- boards and templates ----------
-  startLevel() {
-    const t = this.t, app = this.app, first = app.startPending();
+  // ---------- explore ----------
+  // Templates to start from. A first visit lands here, with a way to keep the demo board.
+  exploreLevel() {
+    const t = this.t, app = this.app, first = app.startPending(), now = Date.now();
     const tplGrid = h('div', { class: 'sf-templates' }, TEMPLATES.map(tp => {
       const nb = this.tplBoard(tp.id), d = app.dimsOf(nb);
-      return h('button', { class: 'sf-template', 'data-k': 'tpl-' + tp.id, onclick: () => app.useTemplate(tp.id) },
-        this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, Date.now(), this.lang, previewLive(app.live.data, Date.now())), nb.theme),
-        h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang]), h('span', null, tp.desc[this.lang])));
+      return h('button', { class: 'sf-template', 'data-k': 'tpl-' + tp.id, onclick: () => this.go({ sec: 'ex', lv: 'tpl', tpl: tp.id }) },
+        this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(app.live.data, now)), nb.theme),
+        h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang]), h('span', null, `${tp.desc[this.lang]} · ${t.boardsCount(nb.pages.length)}`)));
     }));
     const file = h('input', { type: 'file', accept: 'application/json,.json', style: 'display:none', onchange: e => app.importFile(e) });
     return h('div', { class: 'sf-level' },
-      h('div', { class: 'sf-start-head' }, h('h2', null, t.startTitle), h('p', null, t.startBody)),
+      h('div', { class: 'sf-start-head' }, h('h2', null, t.startTitle), h('p', null, t.exIntro)),
       app.account.available && !app.account.signedIn() ? h('div', { class: 'sf-guest' }, h('span', null, t.startGuest), h('button', { class: 'sf-btn', 'data-k': 'start-signin', onclick: () => app.account.signIn() }, t.signInGoogle)) : null,
+      first ? h('button', { class: 'sf-btn big', 'data-k': 'skip', onclick: () => { app.markStarted(); this.open(); } }, t.skip) : null,
       tplGrid,
-      first ? h('button', { class: 'sf-btn big', 'data-k': 'skip', onclick: () => { app.markStarted(); this.go(this.phone() ? 'playlist' : 'page'); } }, t.skip) : null,
-      h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.yourBoards),
-        app.boards.map((bd, i) => {
-          const d = app.dimsOf(bd), cur = i === app.active;
-          return h('div', { class: 'sf-board' + (cur ? ' current' : '') },
-            this.thumb('bd-' + bd.id, d.rows, d.cols, () => compose(bd.pages[0], d.rows, d.cols, Date.now(), this.lang, app.live.data), bd.theme),
-            h('span', { class: 'sf-board-text' }, h('strong', null, bd.name), h('span', null, `${app.sizeLabel(bd)} · ${t.pagesCount(bd.pages.length)}`)),
-            h('div', { class: 'sf-row' },
-              h('button', { class: 'sf-small-btn', disabled: cur, 'data-k': `bd-open-${i}`, onclick: () => { app.pickBoard(i); this.go(this.phone() ? 'playlist' : 'page'); } }, cur ? t.current : t.open),
-              h('button', { class: 'sf-small-btn', 'data-k': `bd-dup-${i}`, onclick: () => app.duplicateBoard(i) }, t.duplicate),
-              h('button', { class: 'sf-small-btn', 'data-k': `bd-exp-${i}`, onclick: () => app.exportJson(i) }, t.exportB),
-              h('button', { class: 'sf-small-btn danger', disabled: app.boards.length < 2, 'data-k': `bd-del-${i}`, onclick: () => app.deleteBoard(i) }, t.del)));
-        }),
+      h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.importTitle),
         h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'import', onclick: () => file.click() }, t.importB), file),
-        h('p', { class: 'sf-note' }, t.jsonNote)));
+        h('p', { class: 'sf-note' }, t.jsonNote)),
+      h('div', { class: 'sf-later' }, h('strong', null, t.fromOthers), h('span', null, t.laterShort)));
+  }
+  templateLevel() {
+    const t = this.t, app = this.app, tp = TEMPLATES.find(x => x.id === this.E.tpl), nb = this.tplBoard(tp.id), d = app.dimsOf(nb), now = Date.now();
+    return h('div', { class: 'sf-level' },
+      h('p', { class: 'sf-note big' }, tp.desc[this.lang]),
+      h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'use-tpl', disabled: app.boards.length >= 50, onclick: () => app.useTemplate(tp.id) }, t.useAsNew)),
+      h('ol', { class: 'sf-pls' }, nb.pages.map((p, i) => h('li', { class: 'sf-pl', style: `--hue:${hueOf(nb, i)}` },
+        h('div', { class: 'sf-pl-open static' },
+          this.thumb(`tp-${tp.id}-${i}`, d.rows, d.cols, () => compose(p, d.rows, d.cols, now, this.lang, previewLive(app.live.data, now)), nb.theme),
+          h('span', { class: 'sf-pl-text' }, h('span', { class: 'sf-pl-name' }, p.name || `${t.page} ${i + 1}`), h('span', { class: 'sf-pl-meta' }, `${p.dur} s`))),
+        h('button', { class: 'sf-small-btn', 'data-k': `tpl-copy-${i}`, onclick: () => { this.E.sheet = { kind: 'copy', tplPage: p }; app.render(); } }, t.addToSb)))));
   }
   tplBoard(id) {
     this.tplCache = this.tplCache || new Map();
@@ -667,7 +807,7 @@ export class Editor {
   }
   startRename() {
     this.E.renaming = true;
-    if (this.phone() && this.E.lv !== 'playlist') { this.go('playlist'); } else this.app.render();
+    if (!(this.E.sec === 'sb' && this.E.lv === 'sb')) this.go({ sec: 'sb', lv: 'sb', sb: this.app.cur().id, view: this.E.view || 'week' }); else this.app.render();
     const el = this.app.drawer && this.app.drawer.querySelector('[data-k="rename-input"]');
     if (el) { el.focus(); el.select(); }
   }
@@ -706,13 +846,14 @@ export class Editor {
   }
   accountLevel() {
     const t = this.t, a = this.app.account, privacy = h('a', { href: this.privacyHref(), 'data-k': 'acc-privacy' }, t.accPrivacy);
-    if (!a.available) return h('div', { class: 'sf-level' }, this.langField());
+    if (!a.available) return h('div', { class: 'sf-level' }, this.langField(), this.accountFoot());
     if (!a.signedIn()) return h('div', { class: 'sf-level' },
       a.status === 'signedout'
         ? h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accSignedOutBody(a.unsyncedCount())))
         : h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accGuestBody), h('p', { class: 'sf-note big' }, t.accSignInBody)),
       h('div', null, h('button', { class: 'sf-btn primary big', 'data-k': 'acc-signin', onclick: () => a.signIn() }, t.signInGoogle)),
       this.langField('ruled'),
+      this.accountFoot(),
       h('p', { class: 'sf-note' }, privacy));
     const status = this.accountStatus();
     return h('div', { class: 'sf-level' },
@@ -734,8 +875,22 @@ export class Editor {
         h('button', { class: 'sf-btn', 'data-k': 'acc-export', onclick: () => a.exportAll() }, t.exportAll),
         this.confirmBtn('signout', t.signOut, a.unsyncedCount() ? t.signOutAnyway : t.signOutAgain, a.unsyncedCount() ? t.confirmSignOutUnsynced(a.unsyncedCount()) : t.confirmSignOut, () => a.signOut())),
       this.langField('ruled'),
+      this.accountFoot(),
       h('div', { class: 'sf-row ruled' }, this.confirmBtn('delete', t.deleteAccount, t.deleteAgain, t.confirmDelete, () => a.deleteAccount(), 'danger')),
       h('p', { class: 'sf-note' }, privacy));
+  }
+
+  // What every Account shows: your data against the limits, Help and the version log, and
+  // the places kept for later.
+  accountFoot() {
+    const t = this.t, row = (k, label, sub, go) => h('button', { class: 'sf-sec', 'data-k': k, onclick: go }, h('span', null, h('strong', null, label), h('span', null, sub)), h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›'));
+    return [
+      h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.yourData), h('span', { class: 'sf-hint' }, t.dataCounts(this.app.boards.length, 50))),
+      h('div', { class: 'sf-secs' },
+        row('open-help', t.help, t.helpSub, () => this.go({ sec: 'acc', lv: 'help' })),
+        row('version', t.versionLog, `v${VERSION}`, () => this.go({ sec: 'acc', lv: 'log' }))),
+      h('div', { class: 'sf-later' }, h('strong', null, t.connections), h('span', null, t.laterShort)),
+      h('div', { class: 'sf-later' }, h('strong', null, t.submissions), h('span', null, t.laterShort))];
   }
 
   // ---------- help ----------
@@ -743,7 +898,7 @@ export class Editor {
   // title, then numbered sections, some with a small board drawn by the renderer.
   helpLevel() {
     const intro = INTRO[this.lang] || INTRO.en, part = x => typeof x === 'string' ? x : x.href === 'privacy' ? h('a', { href: this.privacyHref() }, x.t)
-      : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => { if (x.k === 'account') this.prevLv = 'help'; this.go(x.k); } }, x.t);
+      : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => this.go(x.k) }, x.t);
     return h('div', { class: 'sf-level sf-help' },
       h('div', { class: 'sf-start-head' }, h('h2', null, intro.title), h('p', null, intro.lede)),
       (HELP[this.lang] || HELP.en).map((sec, i) => h('section', { class: 'sf-help-sec' },
