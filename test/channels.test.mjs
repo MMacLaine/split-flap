@@ -235,3 +235,22 @@ test('a faint flap keeps its letter, a faint blank is a blank', async () => {
   assert.equal(cellChar('~ '), ' ');
   assert.equal(cellChar('~~'), ' ');
 });
+
+test('a ticker row shows the data, not only the place name, and keeps items whole (0.7.3)', () => {
+  const now = at(2026, 9, 27, 8, 0);
+  const dep = (line, dest, mm) => ({ line, dest, expected: `2026-09-27T08:${String(mm).padStart(2, '0')}:00`, mode: 'METRO' });
+  const live = { sl: { 1: { deps: [dep('17', 'Åkeshov', 2), dep('18', 'Alvik', 6)] } }, fx: { SEK: { rates: { EUR: 0.0886, USD: 0.101 } } } };
+  const row = (ch, o) => { const segs = new Set(); for (let t = now; t < now + 60000; t += 3500) segs.add(compose({ layout: 'ticker', zones: [{ ch: 'clock', o: {} }, { ch, o }] }, 6, 22, t, 'en', live)[5].join('').trim()); return [...segs]; };
+  const sl = row('sl', { stations: [{ id: 1, name: 'Odenplan' }], eta: 'min' });
+  assert.ok(sl.some(s => /17 ÅKESHOV/.test(s)), sl.join(' | '));      // departures appear, not only ODENPLAN
+  const fx = row('currency', {});
+  assert.ok(fx.every(s => !/^\d+[.,]\d+$/.test(s)), fx.join(' | '));   // no bare number without its label
+});
+
+test('the weather detail fits 6 x 22 without cutting the wind unit', () => {
+  const live = { loc: { lat: 59.33, lon: 18.07, city: 'Stockholm' }, wx: { '59.33,18.07': { t: 11, feels: 9, code: 0, wind: 14, daily: [] } } };
+  for (const lang of ['en', 'sv']) {
+    const lines = channelLines('weather', {}, Z(6, 22), 0, lang, live).lines.filter(l => typeof l === 'string');
+    assert.ok(lines.every(l => !/M\/$/.test(l.trim()) && l.length <= 20), lines.join(' | '));
+  }
+});

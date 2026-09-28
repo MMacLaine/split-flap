@@ -705,6 +705,9 @@ export class Editor {
       if (this.isTicker()) o.text = this.lang === 'sv' ? 'DIN LÖPTEXT HÄR' : 'YOUR TICKER TEXT';
       else if (preview) o.lines = zd.h >= 3 ? ['', this.lang === 'sv' ? 'HEJ' : 'HELLO', 'roygbv'] : [this.lang === 'sv' ? 'HEJ' : 'HELLO'];
     }
+    // defaults in the page's language (0.7.3: the Swedish page started these in English)
+    if (this.lang === 'sv' && tile.id === 'rotating') o.messages = ['GOD MORGON', 'KAFFET ÄR KLART', 'LUNCH KL 12'];
+    if (this.lang === 'sv' && tile.id === 'menu') o.title = 'IDAG';
     if (tile.id === 'draw') { o.mode = 'paint'; o.cells = stamp(zd.h, zd.w, zd.h >= 6 && zd.w >= 7 ? HEART : ['rr.rr', '.rrr.']); }
     if (tile.id === 'photo') { o.mode = 'photo'; o.cells = this.samplePhoto(zd.h, zd.w, theme || this.app.cur().theme); }
     if (tile.id === 'sl') Object.assign(o, home ? { home: true } : { stations: [{ id: 9117, name: 'Odenplan' }] });

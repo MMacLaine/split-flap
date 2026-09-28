@@ -115,8 +115,8 @@ export const TEMPLATES = [
   {
     id: 'blank',
     name: { en: 'Blank', sv: 'Tom' },
-    desc: { en: 'One empty page to type on.', sv: 'En tom sida att skriva på.' },
-    make: sv => base(sv ? 'Ny tavla' : 'New board', { pages: [page(sv ? 'Sida 1' : 'Page 1', 'full', 10, [z('message', { lines: ['', '', sv ? 'SKRIV HÄR' : 'TYPE HERE'] })])] })
+    desc: { en: 'One empty board to type on.', sv: 'En tom tavla att skriva på.' },
+    make: sv => base(sv ? 'Ny storyboard' : 'New storyboard', { pages: [page(sv ? 'Tavla 1' : 'Board 1', 'full', 10, [z('message', { lines: ['', '', sv ? 'SKRIV HÄR' : 'TYPE HERE'] })])] })
   }
 ];
 
