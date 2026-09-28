@@ -3,6 +3,36 @@
 
 export const CHANGELOG = [
   {
+    v: '0.7.3', date: '2026-09-28',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'Fixes from a full test of the live site, across the editor, the content, accounts and the pages around it.',
+      sv: 'Rättningar efter ett fullständigt test av webbplatsen, av redigeraren, innehållet, kontona och sidorna runt omkring.'
+    },
+    items: {
+      en: [
+        'If signing in did not finish, someone who had visited before got a browser error page in place of the message 0.7.2 added. They get the message now.',
+        'On a phone, swiping through the week scrolls it. Before, a swipe could start a new time and jump the week back to midnight. A tap on an empty part of a day asks for a time there.',
+        'The week keeps its place when something changes, and on a wide screen it opens at six in the morning.',
+        'Departures and weather in a ticker row show their data. Before, the row showed only the station or the city, and other channels broke into pieces there.',
+        'The demo weather board no longer cuts the wind unit in half.',
+        'Keep the demo storyboard on a first visit opens the demo, where before it did nothing you could see.',
+        'Share in a storyboard\'s ⋯ menu opens beside the editor on a wide screen, Escape closes an Import sheet even from its text box, and a double press of Save to my boards saves once.',
+        'Swedish pages start Rotating messages and Menu in Swedish, a few hints use the new words, and small text is easier to read, in the light theme especially.'
+      ],
+      sv: [
+        'Om inloggningen inte blev klar fick den som varit här förut en felsida från webbläsaren i stället för meddelandet från 0.7.2. Nu kommer meddelandet.',
+        'På en telefon scrollar ett svep genom veckan. Förut kunde ett svep starta en ny tid och hoppa tillbaka till midnatt. Ett tryck på en tom del av en dag frågar efter en tid där.',
+        'Veckan behåller sin plats när något ändras, och på en bred skärm öppnas den klockan sex på morgonen.',
+        'Avgångar och väder i en löptextrad visar sin data. Förut visade raden bara stationen eller staden, och andra kanaler föll isär där.',
+        'Demons vädertavla klipper inte längre vindens enhet på mitten.',
+        'Behåll demostoryboarden vid första besöket öppnar demon, där den förut inte gjorde något du kunde se.',
+        'Dela i en storyboards ⋯-meny öppnas bredvid redigeraren på en bred skärm, Escape stänger Importera även från textrutan, och två snabba tryck på Spara i mina tavlor sparar en gång.',
+        'Svenska sidor börjar Växlande meddelanden och Meny på svenska, några tips använder de nya orden, och liten text är lättare att läsa, särskilt i det ljusa temat.'
+      ]
+    }
+  },
+  {
     v: '0.7.2', date: '2026-09-28',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

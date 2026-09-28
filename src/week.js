@@ -55,7 +55,7 @@ export function weekView(ed) {
   const shown = phone ? [days[E.day]] : days;
   const anyTime = b.pages.map((p, i) => [p, i]).filter(([p]) => !pageWins(p).length);
   const noTimes = b.pages.every(p => !pageWins(p).length);
-  const H = phone ? 34 : 26;
+  const H = phone ? 34 : 32;   // tall enough on a wide screen for the week to open on 06:00
 
   const head = h('div', { class: 'sf-week-head' },
     h('button', { class: 'sf-icon', 'aria-label': t.prevWeek, 'data-k': 'week-prev', onclick: () => { E.weekOff--; app.render(); } }, '‹'),
@@ -65,8 +65,8 @@ export function weekView(ed) {
     h('span', { class: 'sf-grow' }),
     h('button', { class: 'sf-small-btn', 'data-k': 'week-add', onclick: () => { E.card = { page: 0, win: -1, day: phone ? E.day : (new Date(now).getDay() + 6) % 7, s: 540, e: 600 }; app.S.sel = 0; app.render(); app.tick(true); } }, '+ ' + t.addATime));
 
-  const chips = phone ? h('div', { class: 'sf-days', role: 'tablist', 'aria-label': t.daysLabel }, days.map((d, k) =>
-    h('button', { class: 'sf-day', role: 'tab', 'aria-selected': String(E.day === k), 'aria-pressed': String(E.day === k), 'data-k': 'day-chip-' + k, onclick: () => { E.day = k; app.render(); } },
+  const chips = phone ? h('div', { class: 'sf-days', role: 'group', 'aria-label': t.daysLabel }, days.map((d, k) =>
+    h('button', { class: 'sf-day', 'aria-pressed': String(E.day === k), 'data-k': 'day-chip-' + k, onclick: () => { E.day = k; app.render(); } },
       `${t.dayShort[d.getDay()]} ${d.getDate()}`))) : null;
 
   const strip = h('div', { class: 'sf-anytime' }, h('span', { class: 'sf-eyebrow' }, t.anyTime),
@@ -119,6 +119,17 @@ function setWin(ed, i, wi, fn) {
 // Drag down an empty part of a day: a time from where you pressed to where you let go.
 function dragNew(ed, e, day, H) {
   if (e.button > 0) return;
+  // On touch a swipe scrolls the week; a tap on an empty part of a day asks for a time
+  // there (0.7.3). Drawing a time by dragging is for a mouse or a pen.
+  if (e.pointerType === 'touch') {
+    const top = e.currentTarget.getBoundingClientRect().top, y0 = e.clientY, t0 = Date.now();
+    const up = ev => { removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      if (ev.type !== 'pointerup' || Math.abs(ev.clientY - y0) > 8 || Date.now() - t0 > 600) return;
+      const s = Math.max(0, Math.min(DAY - 60, snap((y0 - top) / H * 60)));
+      ed.E.card = { page: 0, win: -1, day, s, e: s + 60 }; ed.app.S.sel = 0; ed.app.render(); ed.app.tick(true); };
+    addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    return;
+  }
   const col = e.currentTarget, top = col.getBoundingClientRect().top, at = y => Math.max(0, Math.min(DAY, snap((y - top) / H * 60)));
   const s0 = at(e.clientY); let e0 = s0 + 60;
   const ghost = h('span', { class: 'sf-block ghost', style: `top:${s0 / 60 * H}px;height:${H}px;left:2px;right:2px` }); col.append(ghost);
@@ -131,6 +142,13 @@ function dragNew(ed, e, day, H) {
 // edge to change the start or end. A press without a drag opens the board.
 function dragBlock(ed, e, x, day, H, phone) {
   if (e.button > 0) return;
+  if (e.pointerType === 'touch') {               // on touch: a tap opens the board, a swipe scrolls
+    const y0 = e.clientY, t0 = Date.now();
+    const up = ev => { removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      if (ev.type === 'pointerup' && Math.abs(ev.clientY - y0) <= 8 && Date.now() - t0 < 600) ed.openBoard(x.page, 'week'); };
+    addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    return;
+  }
   e.preventDefault();
   const el = e.currentTarget, r = el.getBoundingClientRect(), y0 = e.clientY, x0 = e.clientX;
   const mode = e.clientY - r.top < 6 ? 'start' : r.bottom - e.clientY < 6 ? 'end' : 'move';

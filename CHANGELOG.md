@@ -2,6 +2,19 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.7.3 (2026-09-28): Fixes
+
+Fixes from a full test of the live site, across the editor, the content, accounts and the pages around it.
+
+- If signing in did not finish, someone who had visited before got a browser error page in place of the message 0.7.2 added. They get the message now.
+- On a phone, swiping through the week scrolls it. Before, a swipe could start a new time and jump the week back to midnight. A tap on an empty part of a day asks for a time there.
+- The week keeps its place when something changes, and on a wide screen it opens at six in the morning.
+- Departures and weather in a ticker row show their data. Before, the row showed only the station or the city, and other channels broke into pieces there.
+- The demo weather board no longer cuts the wind unit in half.
+- Keep the demo storyboard on a first visit opens the demo, where before it did nothing you could see.
+- Share in a storyboard's ⋯ menu opens beside the editor on a wide screen, Escape closes an Import sheet even from its text box, and a double press of Save to my boards saves once.
+- Swedish pages start Rotating messages and Menu in Swedish, a few hints use the new words, and small text is easier to read, in the light theme especially.
+
 ## v0.7.2 (2026-09-28): Fixes
 
 Three fixes from using 0.7.1 on a computer and a phone together.
