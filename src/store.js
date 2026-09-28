@@ -149,6 +149,7 @@ export function saveBoards(boards, active) {
   const s = ls(); if (!s) return;
   try { s.setItem(K.boards, JSON.stringify(boards)); s.setItem(K.active, String(active)); } catch { /* storage full or blocked: the board still runs */ }
 }
+export function saveActiveOnly(active) { try { ls().setItem(K.active, String(active)); } catch { /* storage blocked */ } }
 export function getFlag(k) { try { return ls().getItem(k); } catch { return null; } }
 export function setFlag(k, v) { try { ls().setItem(k, v); } catch { /* ignore */ } }
 

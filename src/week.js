@@ -60,7 +60,7 @@ export function weekView(ed) {
     h('button', { class: 'sf-icon', 'aria-label': t.nextWeek, 'data-k': 'week-next', onclick: () => { E.weekOff++; app.render(); } }, '›'),
     E.weekOff ? h('button', { class: 'sf-small-btn', 'data-k': 'week-today', onclick: () => { E.weekOff = 0; E.day = (new Date().getDay() + 6) % 7; app.render(); } }, t.today) : null,
     h('span', { class: 'sf-grow' }),
-    h('button', { class: 'sf-small-btn', 'data-k': 'week-add', onclick: () => { E.card = { page: 0, win: -1, day: phone ? E.day : (new Date(now).getDay() + 6) % 7, s: 540, e: 600 }; app.render(); } }, '+ ' + t.addATime));
+    h('button', { class: 'sf-small-btn', 'data-k': 'week-add', onclick: () => { E.card = { page: 0, win: -1, day: phone ? E.day : (new Date(now).getDay() + 6) % 7, s: 540, e: 600 }; app.S.sel = 0; app.render(); app.tick(true); } }, '+ ' + t.addATime));
 
   const chips = phone ? h('div', { class: 'sf-days', role: 'tablist', 'aria-label': t.daysLabel }, days.map((d, k) =>
     h('button', { class: 'sf-day', role: 'tab', 'aria-selected': String(E.day === k), 'aria-pressed': String(E.day === k), 'data-k': 'day-chip-' + k, onclick: () => { E.day = k; app.render(); } },
@@ -121,7 +121,7 @@ function dragNew(ed, e, day, H) {
   const ghost = h('span', { class: 'sf-block ghost', style: `top:${s0 / 60 * H}px;height:${H}px;left:2px;right:2px` }); col.append(ghost);
   const mv = ev => { e0 = Math.max(s0 + SNAP, at(ev.clientY)); ghost.style.height = `${(e0 - s0) / 60 * H}px`; };
   const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); ghost.remove();
-    ed.E.card = { page: 0, win: -1, day, s: s0, e: Math.min(DAY, e0) }; ed.app.render(); };
+    ed.E.card = { page: 0, win: -1, day, s: s0, e: Math.min(DAY, e0) }; ed.app.S.sel = 0; ed.app.render(); ed.app.tick(true); };
   addEventListener('pointermove', mv); addEventListener('pointerup', up);
 }
 // Drag a block to move it (sideways to another day on a wide screen), or its top or bottom
@@ -179,7 +179,7 @@ function timeCard(ed, days) {
   };
   return h('div', { class: 'sf-card sf-pop', role: 'dialog', 'aria-label': t.timeCardTitle },
     h('strong', null, t.timeCardTitle),
-    h('div', { class: 'sf-row wrap' }, b.pages.map((p, i) => h('button', { class: 'sf-seg', 'aria-pressed': String(C.page === i), style: `--hue:${hueOf(b, i)}`, 'data-k': 'card-page-' + i, onclick: () => { C.page = i; app.render(); } }, name(t, p, i))),
+    h('div', { class: 'sf-row wrap' }, b.pages.map((p, i) => h('button', { class: 'sf-seg', 'aria-pressed': String(C.page === i), style: `--hue:${hueOf(b, i)}`, 'data-k': 'card-page-' + i, onclick: () => { C.page = i; app.S.sel = i; app.render(); app.tick(true); } }, name(t, p, i))),
       h('button', { class: 'sf-seg', 'data-k': 'card-new', onclick: () => { ed.E.card = null; ed.addPage(); } }, '+ ' + t.newBoardShort)),
     h('div', { class: 'sf-row' }, h('span', { class: 'sf-label muted' }, `${t.dayShort[d.getDay()]} ${d.getDate()}`),
       h('input', { type: 'time', class: 'sf-time', value: hm(C.s), 'aria-label': t.from, 'data-k': 'card-from', onchange: e => { C.s = toMin(e.target.value || '09:00'); } }),

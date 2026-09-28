@@ -39,7 +39,6 @@ export class Editor {
       menu: null, sheet: null, last: {} };
     this.specs = new Map();
     this.lastNav = -1;
-    this.stack = [];
     this.composer = new Composer(app, this);
   }
   get t() { return this.app.t; }
@@ -64,8 +63,11 @@ export class Editor {
     E.last[r.sec] = this.route();
     if (!opts.silent) {
       const hash = routeHash(r), url = location.pathname + location.search + hash;
-      if (opts.replace || location.hash === hash) { history.replaceState({ sf: 1 }, '', url); this.stack[this.stack.length - 1] = hash; }
-      else { history.pushState({ sf: 1 }, '', url); this.stack.push(hash); }
+      // Each entry carries how deep in the editor it is and the address of the level it
+      // came from, in history.state, so they survive a reload (0.7.0 review).
+      const st = history.state && history.state.sf ? history.state : null;
+      if (opts.replace || location.hash === hash) history.replaceState({ sf: 1, depth: st ? st.depth : 1, prev: st ? st.prev : '' }, '', url);
+      else history.pushState({ sf: 1, depth: (st ? st.depth : 0) + 1, prev: location.hash }, '', url);
     }
     this.app.S.cz = -1;
     this.app.render(); this.app.tick(true);
@@ -93,8 +95,6 @@ export class Editor {
   }
   // The browser moved (back, forward, or an address typed in): show that level, no new entry.
   apply(r) {
-    const i = this.stack.lastIndexOf(routeHash(r));
-    this.stack = i >= 0 ? this.stack.slice(0, i + 1) : [routeHash(r)];
     this.go(r, { silent: true, back: true });
   }
   backTarget() { return parentRoute(this.route()); }
@@ -103,8 +103,8 @@ export class Editor {
   back() {
     const up = this.backTarget(); if (!up) return;
     const h = routeHash(up);
-    if (this.stack.length > 1 && this.stack[this.stack.length - 2] === h) { this.stack.pop(); history.back(); return; }
-    this.go(up, { back: true, replace: true });
+    if (history.state && history.state.sf && history.state.prev === h) { history.back(); return; }
+    this.go(up, { back: true, replace: true });   // the entry keeps the level it really came from
   }
   // Escape: a menu or sheet first, then the content picker if the zone had content, and
   // otherwise it closes the editor.
@@ -121,12 +121,22 @@ export class Editor {
   open() {
     this.E.drag = -1;
     const r = parseRoute(location.hash);
-    if (r) { this.go(r, { replace: true }); return; }
+    if (r) {
+      // opened at an address with no editor entries of this visit behind it: depth 0
+      if (!(history.state && history.state.sf)) history.replaceState({ sf: 1, depth: 0, prev: '' }, '', location.href);
+      this.go(r, { replace: true }); return;
+    }
     if (this.app.startPending()) { this.go({ sec: 'ex', lv: 'list' }); return; }
     const b = this.app.cur(), p = b.pages[this.app.selIdx(b)];
     this.go(p ? { sec: 'sb', lv: 'board', sb: b.id, bd: p.id, from: 'boards' } : { sec: 'sb', lv: 'sb', sb: b.id, view: 'week' });
   }
-  close() { this.stack = []; history.replaceState(null, '', location.pathname + location.search); }
+  // Done: back out of every entry the editor made, so the browser's back after Done leaves
+  // the site instead of reopening the editor. An editor opened straight from an address
+  // (a reload, a link) has nothing of its own behind it, so its entry is just cleared.
+  close() {
+    const st = history.state, depth = st && st.sf ? st.depth : 0, clear = () => history.replaceState(null, '', location.pathname + location.search);
+    if (depth > 0) { this.closing = true; history.go(-depth); } else clear();
+  }
   openBoard(i, from) { const b = this.app.cur(), p = b.pages[i]; if (p) this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: p.id, from: from || (this.E.lv === 'sb' ? this.E.view : 'boards') }); }
   openPage(i) { this.openBoard(i); }
   openStoryboard(i, view) { const b = this.app.boards[i]; if (b) this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: view || 'week' }); }
@@ -196,12 +206,12 @@ export class Editor {
 
   head() {
     const t = this.t, E = this.E, b = this.app.cur(), p = this.page(), up = this.backTarget();
-    const upLabel = !up ? '' : up.lv === 'sb' ? b.name : up.sec === 'sb' ? t.secStoryboards : up.sec === 'ex' ? t.secExplore : t.secAccount;
+    const upLabel = !up ? '' : up.lv === 'sb' ? b.name : up.sec === 'sb' ? t.secStoryboards : up.sec === 'ex' ? t.secExplore : this.app.account.available ? t.secAccount : t.secSettings;
     const tpl = E.tpl && TEMPLATES.find(x => x.id === E.tpl);
     const [kicker, title] = {
       'sb:list': ['Split-Flap', t.secStoryboards], 'sb:sb': [t.secStoryboards, b.name], 'sb:board': [b.name, p ? p.name || t.page : ''],
       'ex:list': ['Split-Flap', t.secExplore], 'ex:tpl': [t.secExplore, tpl ? tpl.name[this.lang] : ''],
-      'acc:main': ['Split-Flap', this.app.account.available ? t.account : t.lang], 'acc:help': [t.secAccount, t.help], 'acc:log': [`v${VERSION}`, t.versionLog]
+      'acc:main': ['Split-Flap', this.app.account.available ? t.account : t.secSettings], 'acc:help': [t.secAccount, t.help], 'acc:log': [`v${VERSION}`, t.versionLog]
     }[E.sec + ':' + E.lv];
     return h('header', { class: 'sf-panel-head' },
       up ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, upLabel)) : null,
@@ -215,7 +225,7 @@ export class Editor {
     const tab = (id, label) => h('button', { class: 'sf-tab', role: 'tab', 'aria-selected': String(sec === id), 'data-k': 'tab-' + id, onclick: () => this.tab(id) }, label,
       id === 'acc' ? h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark, 'data-sync-fail': '', hidden: this.app.account.status !== 'failed' }, ' !') : null);
     return h('nav', { class: 'sf-tabs', role: 'tablist', 'aria-label': t.editor },
-      tab('sb', t.secStoryboards), tab('ex', t.secExplore), tab('acc', this.app.account.available ? t.secAccount : t.lang),
+      tab('sb', t.secStoryboards), tab('ex', t.secExplore), tab('acc', this.app.account.available ? t.secAccount : t.secSettings),
       h('span', { class: 'sf-grow' }),
       h('button', { class: 'sf-icon sf-search', disabled: true, title: t.searchLater, 'aria-label': t.searchLater, 'data-k': 'search' }, h('span', { 'aria-hidden': 'true' }, '⌕')));
   }
