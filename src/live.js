@@ -14,6 +14,13 @@ import { wxKey, wxPlace, slStations, AREAS, stockholmWall, depStops, nearKey } f
 import { stoptimes, stops as stopList, upstream, roundLL } from './transit.js';
 import { COINS } from './content.js';
 import { placeOf } from './place.js';
+import { lastClose, avDaily, exchangeOf, PERIOD_DAYS } from './markets.js';
+import { getConn, parseSheet, recordPoint, historyOf, loadHist, saveHist, loadAv, saveAv, ownKeyStep, exchangeTz } from './connections.js';
+
+// Markets (0.9): the coins CoinGecko knows by id, and their names on the board.
+export const COIN_IDS = { BTC: ['bitcoin', 'BITCOIN'], ETH: ['ethereum', 'ETHER'], SOL: ['solana', 'SOLANA'], XRP: ['ripple', 'XRP'], ADA: ['cardano', 'CARDANO'], DOGE: ['dogecoin', 'DOGECOIN'] };
+const MK_EVERY = 15 * 60e3, MK_WAIT = 60e3, SHEET_EVERY = 5 * 60e3, AV_GAP = 15e3;
+const EX_CC = { LON: 'GB', US: 'US', FRK: 'DE', DEX: 'DE', PAR: 'FR', AMS: 'NL', TYO: 'JP', HKG: 'HK' };
 
 // Our Worker's data routes (0.8). Whether this page has a Worker behind it is decided
 // once per page load (Fable's 0.8.0 review), so a Worker that fails mid-run never sends
@@ -39,7 +46,7 @@ export const resetDataMode = () => { mode = null; };
 // Only our own "switched off" answer counts as off. Cloudflare also answers 503 when a
 // Worker runs out of CPU time, and that is a failure like any other, retried as usual.
 export async function viaWorker(path, direct, shape, host) {
-  if (!(await dataMode(host)).worker) return shape(await get(direct));
+  if (!(await dataMode(host)).worker) { if (!direct) throw new Error('no_worker'); return shape(await get(direct)); }
   const r = await fetch(DATA + path, { credentials: 'omit', cache: 'no-store' });
   if (r.ok && /json/.test(r.headers.get('content-type') || '')) return await r.json();
   if (r.status === 503) {
@@ -65,7 +72,8 @@ async function get(url) {
 export class Live {
   constructor(onUpdate) {
     this.onUpdate = onUpdate;
-    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, off: [], loc: null, cc: null };
+    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, mk: {}, mkq: {}, off: [], loc: null, cc: null };
+    this.mkWant = { built: [], crypto: new Map(), key: new Set(), sheet: new Set() };
     this.wanted = { sl: new Map(), wx: new Map(), el: new Set(), fx: new Set(), otd: new Set(), url: new Map(), tr: new Map(), near: new Map(), coin: new Map(), hol: new Set() };
     this.status = { tried: 0 };
     this.timer = setInterval(() => this.poll(), 2000);
@@ -101,6 +109,25 @@ export class Live {
         for (const st of depStops(o, this.data)) { if (st.src === 'sl') sl.set(st.id, true); else tr.set(st.id, Math.min(every, tr.get(st.id) || Infinity)); }
       }
     }
+    // Markets: built-in symbols in lists of up to eight (one Worker request each), coins
+    // by currency and the longest period asked for, and your own key's and sheet's symbols.
+    // The exchange's country's holidays are asked for too, for open or closed.
+    const built = new Set(), crypto = new Map(), key = new Set(), sheet = new Set();
+    for (const p of (board && board.pages) || []) for (const z of p.zones) {
+      if (z.ch !== 'markets') continue;
+      const o = z.o || {}, src = o.source || 'built';
+      for (const { s } of (o.symbols || []).filter(x => x && x.s)) {
+        if (src === 'built') built.add(s);
+        else if (src === 'crypto' && COIN_IDS[s]) { const k = `${s}|${o.cur || 'USD'}`, d = Math.min(365, PERIOD_DAYS[o.period || '1m'] || 31); crypto.set(k, Math.max(d, crypto.get(k) || 0)); }
+        else if (src === 'key') key.add(s);
+        else if (src === 'sheet') sheet.add(s);
+        const cc = src === 'crypto' ? null : EX_CC[exchangeOf(s)];
+        if (cc) hol.add(cc);
+      }
+    }
+    const list = [...built].sort(), chunks = [];
+    for (let i = 0; i < list.length; i += 8) chunks.push(list.slice(i, i + 8));
+    this.mkWant = { built: chunks, crypto, key, sheet };
     this.wanted = { sl, wx, el, fx, otd, url, tr, near, coin, hol };
     this.poll();
   }
@@ -117,6 +144,14 @@ export class Live {
     if (trDue.length) this.fetchTr(trDue[0]);
     for (const [k, p] of this.wanted.near) if (due(this.data.near[k], NEAR_EVERY)) this.fetchNear(k, p);
     if (now - this.status.tried > STATUS_EVERY) this.fetchStatus();   // so the picker knows before a tile asks
+    // markets: every 15 minutes, or every minute while a symbol is still on its way
+    for (const ch of this.mkWant.built) {
+      const k = ch.join(','), e = this.data.mkq[k];
+      if (due(e, (e && e.every) || MK_EVERY)) this.fetchMarkets(k, ch);
+    }
+    for (const [k, days] of this.mkWant.crypto) if (due(this.data.mkq['c:' + k], MK_EVERY)) this.fetchCrypto(k, days);
+    if (this.mkWant.sheet.size && due(this.data.mkq.sheet, SHEET_EVERY)) this.fetchSheet();
+    if (this.mkWant.key.size && due(this.data.mkq.key, AV_GAP)) this.fetchOwnKey();
     for (const [k, p] of this.wanted.wx) if (due(this.data.wx[k], WX_EVERY)) this.fetchWx(k, p);
     for (const a of this.wanted.el) { const e = this.data.el[a]; if (due(e, EL_EVERY) || this.elStale(e, now)) this.fetchEl(a); }
     for (const b of this.wanted.fx) if (due(this.data.fx[b], FX_EVERY)) this.fetchFx(b);
@@ -136,6 +171,70 @@ export class Live {
       const lat = roundLL(p.lat), lon = roundLL(p.lon);
       e.stops = (await viaWorker(`/transit/near?lat=${lat}&lon=${lon}`, upstream.near(lat, lon), j => ({ stops: stopList(j) }))).stops || [];
       this.want(this.board, this.lang);   // the stop is known now, so its departures can be asked for
+    });
+  }
+  // Built-in symbols through the Worker's Markets object: daily closes, shared by every
+  // screen. The price shown is the last close, and the panel says so.
+  // The next ask waits as long as the Worker says nothing will change (0.9.0 review):
+  // a minute while a symbol is on its way, else until the soonest next try, 15 minutes at most.
+  fetchMarkets(k, list) {
+    return this.run('mkq', k, async e => {
+      const j = await viaWorker(`/markets?s=${list.map(encodeURIComponent).join(',')}`, null, null), now = Date.now();
+      let wait = MK_EVERY;
+      for (const s of list) {
+        const d = j.data && j.data[s]; if (!d) continue;
+        const closes = Array.isArray(d.closes) && d.closes.length ? d.closes : null;
+        this.data.mk['built:' + s] = { name: d.name, ex: d.ex, cur: d.cur, via: d.via, closes, closeOnly: true, status: d.status,
+          price: closes ? closes[closes.length - 1].c : null, prev: closes && closes.length > 1 ? closes[closes.length - 2].c : null };
+        if (d.status === 'queued') wait = Math.min(wait, MK_WAIT);
+        else if (d.next) wait = Math.min(wait, Math.max(MK_WAIT, d.next - now));
+      }
+      e.every = wait;
+    });
+  }
+  // A coin's price history from CoinGecko (keyless), daily over a period, every few minutes for a day.
+  fetchCrypto(k, days) {
+    const [s, cur] = k.split('|');
+    return this.run('mkq', 'c:' + k, async () => {
+      const j = await get(`https://api.coingecko.com/api/v3/coins/${COIN_IDS[s][0]}/market_chart?vs_currency=${cur.toLowerCase()}&days=${days}${days > 1 ? '&interval=daily' : ''}`);
+      const pts = (j.prices || []).filter(p => Array.isArray(p) && Number.isFinite(p[1])).map(([t, c]) => ({ d: new Date(t).toISOString(), c }));
+      const last = pts[pts.length - 1], dayAgo = pts.slice().reverse().find(p => Date.parse(p.d) <= Date.now() - 864e5 + 30 * 60e3);
+      this.data.mk['crypto:' + s] = { name: COIN_IDS[s][1], ex: 'CRYPTO', cur, closes: pts, price: last ? last.c : null, prev: dayAgo ? dayAgo.c : null };
+    });
+  }
+  // Your published sheet: every five minutes, each price kept so the line builds on this screen.
+  fetchSheet() {
+    return this.run('mkq', 'sheet', async () => {
+      const url = getConn().sheet;
+      if (!url) { for (const s of this.mkWant.sheet) this.data.mk['sheet:' + s] = { needsKey: true }; return; }
+      const ac = new AbortController(), timer = setTimeout(() => ac.abort(), 12e3);
+      let text;
+      try { const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: ac.signal }); if (!r.ok) throw new Error(r.status); text = await r.text(); }
+      finally { clearTimeout(timer); }
+      const rows = parseSheet(text), hist = loadHist(), now = Date.now();
+      for (const s of this.mkWant.sheet) {
+        const x = rows[s]; if (!x) { this.data.mk['sheet:' + s] = { fails: 4 }; continue; }
+        const ex = /^(LON|STO|US|FRK|PAR|AMS|TYO|HKG)$/.test(x.ex) ? x.ex : exchangeOf(s);
+        recordPoint(hist, s, x.price, now, exchangeTz(ex));
+        this.data.mk['sheet:' + s] = { name: x.name, cur: x.cur, ex, price: x.price,
+          prev: Number.isFinite(x.pct) ? x.price / (1 + x.pct / 100) : null, closes: historyOf(hist, s) };
+      }
+      saveHist(hist);
+    });
+  }
+  // Your own Alpha Vantage key, from this browser: one daily series per symbol after each
+  // close, kept here so a reload spends nothing, and one call per poll at most.
+  fetchOwnKey() {
+    return this.run('mkq', 'key', async () => {
+      const key = getConn().av, now = Date.now();
+      if (!key) { for (const s of this.mkWant.key) this.data.mk['key:' + s] = { needsKey: true }; return; }
+      const cache = await ownKeyStep(loadAv(), [...this.mkWant.key], key, now, get);
+      saveAv(cache);
+      for (const s of this.mkWant.key) {
+        const c = cache[s];
+        if (c && c.closes && c.closes.length) { const cl = c.closes; this.data.mk['key:' + s] = { ex: exchangeOf(s), closes: cl, closeOnly: true, price: cl[cl.length - 1].c, prev: cl.length > 1 ? cl[cl.length - 2].c : null }; }
+        else this.data.mk['key:' + s] = { status: c && c.error === 'no_data' ? 'no_data' : cache._limit ? 'budget' : 'queued' };
+      }
     });
   }
   // Which sources the Worker has switched off. No Worker (local), nothing is off.

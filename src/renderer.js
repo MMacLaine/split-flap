@@ -12,7 +12,7 @@
 //   - from the editor handoff (design/editor/flap-renderer.js): the zone highlight and
 //     renderStatic, which draws one still frame of any grid for thumbnails and images
 
-import { CHIPS, DRUM, cellChar, drumPath, isDim, baseChar } from './charset.js';
+import { CHIPS, DRUM, HALVES, cellChar, drumPath, isDim, baseChar } from './charset.js';
 
 export const GEOM = {
   tileW: 0.68,      // flap width / H
@@ -105,10 +105,20 @@ function rr(ctx, x, y, w, h, r) {
 function paintFace(ctx, ch, x, y, w, h, T) {
   const hinge = y + h / 2, r = h * GEOM.radius, dim = isDim(ch);
   if (dim) ch = baseChar(ch);
-  const tint = ch === 'f' ? T.filled : CHIPS[ch], chip = dim ? null : tint;
+  // a half flap (0.9) is a blank face with one half in its colour
+  const half = HALVES[ch], key = half ? half[0] : ch;
+  const tint = key === 'f' ? T.filled : CHIPS[key], chip = dim ? null : tint;
+  const [hy, hh] = half ? (half[1] === 'top' ? [y, hinge - y] : [hinge, y + h - hinge]) : [y, h];
   ctx.save(); rr(ctx, x, y, w, h, r); ctx.clip();
   let g = ctx.createLinearGradient(0, y, 0, y + h);
-  if (chip) {
+  if (chip && half) {
+    g.addColorStop(0, T.faceHi); g.addColorStop(0.5, T.face); g.addColorStop(0.5, T.faceB); g.addColorStop(1, T.faceLo);
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = chip; ctx.fillRect(x, hy, w, hh);
+    const s = ctx.createLinearGradient(0, hy, 0, hy + hh);
+    s.addColorStop(0, half[1] === 'top' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)'); s.addColorStop(1, half[1] === 'top' ? 'rgba(255,255,255,0)' : 'rgba(0,0,0,0.14)');
+    ctx.fillStyle = s; ctx.fillRect(x, hy, w, hh);
+  } else if (chip) {
     ctx.fillStyle = chip; ctx.fillRect(x, y, w, h);
     g.addColorStop(0, 'rgba(255,255,255,0.07)'); g.addColorStop(0.5, 'rgba(255,255,255,0)');
     g.addColorStop(0.5, 'rgba(0,0,0,0.04)'); g.addColorStop(1, 'rgba(0,0,0,0.14)');
@@ -117,7 +127,7 @@ function paintFace(ctx, ch, x, y, w, h, T) {
     g.addColorStop(0, T.faceHi); g.addColorStop(0.5, T.face); g.addColorStop(0.5, T.faceB); g.addColorStop(1, T.faceLo);
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
     ctx.globalAlpha = dim ? T.dim : 1;   // a faint flap: the same glyph or chip, barely there
-    if (dim && tint) { ctx.fillStyle = tint; ctx.fillRect(x, y, w, h); }
+    if (dim && tint) { ctx.fillStyle = tint; ctx.fillRect(x, hy, w, hh); }
     else if (ch === '♥') {
       // Drawn as a shape: the board faces may not carry the glyph, and a fallback font
       // would draw an emoji. Cap height tall, in the glyph colour.

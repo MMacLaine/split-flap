@@ -24,3 +24,13 @@ test('Back goes up one level, and a section top has no Back', () => {
   for (const h of ['#/storyboards', '#/my-boards', '#/explore', '#/account']) assert.equal(parentRoute(parseRoute(h)), null, h);
   assert.equal(routeHash(parentRoute(Object.assign(parseRoute('#/storyboards/b1/boards/p2'), { from: 'week' }))), '#/storyboards/b1/week');   // back to the week it was opened from
 });
+
+test('Explore sections (0.9): a page each, a template inside one, and older template addresses still open', () => {
+  assert.deepEqual(parseRoute('#/explore/finance'), { sec: 'ex', lv: 'section', section: 'finance' });
+  assert.deepEqual(parseRoute('#/explore/finance/stocks'), { sec: 'ex', lv: 'tpl', tpl: 'stocks', section: 'finance' });
+  assert.deepEqual(parseRoute('#/explore/station'), { sec: 'ex', lv: 'tpl', tpl: 'station' });
+  assert.equal(routeHash({ sec: 'ex', lv: 'tpl', tpl: 'stocks', section: 'finance' }), '#/explore/finance/stocks');
+  assert.equal(routeHash({ sec: 'ex', lv: 'section', section: 'finance' }), '#/explore/finance');
+  assert.deepEqual(parentRoute({ sec: 'ex', lv: 'tpl', tpl: 'stocks', section: 'finance' }), { sec: 'ex', lv: 'section', section: 'finance' });
+  assert.deepEqual(parentRoute({ sec: 'ex', lv: 'section', section: 'finance' }), { sec: 'ex', lv: 'list' });
+});

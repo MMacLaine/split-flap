@@ -17,8 +17,21 @@ logs = { invocation_logs = false }
 
 [vars]
 BASE_URL = "https://maclaine.se"
+AV_PER_DAY = "25"   # Alpha Vantage calls a day: the standard free key, 29 Sep 2026
+AV_PER_MIN = "5"
 SOURCES_OFF = ""   # a live data source switched off, e.g. "transit"; see src/data.js. Transitous said yes on 29 Sep 2026 (Robin D, Matrix)
 GOOGLE_CLIENT_ID = "753793711246-04l6hi7vegppvdppu8883dlgiap7e03t.apps.googleusercontent.com"   # not secret
+
+# Markets (0.9): one Durable Object in front of Alpha Vantage, so the key's allowance is
+# spent once for the world, not once per data centre (see src/markets.js). The key is a
+# secret (ALPHAVANTAGE_KEY); its limits are vars, raised if the open-source tier is granted.
+[[durable_objects.bindings]]
+name = "MARKETS"
+class_name = "Markets"
+
+[[migrations]]
+tag = "v1-markets"
+new_sqlite_classes = ["Markets"]
 
 [[d1_databases]]
 binding = "DB"
@@ -42,7 +55,8 @@ simple = { limit = 120, period = 60 }
 # Local development: `npm run dev` serves the app through the Worker from the plain
 # static server on 8801, so the app and the API share http://localhost:8787.
 [env.dev]
-vars = { BASE_URL = "http://localhost:8787", DEV_APP = "http://localhost:8801", GOOGLE_CLIENT_ID = "753793711246-04l6hi7vegppvdppu8883dlgiap7e03t.apps.googleusercontent.com" }
+vars = { BASE_URL = "http://localhost:8787", DEV_APP = "http://localhost:8801", GOOGLE_CLIENT_ID = "753793711246-04l6hi7vegppvdppu8883dlgiap7e03t.apps.googleusercontent.com", AV_PER_DAY = "25", AV_PER_MIN = "5" }
+durable_objects = { bindings = [{ name = "MARKETS", class_name = "Markets" }] }
 # DEV_TEST=1 comes from .dev.vars when running the tests, never from here
 d1_databases = [{ binding = "DB", database_name = "split-flap", database_id = "00000000-0000-0000-0000-000000000000", migrations_dir = "migrations" }]
 ratelimits = [{ name = "WRITES", namespace_id = "5051", simple = { limit = 60, period = 60 } }, { name = "DATA", namespace_id = "5052", simple = { limit = 120, period = 60 } }]

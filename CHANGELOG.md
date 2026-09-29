@@ -2,6 +2,18 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.9.0 (2026-09-30): Markets
+
+Shares, ETFs and crypto on the board, drawn as a line in a new kind of flap.
+
+- **Half flaps.** A flap can now be coloured on its top or bottom half only, so a line on the board has twice the height to move in.
+- **Markets.** A new tile draws a share, an ETF or a coin as a line, green where it rises and red where it falls, with its price, the day's change, and whether its market is open in your own time.
+- **Built in for London and New York.** Shares and ETFs there work with no setup, with each trading day's close. Swedish shares are priced through their London listings. Split-Flap was approved for Alpha Vantage's programme for open-source projects, which is what makes this possible.
+- **Crypto with no setup.** Bitcoin, ether and a few other coins, from CoinGecko.
+- **Your own source.** For anything not built in, such as Stockholm itself or your funds, use your own Alpha Vantage key or a Google Sheet. Both stay in this browser.
+- **Explore in sections.** Templates are in sections with pages of their own, and Finance has Stocks, ETFs, Crypto and Currency. There are three new templates: Stocks, Index trackers and Crypto.
+- A new storyboard is 12 × 40, since this is about screens. Storyboards you have keep their size.
+
 ## v0.8.0 (2026-09-29): Anywhere
 
 Split-Flap was built around Stockholm. This release makes it work for a screen almost anywhere, starting from one city search.

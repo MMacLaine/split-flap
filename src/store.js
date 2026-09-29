@@ -14,7 +14,7 @@ import { COINS } from './content.js';
 import { STOP_ID } from './transit.js';
 
 const K = { boards: 'sf_boards', active: 'sf_active', my: 'sf_myboards' };
-const SIZES = ['6x22', '3x15', 'fill', 'custom'];
+const SIZES = ['6x22', '3x15', '12x40', 'fill', 'custom'];
 const THEMES = ['black', 'white', 'solari'];
 const SPEEDS = ['fast', 'gentle', 'authentic'];
 const TRANSITIONS = ['classic', 'wave', 'drift', 'curtain'];
@@ -83,6 +83,18 @@ function sanitizeZone(z) {
     if (o.alert === true) out.alert = true;
     if (o.merge === true) out.merge = true;
     if (o.near === true || o.near === 'rail') out.near = o.near;
+  } else if (ch === 'markets') {
+    // symbols and how they look; never a key or a sheet link, which stay in this browser (0.9)
+    out.source = pick(o.source, ['built', 'crypto', 'key', 'sheet'], 'built');
+    out.symbols = (Array.isArray(o.symbols) ? o.symbols : []).slice(0, 8).filter(x => x && typeof x === 'object' && /^[A-Z0-9][A-Z0-9.\-:^]{0,29}$/.test(x.s || '')).map(x => Object.assign({ s: x.s }, str(x.name, 40) ? { name: str(x.name, 40) } : {}));
+    out.period = pick(o.period, ['1d', '1w', '1m', '3m', '1y'], '1m');
+    out.every = int(o.every, 5, 600, 12);
+    if (o.line === 'thick') out.line = 'thick';
+    if (o.ref === true) out.ref = true;
+    if (o.side === 'right') out.side = 'right';
+    if (o.panel === false) out.panel = false;
+    if (o.dec != null && o.dec !== '') out.dec = int(o.dec, 0, 4, 2);
+    if (/^[A-Z]{3}$/.test(o.cur || '')) out.cur = o.cur;
   } else if (ch === 'worldtime') {
     out.places = (Array.isArray(o.places) ? o.places : []).slice(0, 6).filter(x => x && typeof x === 'object' && validTz(x.tz)).map(x => ({ city: str(x.city, 40), tz: x.tz }));
     out.fmt = o.fmt === '12' ? '12' : '24';

@@ -11,10 +11,17 @@ import { h, clone } from './dom.js';
 import { THEMES, renderStatic, staticGeom, GEOM } from './renderer.js';
 import { CHIPS, CHIP_NAMES } from './charset.js';
 import { compose, zonesFor, LAYOUTS, newId, blank, templateTokens, fixedCut, vestaboard, nearKey } from './content.js';
-import { TEMPLATES, fromTemplate, availableFor, GROUPS as TPL_GROUPS } from './templates.js';
+import { TEMPLATES, fromTemplate, availableFor, SECTIONS as TPL_SECTIONS, sectionOf } from './templates.js';
 import { searchStations, searchCities, searchStops, nearStops, MODE_LETTERS } from './live.js';
 import { placeOf, formatsFor, priceMark, screenTz, tzDiffers, FX_CURRENCIES } from './place.js';
 import { SOURCES } from './sources.js';
+import { COIN_IDS } from './live.js';
+import { EXCHANGES } from './markets.js';
+import { getConn, setConn } from './connections.js';
+
+// The built-in symbols, loaded once when the Markets picker first searches.
+let MARKET_LIST = null;
+const marketList = () => MARKET_LIST || (MARKET_LIST = fetch(new URL('../data/markets.json', import.meta.url)).then(r => r.json()).then(j => j.symbols || []).catch(() => { MARKET_LIST = null; return []; }));
 import { GROUPS, TILES, tileFor, previewLive, SAMPLE_FEED } from './catalogue.js';
 import { sampleImage, mapImage, stamp, HEART } from './photo.js';
 import { Composer } from './composer.js';
@@ -55,7 +62,7 @@ export class Editor {
   bp() { return this.onBlueprint() ? this.app.blueprints.find(x => x.id === this.E.bp) || null : null; }
 
   // ---------- navigation ----------
-  route() { const E = this.E; return { sec: E.sec, lv: E.lv, sb: E.sb, bd: E.bd, bp: E.bp, view: E.view, tpl: E.tpl, from: E.from }; }
+  route() { const E = this.E; return { sec: E.sec, lv: E.lv, sb: E.sb, bd: E.bd, bp: E.bp, view: E.view, tpl: E.tpl, section: E.section, from: E.from }; }
   // Move to a level. Each move is a history entry, so browser Back goes up the way it came.
   go(r, opts = {}) {
     const E = this.E, prevSec = E.sec;
@@ -63,7 +70,7 @@ export class Editor {
     if (typeof r === 'string') r = { account: { sec: 'acc', lv: 'main' }, help: { sec: 'acc', lv: 'help' }, log: { sec: 'acc', lv: 'log' }, start: { sec: 'ex', lv: 'list' },
       settings: { sec: 'sb', lv: 'sb', sb: this.app.cur().id, view: 'display' } }[r] || { sec: 'sb', lv: 'list' };   // named levels, from Help's links
     r = this.resolve(Object.assign({}, r));
-    Object.assign(E, { sec: r.sec, lv: r.lv, sb: r.sb || null, bd: r.bd || null, bp: r.bp || null, view: r.view || E.view || 'week', tpl: r.tpl || null, from: r.from || E.from,
+    Object.assign(E, { sec: r.sec, lv: r.lv, sb: r.sb || null, bd: r.bd || null, bp: r.bp || null, view: r.view || E.view || 'week', tpl: r.tpl || null, section: r.section || null, from: r.from || E.from,
       fx: opts.back ? 'back' : 'in', navKey: E.navKey + 1, hover: null, search: '' });
     if (!opts.keepZone) Object.assign(E, { zone: 0, zoneOpen: false, picking: false, fresh: false }, opts.zone || {});
     E.last[r.sec] = this.route();
@@ -98,6 +105,7 @@ export class Editor {
       }
     }
     if (r.sec === 'ex' && r.lv === 'tpl' && !TEMPLATES.some(x => x.id === r.tpl)) return { sec: 'ex', lv: 'list' };
+    if (r.sec === 'ex' && r.lv === 'tpl' && !r.section) r.section = (TEMPLATES.find(x => x.id === r.tpl) || {}).section || null;   // older addresses
     if (r.sec === 'my' && r.lv === 'bp' && !app.blueprints.some(x => x.id === r.bp)) return { sec: 'my', lv: 'list' };
     return r;
   }
@@ -200,7 +208,7 @@ export class Editor {
     const body = E.sheet ? this.sheet() : {
       'sb:list': () => this.storyboardsLevel(), 'sb:sb': () => this.storyboardLevel(), 'sb:board': () => this.pageLevel(),
       'my:list': () => this.myBoardsLevel(), 'my:bp': () => this.pageLevel(),
-      'ex:list': () => this.exploreLevel(), 'ex:tpl': () => this.templateLevel(),
+      'ex:list': () => this.exploreLevel(), 'ex:section': () => this.sectionLevel(), 'ex:tpl': () => this.templateLevel(),
       'acc:main': () => this.accountLevel(), 'acc:help': () => this.helpLevel(), 'acc:log': () => this.logLevel()
     }[E.sec + ':' + E.lv]();
     return h('aside', { class: 'sf-drawer', 'aria-label': t.editor },
@@ -215,13 +223,14 @@ export class Editor {
 
   head() {
     const t = this.t, E = this.E, b = this.app.cur(), p = this.page(), up = this.backTarget();
-    const upLabel = !up ? '' : up.lv === 'sb' ? b.name : up.sec === 'sb' ? t.secStoryboards : up.sec === 'my' ? t.secMyBoards : up.sec === 'ex' ? t.secExplore : this.app.account.available ? t.secAccount : t.secSettings;
+    const upLabel = !up ? '' : up.lv === 'sb' ? b.name : up.sec === 'sb' ? t.secStoryboards : up.sec === 'my' ? t.secMyBoards : up.sec === 'ex' ? (up.lv === 'section' && sectionOf(up.section) ? sectionOf(up.section).name[this.lang] : t.secExplore) : this.app.account.available ? t.secAccount : t.secSettings;
     const bp = this.bp();
     const tpl = E.tpl && TEMPLATES.find(x => x.id === E.tpl);
     const [kicker, title] = {
       'sb:list': ['Split-Flap', t.secStoryboards], 'sb:sb': [t.secStoryboards, b.name], 'sb:board': [b.name, p ? p.name || t.page : ''],
       'my:list': ['Split-Flap', t.secMyBoards], 'my:bp': [t.secMyBoards, bp ? bp.name : ''],
-      'ex:list': ['Split-Flap', t.secExplore], 'ex:tpl': [t.secExplore, tpl ? tpl.name[this.lang] : ''],
+      'ex:list': ['Split-Flap', t.secExplore], 'ex:section': [t.secExplore, sectionOf(E.section) ? sectionOf(E.section).name[this.lang] : ''],
+      'ex:tpl': [sectionOf(E.section) ? sectionOf(E.section).name[this.lang] : t.secExplore, tpl ? tpl.name[this.lang] : ''],
       'acc:main': ['Split-Flap', this.app.account.available ? t.account : t.secSettings], 'acc:help': [t.secAccount, t.help], 'acc:log': [`v${VERSION}`, t.versionLog]
     }[E.sec + ':' + E.lv];
     return h('header', { class: 'sf-panel-head' },
@@ -725,6 +734,8 @@ export class Editor {
     if (tile.id === 'weather' && f.units === 'f') o.units = 'f';
     if (tile.id === 'menu' && f.currency) { const m = priceMark(f.currency); o.suffix = m.suffix; if (m.prefix) o.prefix = m.prefix; o.items = this.lang === 'sv' || f.currency === 'SEK' ? o.items : ['COFFEE 3.50', 'CROISSANT 2.80', 'SANDWICH 6.50', 'SOUP 7']; }
     if (tile.id === 'currency' && f.currency && FX_CURRENCIES.includes(f.currency)) { o.base = f.currency; o.pairs = ['EUR', 'USD', 'GBP', 'JPY'].filter(c => c !== f.currency).slice(0, 3); }
+    // Markets starts on the place's own market: a FTSE 100 tracker in the UK, Investor in Sweden
+    if (tile.id === 'markets') o.symbols = pl.cc === 'GB' ? [{ s: 'ISF.LON' }] : pl.cc === 'SE' ? [{ s: '0NC6.LON' }] : [{ s: 'SPY' }];
     if (tile.id === 'worldtime' && pl.city && pl.tz) o.places = [{ city: pl.city, tz: pl.tz }].concat(o.places.filter(p => p.tz !== pl.tz)).slice(0, 3);
     if (tile.id === 'departures' && preview) Object.assign(o, { near: false, stops: [{ src: 'tr', id: 'sample', name: pl.city || 'Central' }] });
     if (tile.id === 'url' && preview) o.url = 'sample';
@@ -789,6 +800,8 @@ export class Editor {
       case 'stations': return wrap(this.stationsField(o, key, f.max));
       case 'stops': return wrap(this.stopsField(o, key, f.max));
       case 'tzcities': return wrap(this.tzCities(o, key, f.max));
+      case 'symbols': return wrap(this.symbolsField(o, key, f.max));
+      case 'conn': return this.connField(o);
       case 'credit': return this.credit(f.src);
       case 'textlist': {
         const items = Array.isArray(val) ? val : [];
@@ -871,6 +884,33 @@ export class Editor {
         h('div', { class: 'sf-row' }, nearList.slice(0, 5).filter(r => !list.some(x => x.id === r.id)).map((r, i) => h('button', { class: 'sf-chip-btn', 'data-k': `${key}-near-${i}`, onclick: () => add(Object.assign({ src: 'tr' }, r)) }, h('span', { 'aria-hidden': 'true' }, '+'), h('span', null, r.name))))) : null,
       h('span', { class: 'sf-hint' }, t.maxStops));
   }
+  // Markets (0.9): the built-in list by search, coins by chip, or symbols typed for your own source.
+  symbolsField(o, key, max) {
+    const t = this.t, src = o.source || 'built', list = Array.isArray(o.symbols) ? o.symbols : [], save = next => this.setO(oo => { oo.symbols = next; });
+    const add = (sym, name) => { if (list.length < max && !list.some(x => x.s === sym)) save(list.concat(name ? { s: sym, name } : { s: sym })); };
+    const chosen = list.map((x, i) => h('div', { class: 'sf-chosen' }, h('span', { class: 'sf-num' }, String(i + 1)), h('span', null, x.name || x.s), h('span', { class: 'sf-hint' }, x.s),
+      h('button', { class: 'sf-icon', 'aria-label': t.moveUp, disabled: i === 0, 'data-k': `${key}-up-${i}`, onclick: () => { const n = list.slice(); [n[i - 1], n[i]] = [n[i], n[i - 1]]; save(n); } }, '↑'),
+      h('button', { class: 'sf-icon', 'aria-label': t.remove, 'data-k': `${key}-rm-${i}`, onclick: () => save(list.filter((_, j) => j !== i)) }, '×')));
+    if (src === 'crypto') return h('div', { class: 'sf-list' }, chosen, h('div', { class: 'sf-row' }, Object.keys(COIN_IDS).filter(c => !list.some(x => x.s === c)).map(c =>
+      h('button', { class: 'sf-chip-btn', 'data-k': `${key}-coin-${c}`, onclick: () => add(c) }, h('span', { 'aria-hidden': 'true' }, '+'), h('span', null, c)))));
+    if (src === 'built') return h('div', { class: 'sf-list' }, chosen,
+      list.length < max ? this.searchBox(key, t.searchSymbol, async q => (await marketList()).filter(x => (x.s + ' ' + x.name).toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
+        .map(x => ({ name: x.name, note: `${x.s} · ${x.via ? t.viaLondon : (EXCHANGES[x.ex] || EXCHANGES.US).city.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase())}${x.cur ? ' · ' + x.cur : ''}`, s: x.s })), r => add(r.s)) : null,
+      h('span', { class: 'sf-hint' }, t.maxSymbols));
+    // your own key or sheet: symbols as that source writes them (IBM, ERIC-B.STO, a sheet's Symbol column)
+    const input = h('input', { class: 'sf-input mono upper', placeholder: t.typeSymbol, 'aria-label': t.typeSymbol, 'data-k': key + '-own', spellcheck: 'false', autocomplete: 'off',
+      onkeydown: e => { if (e.key === 'Enter') { const v = e.target.value.trim().toUpperCase(); if (/^[A-Z0-9][A-Z0-9.\-:^]{0,29}$/.test(v)) add(v); } } });
+    return h('div', { class: 'sf-list' }, chosen, list.length < max ? input : null, h('span', { class: 'sf-hint' }, t.ownSymbolHint));
+  }
+  // Your own key or sheet link, kept in this browser only, never in the board (0.9).
+  connField(o) {
+    const t = this.t, c = getConn(), key = o.source === 'key';
+    const reset = () => { const d = this.app.live.data; d.mkq.key = null; d.mkq.sheet = null; this.app.live.poll(true); };
+    return h('div', { class: 'sf-field' }, h('span', { class: 'sf-label' }, key ? t.yourKey : t.yourSheet),
+      h('input', { class: 'sf-input mono', type: key ? 'password' : 'url', value: key ? c.av : c.sheet, 'data-k': 'f-conn', autocomplete: 'off', spellcheck: 'false', placeholder: key ? 'ABCD1234EFGH5678' : 'https://docs.google.com/spreadsheets/d/e/…/pub?output=csv',
+        onchange: e => { setConn(key ? { av: e.target.value.trim() } : { sheet: e.target.value.trim() }); reset(); this.app.render(); } }),
+      h('span', { class: 'sf-hint' }, key ? t.keyHint : t.sheetHint, ' ', h('a', { href: key ? 'https://www.alphavantage.co/support/#api-key' : 'https://github.com/MMacLaine/split-flap/blob/main/docs/markets-sheet.md', target: '_blank', rel: 'noopener' }, key ? t.getKey : t.sheetHow)));
+  }
   // World clock: cities with their time zones, from the same city search as the weather.
   tzCities(o, key, max) {
     const t = this.t, list = Array.isArray(o.places) ? o.places : [], save = next => this.setO(oo => { oo.places = next; });
@@ -927,7 +967,7 @@ export class Editor {
       h('p', { class: 'sf-note' }, t.displayNote),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.theme), themes),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.size),
-        h('div', { class: 'sf-row' }, seg([['6x22', '6 × 22'], ['3x15', '3 × 15'], ['fill', t.fill], ['custom', t.custom]], b.size, v => app.upd(bb => { if (v === 'custom' && bb.size !== 'custom') { const d = app.dims(); bb.rows = d.rows; bb.cols = d.cols; } bb.size = v; }), 'size')),
+        h('div', { class: 'sf-row' }, seg([['6x22', '6 × 22'], ['3x15', '3 × 15'], ['12x40', '12 × 40'], ['fill', t.fill], ['custom', t.custom]], b.size, v => app.upd(bb => { if (v === 'custom' && bb.size !== 'custom') { const d = app.dims(); bb.rows = d.rows; bb.cols = d.cols; } bb.size = v; }), 'size')),
         b.size === 'custom' && h('div', { class: 'sf-row' },
           h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.rows), h('input', { type: 'number', class: 'sf-input num', min: 1, max: 24, value: b.rows, 'data-k': 'rows', onchange: e => app.upd(bb => { bb.rows = Math.max(1, Math.min(24, +e.target.value || 6)); }) })),
           h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.cols), h('input', { type: 'number', class: 'sf-input num', min: 4, max: 60, value: b.cols, 'data-k': 'cols', onchange: e => app.upd(bb => { bb.cols = Math.max(4, Math.min(60, +e.target.value || 22)); }) })))),
@@ -964,18 +1004,16 @@ export class Editor {
   // Templates to start from. A first visit lands here, with a way to keep the demo board.
   exploreLevel() {
     const t = this.t, app = this.app, first = app.startPending(), now = Date.now();
-    // 0.8: grouped by use, built for the place, and the ones that cannot work here last
-    const pl = app.newPlace(), off = app.live.data.off || [], ok = tp => availableFor(tp, pl, off);
-    const card = tp => {
-      const nb = this.tplBoard(tp.id), d = app.dimsOf(nb);
-      return h('button', { class: 'sf-template', 'data-k': 'tpl-' + tp.id, onclick: () => this.go({ sec: 'ex', lv: 'tpl', tpl: tp.id }) },
-        this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(Object.assign({}, app.live.data, { loc: nb.loc || app.live.data.loc }), now)), nb.theme),
-        h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang]), h('span', null, `${tp.desc[this.lang]} · ${t.boardsCount(nb.pages.length)}`)));
-    };
-    const tplGrid = h('div', null, TPL_GROUPS.map(([g, label]) => {
-      const list = TEMPLATES.filter(tp => tp.group === g && ok(tp));
-      return list.length ? h('section', { class: 'sf-group' }, h('h3', { class: 'sf-eyebrow' }, label[this.lang]), h('div', { class: 'sf-templates' }, list.map(card))) : null;
-    }), TEMPLATES.some(tp => !ok(tp)) ? h('section', { class: 'sf-group' }, h('h3', { class: 'sf-eyebrow' }, t.notHereYet), h('div', { class: 'sf-templates muted' }, TEMPLATES.filter(tp => !ok(tp)).map(card))) : null);
+    // 0.9: a page per section. This first page shows each with its first few templates,
+    // built for the place; the section's page has them all, and the ones that cannot work here.
+    const tplGrid = h('div', null, TPL_SECTIONS.map(sec => {
+      const list = this.tplIn(sec.id), shown = list.slice(0, 3);
+      if (!list.length) return null;
+      return h('section', { class: 'sf-group' },
+        h('div', { class: 'sf-row between' }, h('h3', { class: 'sf-eyebrow' }, sec.name[this.lang]),
+          h('button', { class: 'sf-link-btn', 'data-k': 'sec-' + sec.id, onclick: () => this.go({ sec: 'ex', lv: 'section', section: sec.id }) }, t.seeAll(list.length))),
+        h('div', { class: 'sf-templates' }, shown.map(tp => this.tplCard(tp, sec.id))));
+    }));
     // the first visit asks where the screen is, so the demo and every template fit it
     const fp = app.firstPlace();
     const where = first ? h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.whereTitle),
@@ -993,6 +1031,28 @@ export class Editor {
         h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'import', onclick: () => file.click() }, t.importB), file),
         h('p', { class: 'sf-note' }, t.jsonNote)),
       h('div', { class: 'sf-later' }, h('strong', null, t.fromOthers), h('span', null, t.laterShort)));
+  }
+  // A template's card, drawn for the place, opening at its section's address.
+  tplCard(tp, section, muted) {
+    const t = this.t, app = this.app, now = Date.now(), nb = this.tplBoard(tp.id), d = app.dimsOf(nb);
+    return h('button', { class: 'sf-template', 'data-k': 'tpl-' + tp.id, onclick: () => this.go({ sec: 'ex', lv: 'tpl', tpl: tp.id, section: section || tp.section }) },
+      this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(Object.assign({}, app.live.data, { loc: nb.loc || app.live.data.loc }), now)), nb.theme),
+      h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang]), h('span', null, `${tp.desc[this.lang]} · ${t.boardsCount(nb.pages.length)}`)));
+  }
+  // The templates of a section that can work for this place, and the ones that cannot yet.
+  tplIn(id, notHere) {
+    const pl = this.app.newPlace(), off = this.app.live.data.off || [];
+    const order = ((sectionOf(id) || {}).groups || []).map(g => g[0]), rank = tp => { const i = order.indexOf(tp.group); return i < 0 ? 0 : i; };
+    return TEMPLATES.filter(tp => tp.section === id && availableFor(tp, pl, off) === !notHere).sort((a, b) => rank(a) - rank(b));
+  }
+  sectionLevel() {
+    const t = this.t, sec = sectionOf(this.E.section);
+    if (!sec) return this.exploreLevel();
+    const groups = sec.groups ? sec.groups.map(([g, label]) => [label[this.lang], this.tplIn(sec.id).filter(tp => tp.group === g)]) : [[null, this.tplIn(sec.id)]];
+    const later = this.tplIn(sec.id, true);
+    return h('div', { class: 'sf-level' },
+      groups.filter(([, l]) => l.length).map(([label, l]) => h('section', { class: 'sf-group' }, label ? h('h3', { class: 'sf-eyebrow' }, label) : null, h('div', { class: 'sf-templates' }, l.map(tp => this.tplCard(tp, sec.id))))),
+      later.length ? h('section', { class: 'sf-group' }, h('h3', { class: 'sf-eyebrow' }, t.notHereYet), h('div', { class: 'sf-templates muted' }, later.map(tp => this.tplCard(tp, sec.id)))) : null);
   }
   templateLevel() {
     const t = this.t, app = this.app, tp = TEMPLATES.find(x => x.id === this.E.tpl), nb = this.tplBoard(tp.id), d = app.dimsOf(nb), now = Date.now();

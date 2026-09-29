@@ -20,6 +20,7 @@ import { makeSignature } from 'better-auth/crypto';
 import { authOptions } from './auth.js';
 import { sanitizeBoard, sanitizeBlueprint } from '../../src/store.js';
 import { data } from './data.js';
+export { Markets } from './markets.js';   // the Durable Object in front of Alpha Vantage (0.9)
 
 const API = '/split-flap/api';
 const MAX_BOARDS = 50, MAX_BYTES = 262144;
@@ -74,7 +75,7 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-const KNOWN = ['/', '/me', '/boards', '/blueprints', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near'];
+const KNOWN = ['/', '/me', '/boards', '/blueprints', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets'];
 // Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
 export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
   : /^\/(boards|blueprints)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
