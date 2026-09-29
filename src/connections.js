@@ -8,6 +8,7 @@
 // and the last one of each day, and the chart grows from them.
 
 import { refresh, tried, exchangeOf, avDaily, EXCHANGES } from './markets.js';
+import { feedUrl } from './feeds.js';
 
 const CONN = 'sf_connections', HIST = 'sf_mk_hist', AVC = 'sf_av_cache';
 const ls = () => { try { return window.localStorage; } catch { return null; } };
@@ -160,7 +161,7 @@ export function sanitizeConnection(x) {
   if (!x || typeof x !== 'object' || !CONN_KINDS.includes(x.kind)) return null;
   const id = typeof x.id === 'string' && /^c[A-Za-z0-9_-]{1,39}$/.test(x.id) ? x.id : null;
   const value = typeof x.value === 'string' ? x.value.trim() : '';
-  const ok = x.kind === 'av' ? /^[A-Za-z0-9]{8,64}$/.test(value) : HTTPS.test(value);
+  const ok = x.kind === 'av' ? /^[A-Za-z0-9]{8,64}$/.test(value) : x.kind === 'feed' || x.kind === 'json' ? !!feedUrl(value) : HTTPS.test(value);
   if (!id || !ok) return null;
   return { id, kind: x.kind, name: (typeof x.name === 'string' ? x.name.trim() : '').slice(0, 60) || x.kind, value, updated: Number.isFinite(+x.updated) ? +x.updated : 0 };
 }

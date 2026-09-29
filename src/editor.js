@@ -18,6 +18,10 @@ import { SOURCES } from './sources.js';
 import { COIN_IDS } from './live.js';
 import { EXCHANGES } from './markets.js';
 import { bankFor } from './rates.js';
+import { feedUrl } from './feeds.js';
+// the built-in feeds, fetched once (a JSON import would stop the editor loading in older browsers)
+let BUILT_FEEDS = [];
+fetch(new URL('../data/feeds.json', import.meta.url)).then(r => r.json()).then(j => { BUILT_FEEDS = j.feeds || []; }).catch(() => {});
 
 // The built-in symbols, loaded once when the Markets picker first searches.
 let MARKET_LIST = null;
@@ -803,6 +807,7 @@ export class Editor {
       case 'tzcities': return wrap(this.tzCities(o, key, f.max));
       case 'symbols': return wrap(this.symbolsField(o, key, f.max));
       case 'conn': return this.connField(o);
+      case 'feeds': return wrap(this.feedsField(o, key, f.max));
       case 'credit': return this.credit(f.src);
       case 'textlist': {
         const items = Array.isArray(val) ? val : [];
@@ -911,6 +916,27 @@ export class Editor {
       h('input', { class: 'sf-input mono', type: key ? 'password' : 'url', value: c ? c.value : '', 'data-k': 'f-conn', autocomplete: 'off', spellcheck: 'false', placeholder: key ? 'ABCD1234EFGH5678' : 'https://docs.google.com/spreadsheets/d/e/…/pub?output=csv',
         onchange: e => { const v = e.target.value.trim(); const ok = c ? (v ? this.app.updateConnection(c.id, { value: v }) : (this.app.removeConnection(c.id), true)) : v ? !!this.app.addConnection(kind, v) : true; if (ok === false || ok === null) this.app.flash(t.connBad); this.app.render(); } }),
       h('span', { class: 'sf-hint' }, key ? t.keyHint : t.sheetHint, ' ', h('a', { href: key ? 'https://www.alphavantage.co/support/#api-key' : 'https://github.com/MMacLaine/split-flap/blob/main/docs/markets-sheet.md', target: '_blank', rel: 'noopener' }, key ? t.getKey : t.sheetHow)));
+  }
+  // Headlines (0.9.3): the built-in feeds to tick, and any other by its address. Signed in,
+  // an added address is kept as a feed connection, which is what lets the Worker fetch it
+  // for wall screens; as a guest it works only if the feed lets browsers read it.
+  feedsField(o, key, max) {
+    const t = this.t, app = this.app, list = Array.isArray(o.feeds) ? o.feeds : [], save = next => this.setO(oo => { oo.feeds = next; });
+    const add = (url, name) => {
+      const u = feedUrl(url); if (!u) { app.flash(t.feedBad); return; }
+      if (list.some(f => f.url === u) || list.length >= max) return;
+      save(list.concat({ url: u, name: name || '' }));
+      if (!BUILT_FEEDS.some(f => f.url === u) && app.account.signedIn() && !app.connections.some(c => c.kind === 'feed' && c.value === u)) app.addConnection('feed', u, name || new URL(u).hostname);
+    };
+    const input = h('input', { class: 'sf-input mono', type: 'url', placeholder: 'https://example.com/feed.xml', 'aria-label': t.feedAdd, 'data-k': key + '-url', spellcheck: 'false', autocomplete: 'off',
+      onkeydown: e => { if (e.key === 'Enter') add(e.target.value); } });
+    return h('div', { class: 'sf-list' },
+      list.map((f, i) => h('div', { class: 'sf-chosen' }, h('span', { class: 'sf-num' }, String(i + 1)), h('span', null, f.name || new URL(f.url).hostname), h('span', { class: 'sf-hint' }, new URL(f.url).hostname),
+        h('button', { class: 'sf-icon', 'aria-label': t.remove, 'data-k': `${key}-rm-${i}`, onclick: () => save(list.filter((_, j) => j !== i)) }, '×'))),
+      list.length < max ? h('div', { class: 'sf-row' }, BUILT_FEEDS.filter(f => !list.some(x => x.url === f.url)).map(f =>
+        h('button', { class: 'sf-chip-btn', 'data-k': `${key}-built-${f.name.replace(/\W+/g, '')}`, onclick: () => add(f.url, f.name) }, h('span', { 'aria-hidden': 'true' }, '+'), h('span', null, f.name)))) : null,
+      list.length < max ? input : null,
+      h('span', { class: 'sf-hint' }, app.account.signedIn() ? t.feedSignedIn : t.feedGuest));
   }
   // Account's Connections (0.9.2): each of your own sources with its kind, renamed or
   // removed here. The value is never shown in full.

@@ -2,6 +2,14 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.9.3 (2026-09-30): Headlines
+
+News and other feeds on the board, including on wall screens that never sign in.
+
+- **Headlines.** A new tile shows the latest from a news site or any other RSS, Atom or JSON feed, one headline at a time under the feed's name. It works in a ticker row too.
+- **Any feed, on any screen.** Most news sites do not let other pages read their feeds, so Split-Flap's server fetches them. BBC News, SVT Nyheter, NASA and Hacker News work for everyone. Any other feed works once you have added it signed in, and a wall screen showing it can then read it without signing in.
+- A new template, Headlines, in Home.
+
 ## v0.9.2 (2026-09-30): Your sources
 
 Your own keys and sheets are kept with your account, and a new tile shows central banks' interest rates.

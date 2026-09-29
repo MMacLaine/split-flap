@@ -206,3 +206,45 @@ test('seal: a value opens for its row and account only, and there is no key with
   assert.equal(await unseal(key, 'user1', 'c2', s1), null);                   // another row
   assert.equal(await unseal(key, 'user1', 'c1', 'MYSECRETKEY'), null);        // never plain text
 });
+
+test('feeds: redirects are checked like the first address, and only feeds come back', async () => {
+  const { fetchFeed } = await import('../src/feeds.js');
+  const hop = (to) => new Response(null, { status: 302, headers: { location: to } });
+  const ok = body => new Response(body, { status: 200 });
+  const seq = list => { let i = 0; return async () => list[i++]; };
+  assert.equal((await fetchFeed('https://a.example/f', seq([hop('http://a.example/f')]))).error, 'bad_address');        // to plain http
+  assert.equal((await fetchFeed('https://a.example/f', seq([hop('https://127.0.0.1/admin')]))).error, 'bad_address');   // to a private address
+  assert.equal((await fetchFeed('https://a.example/f', seq([hop('https://maclaine.se/split-flap/api/connections')]))).error, 'bad_address');
+  assert.equal((await fetchFeed('https://a.example/f', seq([hop('/1'), hop('/2'), hop('/3'), hop('/4')]))).error, 'too_many_redirects');
+  assert.equal((await fetchFeed('https://a.example/f', seq([ok('<!DOCTYPE html><script>x</script>')]))).error, 'not_a_feed');
+  assert.equal((await fetchFeed('https://a.example/f', seq([hop('https://b.example/rss'), ok('<rss><channel></channel></rss>')]))).text, '<rss><channel></channel></rss>');
+  assert.equal((await fetchFeed('https://a.example/f', seq([new Response('x'.repeat(10), { headers: { 'content-length': String(2 << 20) } })]))).error, 'too_big');
+});
+
+test('feeds: an XHTML page with a script comes back as plain text in a sandbox, never as a page', async () => {
+  const { feed } = await import('../src/feeds.js');
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><script>alert(document.cookie)</script></html>', { status: 200, headers: { 'content-type': 'application/xhtml+xml' } });
+  try {
+    const url = new URL('https://maclaine.se/split-flap/api/data/feed?u=' + encodeURIComponent('https://feeds.bbci.co.uk/news/rss.xml'));   // a built-in feed: no account needed
+    const r = await feed(new Request(url), {}, { waitUntil() {} }, url, []);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('content-type'), 'text/plain; charset=utf-8');
+    assert.equal(r.headers.get('content-security-policy'), "sandbox; default-src 'none'");
+    assert.equal(r.headers.get('content-disposition'), 'attachment');
+    assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+    const off = await feed(new Request(url), {}, { waitUntil() {} }, url, ['feeds']);
+    assert.equal(off.status, 503);
+  } finally { globalThis.fetch = realFetch; }
+});
+
+test('feeds: a body sent without a length is cut off, and the stream cancelled, once it passes 1 MB', async () => {
+  const { fetchFeed } = await import('../src/feeds.js');
+  let sent = 0, cancelled = false;
+  const chunk = new TextEncoder().encode('<rss>' + 'x'.repeat(64 * 1024 - 5));
+  const body = new ReadableStream({ pull(c) { if (sent >= 32) { c.close(); return; } sent++; c.enqueue(chunk); }, cancel() { cancelled = true; } });   // 32 x 64 KB = 2 MB
+  const r = await fetchFeed('https://a.example/f', async () => new Response(body, { status: 200 }));
+  assert.equal(r.error, 'too_big');
+  assert.ok(cancelled, 'the stream was cancelled');
+  assert.ok(sent <= 18, `read ${sent} chunks, not the whole 32`);
+});

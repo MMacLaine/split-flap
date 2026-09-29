@@ -9,6 +9,7 @@
 //   GET /transit/near?lat=&lon=           the stops nearest a place
 //   GET /markets?s=SPY,ISF.LON             daily closes for listed symbols (0.9, markets.js)
 //   GET /rates?b=boe|riks&y=1|5           a central bank's policy rate (0.9.2, src/rates.js)
+//   GET /feed?u=<address>                  a feed some account has added (0.9.3, feeds.js)
 //
 // Only known sources with checked parameters are fetched; this is not a relay for
 // arbitrary addresses. SOURCES_OFF (a Worker variable, comma separated) switches a source
@@ -17,6 +18,7 @@
 import { stoptimes, stops, upstream, STOP_ID, roundLL } from '../../src/transit.js';
 import LIST from '../../data/markets.json' with { type: 'json' };
 import { upstream as rateUrl, boeSeries, riksSeries } from '../../src/rates.js';
+import { feed } from './feeds.js';
 
 // The built-in symbols (0.9): only these reach Split-Flap's Alpha Vantage key, so no one
 // can spend its allowance on symbols of their own. Up to eight per request, one board.
@@ -65,7 +67,9 @@ export function parseData(path, q) {
 
 export async function data(req, env, ctx, url) {
   if (req.method !== 'GET') return reply({ error: 'method_not_allowed' }, 405);
-  const off = offList(env), p = parseData(url.pathname.slice('/split-flap/api'.length), url.searchParams);
+  const off = offList(env);
+  if (url.pathname === '/split-flap/api/data/feed') return feed(req, env, ctx, url, off);
+  const p = parseData(url.pathname.slice('/split-flap/api'.length), url.searchParams);
   if (!p) return reply({ error: 'bad_request' }, 400);
   if (p.kind === 'status') return reply({ off }, 200, 60);
   if (off.includes(p.src || 'transit')) return reply({ error: 'source_off' }, 503);
