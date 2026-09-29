@@ -3,6 +3,34 @@
 
 export const CHANGELOG = [
   {
+    v: '0.9.0', date: '2026-09-30',
+    tag: { en: 'Markets', sv: 'Marknader' },
+    desc: {
+      en: 'Shares, ETFs and crypto on the board, drawn as a line in a new kind of flap.',
+      sv: 'Aktier, fonder och krypto på tavlan, ritade som en linje med en ny sorts flapp.'
+    },
+    items: {
+      en: [
+        '**Half flaps.** A flap can now be coloured on its top or bottom half only, so a line on the board has twice the height to move in.',
+        '**Markets.** A new tile draws a share, an ETF or a coin as a line, green where it rises and red where it falls, with its price, the day\'s change, and whether its market is open in your own time.',
+        '**Built in for London and New York.** Shares and ETFs there work with no setup, with each trading day\'s close. Swedish shares are priced through their London listings. Split-Flap was approved for Alpha Vantage\'s programme for open-source projects, which is what makes this possible.',
+        '**Crypto with no setup.** Bitcoin, ether and a few other coins, from CoinGecko.',
+        '**Your own source.** For anything not built in, such as Stockholm itself or your funds, use your own Alpha Vantage key or a Google Sheet. Both stay in this browser.',
+        '**Explore in sections.** Templates are in sections with pages of their own, and Finance has Stocks, ETFs, Crypto and Currency. There are three new templates: Stocks, Index trackers and Crypto.',
+        'A new storyboard is 12 × 40, since this is about screens. Storyboards you have keep their size.'
+      ],
+      sv: [
+        '**Halva flappar.** En flapp kan nu vara färgad bara på övre eller undre halvan, så en linje på tavlan har dubbelt så mycket höjd att röra sig i.',
+        '**Marknader.** En ny ruta ritar en aktie, en fond eller ett mynt som en linje, grön där den stiger och röd där den faller, med pris, dagens förändring och om marknaden är öppen i din egen tid.',
+        '**Inbyggt för London och New York.** Aktier och fonder där fungerar utan att ställa in något, med varje handelsdags stängningskurs. Svenska aktier prissätts via sina noteringar i London. Split-Flap godkändes för Alpha Vantages program för projekt med öppen källkod, och det är det som gör det möjligt.',
+        '**Krypto utan inställningar.** Bitcoin, ether och några andra mynt, från CoinGecko.',
+        '**Din egen källa.** För allt som inte finns inbyggt, till exempel Stockholmsbörsen eller dina fonder, använd din egen Alpha Vantage-nyckel eller ett Google-kalkylark. Båda stannar i den här webbläsaren.',
+        '**Utforska i sektioner.** Mallarna ligger i sektioner med egna sidor, och Ekonomi har Aktier, Fonder, Krypto och Valuta. Det finns tre nya mallar: Aktier, Indexfonder och Krypto.',
+        'En ny storyboard är 12 × 40, eftersom det här handlar om skärmar. Storyboards du redan har behåller sin storlek.'
+      ]
+    }
+  },
+  {
     v: '0.8.0', date: '2026-09-29',
     tag: { en: 'Anywhere', sv: 'Var som helst' },
     desc: {

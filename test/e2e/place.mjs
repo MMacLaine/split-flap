@@ -37,7 +37,7 @@ try {
   check('the demo is built again for London, under the same id', (await ev('splitFlap.cur().id')) === fresh && (await ev('splitFlap.cur().loc && splitFlap.cur().loc.cc')) === 'GB');
   const dz = JSON.parse(await ev(`JSON.stringify(splitFlap.cur().pages.find(p => p.zones.some(z => z.ch === 'departures')) || null)`));
   check('its departures follow the nearest stop, not Odenplan', !!dz && dz.zones[1].o.near === true && !JSON.stringify(dz).includes('Odenplan'));
-  check('Explore is grouped by use', (await ev(`document.querySelectorAll('.sf-level .sf-group > .sf-eyebrow').length`)) >= 5, await ev(`[...document.querySelectorAll('.sf-level .sf-group > .sf-eyebrow')].map(e => e.textContent).join(', ')`));
+  check('Explore shows its sections, each with a way to see all', (await ev(`document.querySelectorAll('.sf-level [data-k^="sec-"]').length`)) >= 5, await ev(`[...document.querySelectorAll('.sf-level .sf-group .sf-eyebrow')].map(e => e.textContent).join(', ')`));
   const nearOk = await waitFor(`Object.values(splitFlap.live.data.near).some(n => n.stops && n.stops.length)`);
   check('the nearest stops come back through the Worker', nearOk, await ev(`JSON.stringify(Object.values(splitFlap.live.data.near).map(n => (n.stops || []).slice(0, 2).map(s => s.name)))`));
   const depOk = await waitFor(`Object.values(splitFlap.live.data.tr).some(e => e.deps && e.deps.length)`, 30000);
@@ -69,8 +69,8 @@ try {
   // the kill switch: a source the Worker lists as off hides its tile and its templates
   await ev(`(() => { splitFlap.live.data.off = ['transit']; splitFlap.editor.E.picking = true; splitFlap.render(); })()`); await sleep(400);
   check('a switched-off source hides its tile', (await ev(`String(!!document.querySelector('[data-k=tile-departures]'))`)) === 'false');
-  await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'list' })`); await sleep(600);
-  check('and moves its templates to Not available here yet', /Not available here yet/.test(await ev(`document.querySelector('.sf-drawer').textContent`)));
+  await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'section', section: 'travel' })`); await sleep(600);
+  check('and moves its templates to Not available here yet, on their section\'s page', /Not available here yet/.test(await ev(`document.querySelector('.sf-drawer').textContent`)) && (await at()) === '#/explore/travel', await at());
   await ev(`splitFlap.live.data.off = []`);
 } catch (err) { check('no exception', false, err && err.message); }
 

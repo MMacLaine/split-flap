@@ -39,8 +39,13 @@ export const SOURCES = {
     terms: 'Free, keyless, European Central Bank reference rates.', checked: '2026-09-27', contact: 'frankfurter.dev',
     credit: { en: 'European Central Bank reference rates, through Frankfurter.', sv: 'Europeiska centralbankens referenskurser, via Frankfurter.' }, link: 'https://frankfurter.dev/'
   },
+  markets: {
+    name: 'Alpha Vantage', tier: 'worker', tiles: ['markets'], every: 'each symbol once a day after its exchange closes, through one Durable Object for every screen',
+    terms: 'Split-Flap was approved for Alpha Vantage\'s programme for open-source projects on 29 September 2026. The key it granted answers as a standard free key, 25 calls a day.', checked: '2026-09-29', contact: 'support@alphavantage.co',
+    credit: { en: 'Stock and ETF prices from Alpha Vantage.', sv: 'Aktie- och fondkurser från Alpha Vantage.' }, link: 'https://www.alphavantage.co/'
+  },
   crypto: {
-    name: 'CoinGecko', tier: 'browser', tiles: ['currency'], every: 'every five minutes for the coins on a board',
+    name: 'CoinGecko', tier: 'browser', tiles: ['currency', 'markets'], every: 'every five minutes for the coins on a board',
     terms: 'Public API without a key, around 30 calls a minute, attribution required.', checked: '2026-09-29', contact: 'coingecko.com',
     credit: { en: 'Crypto prices by CoinGecko.', sv: 'Kryptopriser från CoinGecko.' }, link: 'https://www.coingecko.com/'
   },

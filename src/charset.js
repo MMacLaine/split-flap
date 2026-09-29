@@ -18,7 +18,14 @@ export const CHIP_NAMES = {
 
 // The heart came in 0.3 (the Vestaboard Note has one), after the punctuation so the
 // chips stay last. Links store characters, not positions, so older boards are unchanged.
-export const DRUM = ' ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖÆØÜÉ0123456789.,:;!?\'"-+/&%#@()=$°♥' + CHIP_KEYS.join('');
+// Half flaps (0.9): only the top or the bottom half coloured, green, red or the theme's
+// glyph colour, so a line chart has two heights per row. They are private-use characters,
+// one UTF-16 unit each like every other flap, that no keyboard types, and they sit after
+// the chips so the drum's order for everything before them is unchanged.
+export const HALF = { gTop: '\uE000', gBottom: '\uE001', rTop: '\uE002', rBottom: '\uE003', fTop: '\uE004', fBottom: '\uE005' };
+export const HALVES = { '\uE000': ['g', 'top'], '\uE001': ['g', 'bottom'], '\uE002': ['r', 'top'], '\uE003': ['r', 'bottom'], '\uE004': ['f', 'top'], '\uE005': ['f', 'bottom'] };
+export const isHalf = ch => Object.prototype.hasOwnProperty.call(HALVES, ch);
+export const DRUM = ' ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖÆØÜÉ0123456789.,:;!?\'"-+/&%#@()=$°♥' + CHIP_KEYS.join('') + Object.keys(HALVES).join('');
 export const DRUM_IDX = Object.fromEntries([...DRUM].map((c, i) => [c, i]));
 
 // Characters that are not on the drum but have an honest stand-in.
@@ -43,13 +50,15 @@ const TRANSLIT = {
   'І': 'I', 'Ї': 'YI', 'Є': 'YE', 'Ґ': 'G', 'Ў': 'U', 'Ђ': 'DJ', 'Ј': 'J', 'Љ': 'LJ', 'Њ': 'NJ', 'Ћ': 'C', 'Џ': 'DZ', 'Ѓ': 'GJ', 'Ќ': 'KJ', 'Ѕ': 'DZ'
 };
 
-export const isChip = ch => ch === 'f' || Object.prototype.hasOwnProperty.call(CHIPS, ch);
+// A colour flap, whole or half: never typed, never read aloud, blank in a ticker row.
+export const isChip = ch => ch === 'f' || Object.prototype.hasOwnProperty.call(CHIPS, ch) || isHalf(ch);
 
 // One character to what the flaps print for it: itself, a stand-in of one or more
 // letters, '' for a letter that prints nothing, or null when there is no stand-in.
 // Accents the drum has no flap for are dropped (Ł is a table entry, ș splits into s and
 // a mark), and Å Ä Ö Ü É keep their own flaps because they are looked up first.
 function fold(ch) {
+  if (isHalf(ch)) return null;   // drawn by the chart only, never from text
   const u = String(ch).toUpperCase();
   if (u.length === 1 && DRUM_IDX[u] !== undefined) return u;
   const f = FOLD_MAP[u] ?? FOLD_MAP[ch] ?? TRANSLIT[u];
@@ -155,6 +164,8 @@ for (let i = 1; i <= 26; i++) VB_CODES[i] = String.fromCharCode(64 + i);
 for (let i = 27; i <= 35; i++) VB_CODES[i] = String(i - 26);
 VB_CODES[36] = '0';
 export const VB_FROM_CHAR = Object.fromEntries(Object.entries(VB_CODES).map(([k, v]) => [v, +k]));
+// A Vestaboard has no half flaps: each is sent as the whole chip of its colour.
+for (const [c, [k]] of Object.entries(HALVES)) VB_FROM_CHAR[c] = VB_FROM_CHAR[k];
 
 export function fromVestaboardCodes(rows) {
   return rows.map(r => r.map(code => VB_CODES[code] ?? ' '));

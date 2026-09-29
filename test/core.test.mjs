@@ -9,9 +9,9 @@ import { wrap, toCells, depMinutes, channelLines, compose, zonesFor } from '../s
 import { sanitizeBoard, encodeBoard, decodeBoard } from '../src/store.js';
 
 // ---------- charset ----------
-test('drum holds 74 flaps', () => {
-  // 1 blank + 26 letters + 7 Nordic (Å Ä Ö Æ Ø Ü É) + 10 digits + 20 punctuation + the heart + 9 chips
-  assert.equal(DRUM.length, 74);
+test('drum holds 80 flaps', () => {
+  // 1 blank + 26 letters + 7 Nordic (Å Ä Ö Æ Ø Ü É) + 10 digits + 20 punctuation + the heart + 9 chips + 6 half flaps (0.9)
+  assert.equal(DRUM.length, 80);
 });
 
 // Names from the places 0.8's sources cover, and what the flaps print for each (worked
@@ -38,26 +38,35 @@ test('a name the drum cannot carry falls through to the next, never to blanks', 
   assert.equal(printable('9022 東京駅', '1234'), '1234');     // mostly unprintable
 });
 
+test('half flaps: on the drum, kept in stored cells, never made from typed text', async () => {
+  const { HALF, isChip, cellChar } = await import('../src/charset.js');
+  assert.equal(cellChar(HALF.gTop), HALF.gTop);                       // a stored cell keeps it
+  assert.equal(cleanChar(HALF.rBottom).valid, false);                 // typing one gives a blank
+  assert.deepEqual(textToCells('a' + HALF.fTop), ['A', ' ']);
+  assert.ok(isChip(HALF.gBottom));                                    // blank in a ticker row, never read aloud
+  assert.equal(VB_CODES[(await import('../src/charset.js')).VB_FROM_CHAR[HALF.gTop]], 'g');   // a Vestaboard gets the whole green chip
+});
+
 test('the composer expands stand-ins of several letters', () => {
   assert.deepEqual(composerInput('ßЖ'), { cells: ['S', 'S', 'Z', 'H'], invalid: [] });
   assert.deepEqual(composerInput('東'), { cells: [' '], invalid: ['東'] });
 });
 
 test('Z to B goes forward the long way round', () => {
-  // Z is flap 26, B is flap 2. Forward from 26 to 2 wraps: (2 - 26) mod 74 = 50 steps.
+  // Z is flap 26, B is flap 2. Forward from 26 to 2 wraps: (2 - 26) mod 80 = 56 steps.
   const full = drumPath('Z', 'B');
-  assert.equal(full.length, 50);
+  assert.equal(full.length, 56);
   assert.equal(full[0], 'Å');                 // flap 27, the one after Z
   assert.deepEqual(full.slice(-3), [' ', 'A', 'B']);
 });
 
 test('fast speed shows only the last 10 flaps before the target', () => {
-  // Last 10 flaps ending at B (flap 2): flaps 67..73 are chips y g b v w k f, then 0 1 2.
-  assert.deepEqual(drumPath('Z', 'B', 10), ['y', 'g', 'b', 'v', 'w', 'k', 'f', ' ', 'A', 'B']);
+  // Last 10 flaps ending at B (flap 2): flap 73 is the filled chip, 74..79 the six half flaps, then 0 1 2.
+  assert.deepEqual(drumPath('Z', 'B', 10), ['f', '\uE000', '\uE001', '\uE002', '\uE003', '\uE004', '\uE005', ' ', 'A', 'B']);
 });
 
-test('same flap to itself is a full turn (74)', () => {
-  assert.equal(drumPath('A', 'A').length, 74);
+test('same flap to itself is a full turn (80)', () => {
+  assert.equal(drumPath('A', 'A').length, 80);
 });
 
 test('typing: lowercase prints as capitals, Nordic letters stay themselves', () => {

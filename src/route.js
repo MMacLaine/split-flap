@@ -6,12 +6,14 @@
 //   #/storyboards/<id>/<week|boards|display>
 //   #/storyboards/<id>/boards/<boardId>    one board of a storyboard
 //   #/my-boards, #/my-boards/<id>            My boards and one blueprint (0.7.1)
-//   #/explore, #/explore/<templateId>
+//   #/explore, #/explore/<section>, #/explore/<section>/<templateId> (sections in 0.9;
+//   #/explore/<templateId> from before still opens the template)
 //   #/account, #/account/help, #/account/log
 //
 // Ids are the stored ones: a storyboard is a stored board, a board is one of its pages.
 
 const VIEWS = ['week', 'boards', 'display'];
+export const SECTIONS = ['start', 'finance', 'travel', 'home', 'work', 'fun'];
 const clean = s => /^[\w-]{1,64}$/.test(s || '') ? s : null;
 
 export function parseRoute(hash) {
@@ -24,7 +26,10 @@ export function parseRoute(hash) {
     return { sec: 'sb', lv: 'sb', sb, view: VIEWS.includes(b) ? b : 'week' };
   }
   if (sec === 'my-boards') return a && clean(a) ? { sec: 'my', lv: 'bp', bp: a } : { sec: 'my', lv: 'list' };
-  if (sec === 'explore') return a && clean(a) ? { sec: 'ex', lv: 'tpl', tpl: a } : { sec: 'ex', lv: 'list' };
+  if (sec === 'explore') {
+    if (SECTIONS.includes(a)) return b && clean(b) ? { sec: 'ex', lv: 'tpl', tpl: b, section: a } : { sec: 'ex', lv: 'section', section: a };
+    return a && clean(a) ? { sec: 'ex', lv: 'tpl', tpl: a } : { sec: 'ex', lv: 'list' };
+  }
   if (sec === 'account') return a === 'help' || a === 'log' ? { sec: 'acc', lv: a } : { sec: 'acc', lv: 'main' };
   return null;
 }
@@ -38,7 +43,7 @@ export function routeHash(r) {
     return '#/storyboards';
   }
   if (r.sec === 'my') return r.lv === 'bp' ? `#/my-boards/${e(r.bp)}` : '#/my-boards';
-  if (r.sec === 'ex') return r.lv === 'tpl' ? `#/explore/${e(r.tpl)}` : '#/explore';
+  if (r.sec === 'ex') return r.lv === 'tpl' ? (SECTIONS.includes(r.section) ? `#/explore/${r.section}/${e(r.tpl)}` : `#/explore/${e(r.tpl)}`) : r.lv === 'section' && SECTIONS.includes(r.section) ? `#/explore/${r.section}` : '#/explore';
   if (r.sec === 'acc') return r.lv === 'help' || r.lv === 'log' ? `#/account/${r.lv}` : '#/account';
   return '';
 }
@@ -48,7 +53,7 @@ export function parentRoute(r) {
   if (!r) return null;
   if (r.sec === 'sb') return r.lv === 'board' ? { sec: 'sb', lv: 'sb', sb: r.sb, view: r.from || 'boards' } : r.lv === 'sb' ? { sec: 'sb', lv: 'list' } : null;
   if (r.sec === 'my') return r.lv === 'bp' ? { sec: 'my', lv: 'list' } : null;
-  if (r.sec === 'ex') return r.lv === 'tpl' ? { sec: 'ex', lv: 'list' } : null;
+  if (r.sec === 'ex') return r.lv === 'tpl' ? (SECTIONS.includes(r.section) ? { sec: 'ex', lv: 'section', section: r.section } : { sec: 'ex', lv: 'list' }) : r.lv === 'section' ? { sec: 'ex', lv: 'list' } : null;
   if (r.sec === 'acc') return r.lv === 'help' || r.lv === 'log' ? { sec: 'acc', lv: 'main' } : null;
   return null;
 }

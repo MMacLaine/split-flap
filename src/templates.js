@@ -6,7 +6,7 @@
 //
 // Each template also says where it works and what it needs, so Explore can group them,
 // and hide the ones that cannot work here or whose source is switched off:
-//   group   Explore's section
+//   section Explore's section, and group the kind within Finance
 //   works   'anywhere', or a list of country codes
 //   needs   the tiles it uses that depend on an outside source
 
@@ -62,15 +62,19 @@ function menu(c, sv, kind) {
   return { title: sv ? 'RUM PER TIMME' : 'ROOMS PER HOUR', items, suffix: krona ? ' KR' : m.suffix, ...(m.prefix ? { prefix: m.prefix } : {}) };
 }
 
-export const GROUPS = [
-  ['start', { en: 'To start with', sv: 'Att börja med' }], ['home', { en: 'Home', sv: 'Hemma' }], ['commute', { en: 'Commute', sv: 'Pendling' }],
-  ['office', { en: 'Office and lobby', sv: 'Kontor och entré' }], ['shop', { en: 'Café and shop', sv: 'Kafé och butik' }],
-  ['money', { en: 'Money', sv: 'Pengar' }], ['fun', { en: 'Maker and fun', sv: 'Skapa och leka' }]
+// Explore's sections (0.9), each with a page of its own; Finance is split by kind.
+export const SECTIONS = [
+  { id: 'start', name: { en: 'To start with', sv: 'Att börja med' } },
+  { id: 'finance', name: { en: 'Finance', sv: 'Ekonomi' }, groups: [['stocks', { en: 'Stocks', sv: 'Aktier' }], ['etfs', { en: 'ETFs', sv: 'Börshandlade fonder' }], ['crypto', { en: 'Crypto', sv: 'Krypto' }], ['currency', { en: 'Currency', sv: 'Valuta' }]] },
+  { id: 'travel', name: { en: 'Travel', sv: 'Resor' } },
+  { id: 'home', name: { en: 'Home', sv: 'Hemma' } },
+  { id: 'work', name: { en: 'Work and shop', sv: 'Arbete och butik' } },
+  { id: 'fun', name: { en: 'Fun', sv: 'Lek' } }
 ];
 
 export const TEMPLATES = [
   {
-    id: 'demo', group: 'start', works: 'anywhere', needs: ['departures', 'weather'],
+    id: 'demo', section: 'start', works: 'anywhere', needs: ['departures', 'weather'],
     name: { en: 'Demo', sv: 'Demo' },
     desc: { en: 'A tour of everything: messages, big clock, departures, weather and colour.', sv: 'En rundtur: meddelanden, stor klocka, avgångar, väder och färg.' },
     make: a => { const c = ctx(a), sv = a.sv; return base('Demo', { ...c.loc, pages: [
@@ -83,13 +87,14 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'blank', group: 'start', works: 'anywhere', needs: [],
+    id: 'blank', section: 'start', works: 'anywhere', needs: [],
     name: { en: 'Blank', sv: 'Tom' },
     desc: { en: 'One empty board to type on.', sv: 'En tom tavla att skriva på.' },
-    make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Ny storyboard' : 'New storyboard', { ...c.loc, pages: [page(sv ? 'Tavla 1' : 'Board 1', 'full', 10, [z('message', { lines: ['', '', sv ? 'SKRIV HÄR' : 'TYPE HERE'] })])] }); }
+    // a new storyboard is 12 x 40 (0.9): this is about screens, and a screen has the room
+    make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Ny storyboard' : 'New storyboard', { ...c.loc, size: '12x40', rows: 12, cols: 40, pages: [page(sv ? 'Tavla 1' : 'Board 1', 'full', 10, [z('message', { lines: ['', '', '', '', sv ? 'SKRIV HÄR' : 'TYPE HERE'] })])] }); }
   },
   {
-    id: 'home', group: 'home', works: 'anywhere', needs: ['departures', 'weather'],
+    id: 'home', section: 'home', works: 'anywhere', needs: ['departures', 'weather'],
     name: { en: 'Home dashboard', sv: 'Hemmapanel' },
     desc: { en: 'Clock, weather and your nearest departures, for the hallway.', sv: 'Klocka, väder och dina närmaste avgångar, för hallen.' },
     make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Hemma' : 'Home', { ...c.loc, quiet: { on: true, from: '23:00', to: '06:30', mode: 'dim' }, pages: [
@@ -100,7 +105,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'morning', group: 'home', works: 'anywhere', needs: ['departures', 'weather', 'holidays'],
+    id: 'morning', section: 'home', works: 'anywhere', needs: ['departures', 'weather', 'holidays'],
     name: { en: 'Morning', sv: 'Morgon' },
     desc: { en: 'Your trains or buses on weekday mornings, then the weather, the day and whether it will rain.', sv: 'Dina tåg eller bussar på vardagsmorgnar, sedan vädret, dagen och om det blir regn.' },
     make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Morgon' : 'Morning', { ...c.loc, quiet: { on: true, from: '23:00', to: '06:00', mode: 'dim' }, pages: [
@@ -111,7 +116,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'weather', group: 'home', works: 'anywhere', needs: ['weather'],
+    id: 'weather', section: 'home', works: 'anywhere', needs: ['weather'],
     name: { en: 'Weather station', sv: 'Väderstation' },
     desc: { en: 'Now, the next hours and three days ahead, on a white board.', sv: 'Nu, kommande timmar och tre dagar framåt, på en vit tavla.' },
     make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Väder' : 'Weather', { ...c.loc, theme: 'white', soundStyle: 'soft', pages: [
@@ -121,7 +126,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'station', group: 'commute', works: 'anywhere', needs: ['departures', 'weather'],
+    id: 'station', section: 'travel', works: 'anywhere', needs: ['departures', 'weather'],
     name: { en: 'Station board', sv: 'Stationstavla' },
     desc: { en: 'A big amber departure board for your nearest station, with platforms and a heavy flap sound.', sv: 'En stor bärnstensgul avgångstavla för din närmaste station, med spår och tungt fällbladsljud.' },
     make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Avgångar' : 'Departures', { ...c.loc, theme: 'solari', size: 'custom', rows: 10, cols: 32, speed: 'gentle', soundStyle: 'heavy', pages: [
@@ -130,7 +135,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'lobby', group: 'office', works: 'anywhere', needs: [],
+    id: 'lobby', section: 'work', works: 'anywhere', needs: [],
     name: { en: 'Office lobby', sv: 'Kontorsentré' },
     desc: { en: 'A welcome that takes turns with notices, the time in three cities, and room prices.', sv: 'Ett välkommen som turas om med meddelanden, tiden i tre städer och rumspriser.' },
     make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Entré' : 'Lobby', { ...c.loc, quiet: { on: true, from: '20:00', to: '07:00', mode: 'dim' }, pages: [
@@ -141,7 +146,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'world', group: 'office', works: 'anywhere', needs: [],
+    id: 'world', section: 'work', works: 'anywhere', needs: [],
     name: { en: 'World clock wall', sv: 'Världsklocka' },
     desc: { en: 'The time where your team or family is, in a row of cities, for a wide screen.', sv: 'Tiden där ditt team eller din familj är, i en rad städer, för en bred skärm.' },
     make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Världsklocka' : 'World clock', { ...c.loc, size: 'custom', rows: 6, cols: 26, speed: 'gentle', pages: [
@@ -149,7 +154,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'cafe', group: 'shop', works: 'anywhere', needs: [],
+    id: 'cafe', section: 'work', works: 'anywhere', needs: [],
     name: { en: 'Café', sv: 'Kafé' },
     desc: { en: 'Today’s menu with prices in your currency, and a coffee call, on a white board.', sv: 'Dagens meny med priser i din valuta, och ett fikarop, på en vit tavla.' },
     make: a => { const c = ctx(a), sv = a.sv, fika = !c.P || c.P.cc === 'SE'; return base(sv ? 'Kafé' : 'Café', { ...c.loc, theme: 'white', soundStyle: 'soft', pages: [
@@ -159,7 +164,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'money', group: 'money', works: 'anywhere', needs: ['fx'],
+    id: 'money', section: 'finance', group: 'currency', works: 'anywhere', needs: ['fx'],
     name: { en: 'Currency board', sv: 'Valutatavla' },
     desc: { en: 'Exchange rates in your currency, and bitcoin and ether with a green or red flap for their day.', sv: 'Växelkurser i din valuta, och bitcoin och ether med en grön eller röd flapp för dygnet.' },
     make: a => { const c = ctx(a), sv = a.sv, cur = c.cur && ['EUR', 'USD', 'GBP', 'SEK', 'NOK', 'DKK', 'CHF', 'JPY', 'PLN', 'CZK', 'AUD', 'CAD'].includes(c.cur) ? c.cur : 'SEK';
@@ -170,7 +175,31 @@ export const TEMPLATES = [
       ] }); }
   },
   {
-    id: 'colour', group: 'fun', works: 'anywhere', needs: [],
+    id: 'stocks', section: 'finance', group: 'stocks', works: 'anywhere', needs: ['markets'],
+    name: { en: 'Stocks', sv: 'Aktier' },
+    desc: { en: 'Large shares in London, New York and Stockholm as lines, each market flipping to the next.', sv: 'Stora aktier i London, New York och Stockholm som linjer, där varje marknad fäller över till nästa.' },
+    make: a => { const c = ctx(a), sv = a.sv, mk = (name, syms) => page(name, 'full', syms.length * 12, [z('markets', { source: 'built', symbols: syms.map(s => ({ s })), period: '1m', every: 12 })]);
+      return base(sv ? 'Aktier' : 'Stocks', { ...c.loc, size: '12x40', rows: 12, cols: 40, speed: 'gentle', transition: 'curtain', pages: [
+        mk('London', ['AZN.LON', 'SHEL.LON']), mk('New York', ['AAPL', 'MSFT']), mk('Stockholm', ['0NC6.LON', '0MHW.LON'])] }); }
+  },
+  {
+    id: 'indices', section: 'finance', group: 'etfs', works: 'anywhere', needs: ['markets'],
+    name: { en: 'Index trackers', sv: 'Indexfonder' },
+    desc: { en: 'ETFs that follow the S&P 500, the FTSE 100, the Nasdaq 100 and gold, taking turns.', sv: 'Börshandlade fonder som följer S&P 500, FTSE 100, Nasdaq 100 och guld, som turas om.' },
+    make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Index' : 'Indices', { ...c.loc, size: '12x40', rows: 12, cols: 40, speed: 'gentle', pages: [
+      page(sv ? 'Index' : 'Indices', 'full', 48, [z('markets', { source: 'built', symbols: [{ s: 'SPY' }, { s: 'ISF.LON' }, { s: 'QQQ' }, { s: 'GLD' }], period: '3m', every: 12, ref: true })])] }); }
+  },
+  {
+    id: 'crypto', section: 'finance', group: 'crypto', works: 'anywhere', needs: ['crypto'],
+    name: { en: 'Crypto', sv: 'Krypto' },
+    desc: { en: 'Bitcoin and ether over the month, and bitcoin over the last day, working with no setup.', sv: 'Bitcoin och ether över månaden, och bitcoin det senaste dygnet, utan att ställa in något.' },
+    make: a => { const c = ctx(a), sv = a.sv, cur = c.cur && ['USD', 'EUR', 'GBP', 'SEK'].includes(c.cur) ? c.cur : 'USD';
+      return base(sv ? 'Krypto' : 'Crypto', { ...c.loc, size: '12x40', rows: 12, cols: 40, speed: 'gentle', pages: [
+        page(sv ? 'Månaden' : 'The month', 'full', 24, [z('markets', { source: 'crypto', symbols: [{ s: 'BTC' }, { s: 'ETH' }], period: '1m', every: 12, cur })]),
+        page(sv ? 'Dygnet' : 'The day', 'full', 12, [z('markets', { source: 'crypto', symbols: [{ s: 'BTC' }], period: '1d', cur })])] }); }
+  },
+  {
+    id: 'colour', section: 'fun', works: 'anywhere', needs: [],
     name: { en: 'Colour mosaic', sv: 'Färgmosaik' },
     desc: { en: 'No words at all: flags, rain, waves and confetti, flap by flap.', sv: 'Inga ord alls: flaggor, regn, vågor och konfetti, blad för blad.' },
     make: a => { const sv = a.sv; return base(sv ? 'Mosaik' : 'Mosaic', { transition: 'wave', pages: [
@@ -182,14 +211,14 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'letters', group: 'fun', works: 'anywhere', needs: [],
+    id: 'letters', section: 'fun', works: 'anywhere', needs: [],
     name: { en: 'Letter clock', sv: 'Bokstavsklocka' },
     desc: { en: 'The time lit up in a grid of letters, with a dot in a corner for each minute in between.', sv: 'Tiden tänd i ett rutnät av bokstäver, med en prick i ett hörn för varje minut däremellan.' },
     make: a => { const sv = a.sv; return base(sv ? 'Bokstavsklocka' : 'Letter clock', { size: 'custom', rows: 11, cols: 15, speed: 'gentle', transition: 'drift', soundStyle: 'soft',
       quiet: { on: true, from: '23:00', to: '06:30', mode: 'dim' }, pages: [page(sv ? 'Klocka' : 'Clock', 'full', 3600, [z('letterclock')])] }); }
   },
   {
-    id: 'showcase', group: 'fun', works: 'anywhere', needs: [],
+    id: 'showcase', section: 'fun', works: 'anywhere', needs: [],
     name: { en: 'Everything at once', sv: 'Allt på en gång' },
     desc: { en: 'The extreme one: fills the screen, rolls every flap the long way round, and never sits still.', sv: 'Den extrema: fyller skärmen, rullar varje blad hela varvet och står aldrig still.' },
     make: a => { const sv = a.sv; return base(sv ? 'Allt på en gång' : 'Everything at once', { size: 'fill', speed: 'authentic', transition: 'curtain', soundStyle: 'heavy', pages: [
@@ -207,6 +236,7 @@ export const TEMPLATES = [
 // A template for a place: works says the countries it has data for, and needs the
 // sources it reads, so one switched off hides only the templates that depend on it.
 export const availableFor = (tp, place, off = []) => (tp.works === 'anywhere' || !place || !place.cc || tp.works.includes(place.cc)) && !tp.needs.some(n => off.includes(n === 'departures' ? 'transit' : n));
+export const sectionOf = id => SECTIONS.find(x => x.id === id) || null;
 
 export function fromTemplate(id, lang, home, place) {
   const t = TEMPLATES.find(x => x.id === id) || TEMPLATES[0];

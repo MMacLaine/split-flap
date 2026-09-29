@@ -79,3 +79,116 @@ test('live data: a Transitous reply becomes the departures shape every tile read
     { type: 'STOP', id: 'se-Trafiklab_740021014', name: 'Odenplan T-bana' }, { type: 'ADDRESS', id: 'x', name: 'Odengatan 1' }, { type: 'STOP', id: 'bad id!', name: 'Nope' }]);
   assert.deepEqual(s, [{ id: 'se-Trafiklab_740021013', name: 'Odenplan T-bana', note: 'Stockholms kommun', modes: ['METRO', 'BUS'], lat: 59.343, lon: 18.0497, tz: 'Europe/Stockholm', cc: 'SE' }]);
 });
+
+test('markets: only listed symbols, up to eight, and a switched-off source answers 503', async () => {
+  const { parseData } = await import('../src/data.js');
+  const q = s => new URLSearchParams(s);
+  assert.deepEqual(parseData('/data/markets', q('s=SPY,ISF.LON')).symbols, ['SPY', 'ISF.LON']);
+  assert.equal(parseData('/data/markets', q('s=ISF.LON,SPY')).key, parseData('/data/markets', q('s=SPY,ISF.LON')).key);   // one cache entry for either order
+  assert.equal(parseData('/data/markets', q('s=SPY,MADEUP')), null);                        // not on the list: never reaches the key
+  assert.equal(parseData('/data/markets', q('s=' + Array(9).fill('SPY').map((x, i) => ['SPY', 'QQQ', 'DIA', 'IWM', 'VT', 'EWD', 'EWU', 'EWG', 'EWJ'][i]).join(','))), null);
+  const { data } = await import('../src/data.js');
+  const call = path => data(new Request('https://maclaine.se/split-flap/api' + path), { SOURCES_OFF: 'markets' }, { waitUntil() {} }, new URL('https://maclaine.se/split-flap/api' + path));
+  assert.equal((await call('/data/markets?s=SPY')).status, 503);
+});
+
+// A fake Durable Object storage and clock, so the object's rules run without Cloudflare.
+function fakeObject(env, replies) {
+  const map = new Map(); let alarm = null;
+  const storage = { get: async k => map.get(k), put: async (k, v) => { map.set(k, v); }, getAlarm: async () => alarm, setAlarm: async t => { alarm = t; } };
+  return import('../src/markets.js').then(({ Markets }) => {
+    const m = new Markets({ storage }, env), calls = [];
+    m.fetchImpl = async url => { calls.push(url); const r = replies.shift(); return new Response(JSON.stringify(r), { status: 200 }); };
+    return { m, map, calls, alarm: () => alarm, clearAlarm: () => { alarm = null; } };
+  });
+}
+const DAILY = { 'Time Series (Daily)': { '2026-09-25': { '4. close': '100' }, '2026-09-28': { '4. close': '101.5' } } };
+
+test('markets object: one copy for the world, one call per symbol a day, and the allowance kept', async () => {
+  const realNow = Date.now;
+  Date.now = () => Date.parse('2026-09-29T10:00:00Z');   // New York last closed 28 Sep 20:00 UTC
+  try {
+    const o = await fakeObject({ AV_PER_DAY: '2', AV_PER_MIN: '5', ALPHAVANTAGE_KEY: 'k' }, [DAILY, DAILY, { Information: 'standard API rate limit is 25 requests per day' }]);
+    const ask = syms => o.m.fetch(new Request('https://x/', { method: 'POST', body: JSON.stringify({ symbols: syms.map(s => ({ s, ex: 'US' })) }) })).then(r => r.json());
+    let r = await ask(['SPY', 'QQQ', 'DIA']);
+    assert.deepEqual(r.data.SPY, { closes: null, at: null, status: 'queued' });       // nothing yet, and queued
+    assert.equal(r.left, 2);
+    await o.m.alarm(); await o.m.alarm();                                              // two calls: the day's allowance
+    await o.m.alarm();                                                                 // the third waits for tomorrow
+    assert.equal(o.calls.length, 2);
+    assert.ok(o.alarm() > Date.parse('2026-09-30T00:00:00Z'));
+    r = await ask(['SPY', 'QQQ', 'DIA']);
+    assert.deepEqual(r.data.SPY.closes, [{ d: '2026-09-25', c: 100 }, { d: '2026-09-28', c: 101.5 }]);
+    assert.equal(r.data.DIA.closes, null); assert.equal(r.left, 0);
+    assert.equal(r.data.DIA.status, 'budget'); assert.ok(r.data.DIA.next > Date.parse('2026-09-30T00:00:00Z'));   // says why, and when
+    // asked again the same day: nothing is due, so no calls
+    const before = o.calls.length; await ask(['SPY']); await o.m.alarm();
+    assert.equal(o.calls.length, before);
+    assert.ok(!o.calls.some(u => /apikey=(?!k)/.test(u)));
+  } finally { Date.now = realNow; }
+});
+
+test('markets object: a reply saying the key\'s limit is reached ends the day and keeps the symbol queued', async () => {
+  const realNow = Date.now;
+  Date.now = () => Date.parse('2026-09-29T10:00:00Z');
+  try {
+    const o = await fakeObject({ AV_PER_DAY: '25', ALPHAVANTAGE_KEY: 'k' }, [{ Information: 'Thank you for using Alpha Vantage! Please consider spreading out your free API requests' }]);
+    await o.m.fetch(new Request('https://x/', { method: 'POST', body: JSON.stringify({ symbols: [{ s: 'SPY', ex: 'US' }] }) }));
+    await o.m.alarm();
+    assert.equal(o.map.get('used:2026-09-29'), 25);
+    assert.deepEqual(Object.keys(o.map.get('queue2')), [JSON.stringify({ s: 'SPY', ex: 'US' })]);
+    assert.equal(o.map.get('d:SPY'), undefined);
+  } finally { Date.now = realNow; }
+});
+
+test('markets object: the most asked-for symbol goes first, and a symbol queued mid-call is kept', async () => {
+  const realNow = Date.now;
+  Date.now = () => Date.parse('2026-09-29T10:00:00Z');
+  try {
+    let o;
+    o = await fakeObject({ AV_PER_DAY: '25', ALPHAVANTAGE_KEY: 'k' }, [DAILY, DAILY]);
+    const ask = syms => o.m.fetch(new Request('https://x/', { method: 'POST', body: JSON.stringify({ symbols: syms.map(s => ({ s, ex: 'US' })) }) }));
+    await ask(['QQQ']); await ask(['SPY']); await ask(['SPY']); await ask(['SPY']);
+    // while the call for SPY is on its way, another board asks for DIA
+    const fetchFirst = o.m.fetchImpl;
+    o.m.fetchImpl = async url => { await ask(['DIA']); return fetchFirst(url); };
+    await o.m.alarm();
+    assert.ok(o.calls[0].includes('symbol=SPY'), o.calls[0]);                      // three screens asked for SPY, one for QQQ
+    assert.deepEqual(Object.keys(o.map.get('queue2')).map(k => JSON.parse(k).s).sort(), ['DIA', 'QQQ']);   // DIA was not lost
+  } finally { Date.now = realNow; }
+});
+
+test('markets object: a close Alpha Vantage has not posted yet is asked again, twice at most, two hours apart', async () => {
+  const realNow = Date.now; let t = Date.parse('2026-09-29T20:40:00Z');   // New York closed at 20:00 UTC; settled at 20:30
+  Date.now = () => t;
+  try {
+    const OLD = { 'Time Series (Daily)': { '2026-09-28': { '4. close': '101' } } }, NEW = { 'Time Series (Daily)': { '2026-09-28': { '4. close': '101' }, '2026-09-29': { '4. close': '102' } } };
+    const o = await fakeObject({ AV_PER_DAY: '25', ALPHAVANTAGE_KEY: 'k' }, [OLD, OLD, OLD, NEW]);
+    const ask = () => o.m.fetch(new Request('https://x/', { method: 'POST', body: JSON.stringify({ symbols: [{ s: 'SPY', ex: 'US' }] }) })).then(r => r.json());
+    await ask(); await o.m.alarm();                                  // first try: still Monday's bar
+    assert.equal(o.calls.length, 1);
+    t += 60 * 60e3; await ask(); await o.m.alarm();                  // an hour later: too soon to ask again
+    assert.equal(o.calls.length, 1);
+    t += 61 * 60e3; await ask(); await o.m.alarm();                  // two hours after the first: the second try
+    t += 121 * 60e3; await ask(); await o.m.alarm();                 // the third and last
+    t += 121 * 60e3; await ask(); await o.m.alarm();                 // no fourth, whatever it would say
+    assert.equal(o.calls.length, 3);
+    const r = await ask();
+    assert.equal(r.data.SPY.closes.at(-1).d, '2026-09-28');          // shown with its own, older date
+    assert.equal(r.data.SPY.status, 'ok'); assert.ok(r.data.SPY.next > t);
+  } finally { Date.now = realNow; }
+});
+
+test('markets route: the answer is cached a minute only while something is on its way', async () => {
+  const { data } = await import('../src/data.js');
+  const put = []; const cache = { match: async () => null, put: async (k, v) => { put.push(v.headers.get('cache-control')); } };
+  globalThis.caches = { default: cache };
+  try {
+    const obj = body => ({ idFromName: () => 'id', get: () => ({ fetch: async () => new Response(JSON.stringify(body)) }) });
+    const call = async body => { const url = new URL('https://maclaine.se/split-flap/api/data/markets?s=SPY'); const waits = []; await data(new Request(url), { MARKETS: obj(body) }, { waitUntil: p => waits.push(p) }, url); await Promise.all(waits); };
+    await call({ data: { SPY: { closes: null, status: 'queued' } }, left: 10 });
+    await call({ data: { SPY: { closes: null, status: 'budget', next: Date.now() + 5 * 3600e3 } }, left: 0 });
+    await call({});                                                       // an odd answer from the object: names, no crash
+    assert.deepEqual(put, ['public, s-maxage=60', 'public, s-maxage=900', 'public, s-maxage=60']);
+  } finally { delete globalThis.caches; }
+});

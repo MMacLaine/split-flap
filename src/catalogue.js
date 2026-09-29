@@ -16,7 +16,7 @@ const SEG = (k, label, opts, extra) => Object.assign({ k, t: 'seg', label, opts 
 const TOG = (k, label, extra) => Object.assign({ k, t: 'toggle', label }, extra);
 const FMT = SEG('fmt', t2('Format', 'Format'), [['24', t2('24 h', '24 h')], ['12', t2('12 h', '12 h')]]);
 
-export const GROUPS = [['words', t2('Words', 'Ord')], ['time', t2('Time', 'Tid')], ['live', t2('Live', 'Live')], ['pictures', t2('Pictures', 'Bilder')], ['later', t2('Later', 'Senare')]];
+export const GROUPS = [['words', t2('Words', 'Ord')], ['time', t2('Time', 'Tid')], ['live', t2('Live', 'Live')], ['finance', t2('Finance', 'Ekonomi')], ['pictures', t2('Pictures', 'Bilder')], ['later', t2('Later', 'Senare')]];
 
 export const TILES = [
   { id: 'message', g: 'words', ch: 'message', mode: 'type', name: t2('Message', 'Meddelande'), desc: t2('Type anything, letter by letter', 'Skriv vad du vill, bokstav för bokstav'), def: {} },
@@ -94,7 +94,22 @@ export const TILES = [
       SEG('view', t2('Show', 'Visa'), [['now', t2('Price now', 'Pris nu')], ['chart', t2('Today as bars', 'Idag som staplar')]], { dflt: 'now' }),
       TOG('vat', t2('Include VAT (value added tax, moms)', 'Inklusive moms'), { dflt: true, adv: 1 }),
       { t: 'note', label: t2('Prices from elprisetjustnu.se, before network fees and your supplier’s markup.', 'Priser från elprisetjustnu.se, utan nätavgift och elhandlarens påslag.') }] },
-  { id: 'currency', g: 'live', ch: 'currency', name: t2('Currency', 'Valuta'), desc: t2('Exchange rates and crypto prices in your currency', 'Växelkurser och kryptopriser i din valuta'), def: { base: 'SEK', pairs: ['EUR', 'USD', 'GBP'], dec: 2 },
+  { id: 'markets', g: 'finance', ch: 'markets', src: 'markets', name: t2('Markets', 'Marknader'), desc: t2('A stock, ETF or coin as a line, green up and red down, with its price', 'En aktie, fond eller ett mynt som en linje, grön upp och röd ner, med priset'),
+    def: { source: 'built', symbols: [{ s: 'SPY' }], period: '1m', every: 12 },
+    fields: [SEG('source', t2('What', 'Vad'), [['built', t2('Stocks and ETFs', 'Aktier och fonder')], ['crypto', t2('Crypto', 'Krypto')]], { dflt: 'built', hint: t2('London and New York are built in, with each day\'s close. Swedish shares are priced through London.', 'London och New York finns inbyggt, med varje dags stängningskurs. Svenska aktier prissätts via London.') }),
+      { k: 'symbols', t: 'symbols', label: t2('Symbols', 'Symboler'), max: 8 },
+      SEG('period', t2('Period', 'Period'), [['1d', t2('Day', 'Dag')], ['1w', t2('Week', 'Vecka')], ['1m', t2('Month', 'Månad')], ['3m', t2('3 months', '3 månader')], ['1y', t2('Year', 'År')]], { dflt: '1m' }),
+      SEG('source', t2('Your own source', 'Din egen källa'), [['key', t2('Your Alpha Vantage key', 'Din Alpha Vantage-nyckel')], ['sheet', t2('Your published sheet', 'Ditt publicerade kalkylark')]], { adv: 1, hint: t2('For symbols that are not built in, such as Stockholm itself or your funds.', 'För symboler som inte finns inbyggda, till exempel Stockholmsbörsen eller dina fonder.') }),
+      { t: 'conn', adv: 1, show: o => o.source === 'key' || o.source === 'sheet' },
+      { k: 'every', t: 'stepper', label: t2('Each symbol for', 'Varje symbol i'), min: 5, max: 120, step: 1, unit: 's', dflt: 12, adv: 1, show: o => Array.isArray(o.symbols) && o.symbols.length > 1 },
+      SEG('line', t2('Line', 'Linje'), [['thin', t2('Half flaps', 'Halva flappar')], ['thick', t2('Whole flaps', 'Hela flappar')]], { dflt: 'thin', adv: 1, hint: t2('Whole flaps read better on a small board.', 'Hela flappar syns bättre på en liten tavla.') }),
+      TOG('ref', t2('A faint line at the price the period started at', 'En svag linje vid priset när perioden började'), { dflt: false, adv: 1 }),
+      SEG('side', t2('Chart on the', 'Diagrammet till'), [['left', t2('Left', 'Vänster')], ['right', t2('Right', 'Höger')]], { dflt: 'left', adv: 1 }),
+      TOG('panel', t2('Show the name and price beside it', 'Visa namn och pris bredvid'), { dflt: true, adv: 1 }),
+      SEG('cur', t2('Coins priced in', 'Mynt i'), [['USD', t2('USD', 'USD')], ['EUR', t2('EUR', 'EUR')], ['GBP', t2('GBP', 'GBP')], ['SEK', t2('SEK', 'SEK')]], { dflt: 'USD', adv: 1, show: o => o.source === 'crypto' }),
+      { t: 'note', label: t2('The chart wants about 30 flaps across. A 12 × 40 board draws a month with room for the price.', 'Diagrammet vill ha ungefär 30 flappar i bredd. En tavla på 12 × 40 ritar en månad med plats för priset.') },
+      { t: 'credit', src: ['markets', 'crypto'] }] },
+  { id: 'currency', g: 'finance', ch: 'currency', name: t2('Currency', 'Valuta'), desc: t2('Exchange rates and crypto prices in your currency', 'Växelkurser och kryptopriser i din valuta'), def: { base: 'SEK', pairs: ['EUR', 'USD', 'GBP'], dec: 2 },
     fields: [{ k: 'base', t: 'select', label: t2('Priced in', 'Räknat i'), opts: FX_CURRENCIES.map(c => [c, t2(c, c)]), dflt: 'SEK', hint: t2('New tiles start in the currency of the place in Display.', 'Nya rutor börjar i valutan för platsen under Visning.') },
       { k: 'pairs', t: 'chips', label: t2('Currencies and coins', 'Valutor och mynt'), max: 6, opts: ['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CNY', 'BTC', 'ETH'].map(c => [c, t2(c, c)]) },
       { k: 'pairs', t: 'chips', label: t2('More currencies and coins', 'Fler valutor och mynt'), max: 6, adv: 1, opts: FX_CURRENCIES.filter(c => !['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CNY'].includes(c)).concat(['SOL', 'XRP', 'ADA', 'DOGE']).map(c => [c, t2(c, c)]) },
@@ -121,8 +136,7 @@ export const TILES = [
 
   { id: 'scoreboard', g: 'later', later: 1, name: t2('Scoreboard', 'Resultattavla') },
   { id: 'timer', g: 'later', later: 1, name: t2('Timer', 'Timer') },
-  { id: 'list', g: 'later', later: 1, name: t2('List', 'Lista') },
-  { id: 'stocks', g: 'later', later: 1, name: t2('Stock ticker', 'Aktiekurser') }
+  { id: 'list', g: 'later', later: 1, name: t2('List', 'Lista') }
 ];
 export const TILE = Object.fromEntries(TILES.map(t => [t.id, t]));
 

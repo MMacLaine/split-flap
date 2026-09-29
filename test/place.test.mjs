@@ -141,7 +141,7 @@ test('templates built for London: its weather and nearest stop, pounds, no Odenp
 });
 
 test('Explore: every template says where it works, and a switched-off source hides only its own', () => {
-  for (const tp of TEMPLATES) assert.ok(tp.group && tp.works && Array.isArray(tp.needs), tp.id);
+  for (const tp of TEMPLATES) assert.ok(tp.section && tp.works && Array.isArray(tp.needs), tp.id);
   const hidden = TEMPLATES.filter(tp => !availableFor(tp, LONDON, ['transit'])).map(tp => tp.id);
   assert.deepEqual(hidden, ['demo', 'home', 'morning', 'station']);
 });
