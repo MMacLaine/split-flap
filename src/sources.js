@@ -52,6 +52,17 @@ export const SOURCES = {
     credit: { en: 'Bank Rate from the Bank of England.', sv: 'Bank Rate från Bank of England.' }, link: 'https://www.bankofengland.co.uk/boeapps/database/' },
   ratesRiks: { name: 'Sveriges Riksbank', tier: 'worker', tiles: ['rates'], every: 'once a day, through the Worker', terms: 'Open data from the Riksbank\'s SWEA API.', checked: '2026-09-30', contact: 'riksbank.se',
     credit: { en: 'The policy rate from Sveriges Riksbank.', sv: 'Styrräntan från Sveriges riksbank.' }, link: 'https://www.riksbank.se/en-gb/statistics/' },
+  // the built-in feeds (data/feeds.json): fetched by the Worker for anyone, so their terms are Split-Flap's to keep
+  feedBbc: { name: 'BBC News', tier: 'worker', tiles: ['headlines'], every: 'each feed every 15 minutes, cached by the Worker',
+    terms: 'BBC feeds may be shown on other sites unchanged, with BBC News credited and linked nearby; business use needs the BBC\'s permission. Kept out of the Work and shop templates.', checked: '2026-09-30', contact: 'bbc.co.uk',
+    credit: { en: 'Headlines from BBC News.', sv: 'Rubriker från BBC News.' }, link: 'https://www.bbc.co.uk/news' },
+  feedNasa: { name: 'NASA', tier: 'worker', tiles: ['headlines'], every: 'every 15 minutes', terms: 'Public domain, US government work.', checked: '2026-09-30', contact: 'nasa.gov',
+    credit: { en: 'News from NASA.', sv: 'Nyheter från NASA.' }, link: 'https://www.nasa.gov/news/' },
+  feedHn: { name: 'hnrss.org', tier: 'worker', tiles: ['headlines'], every: 'every 15 minutes, a light load for a volunteer service', terms: 'A volunteer-run service giving Hacker News as RSS; credited by name.', checked: '2026-09-30', contact: 'hnrss.org',
+    credit: { en: 'Hacker News through hnrss.org.', sv: 'Hacker News via hnrss.org.' }, link: 'https://hnrss.org/' },
+  feeds: { name: 'The feeds you pick', tier: 'worker', tiles: ['headlines'], every: 'each feed every 15 minutes, cached by the Worker for every screen',
+    terms: 'Each feed is its publisher\'s, shown with its name as a feed reader shows it. The Worker fetches only the built-in list (data/feeds.json) and feeds an account has added.', checked: '2026-09-30', contact: 'each publisher',
+    credit: { en: 'Headlines from each feed, under its own name.', sv: 'Rubriker från varje flöde, under dess eget namn.' }, link: 'https://github.com/MMacLaine/split-flap/blob/main/data/feeds.json' },
   crypto: {
     name: 'CoinGecko', tier: 'browser', tiles: ['currency', 'markets'], every: 'every five minutes for the coins on a board',
     terms: 'Public API without a key, around 30 calls a minute, attribution required.', checked: '2026-09-29', contact: 'coingecko.com',

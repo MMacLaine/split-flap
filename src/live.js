@@ -14,6 +14,8 @@ import { wxKey, wxPlace, slStations, AREAS, stockholmWall, depStops, nearKey } f
 import { stoptimes, stops as stopList, upstream, roundLL } from './transit.js';
 import { COINS } from './content.js';
 import { upstream as rateUrl, ecbSeries, fedSeries } from './rates.js';
+import { parseFeed } from './feeds.js';
+const FEED_EVERY = 15 * 60e3;
 const RATES_EVERY = 6 * 36e5;
 import { placeOf } from './place.js';
 import { lastClose, avDaily, exchangeOf, PERIOD_DAYS } from './markets.js';
@@ -74,8 +76,8 @@ async function get(url) {
 export class Live {
   constructor(onUpdate) {
     this.onUpdate = onUpdate;
-    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, mk: {}, mkq: {}, rates: {}, off: [], loc: null, cc: null };
-    this.ratesWant = new Set();
+    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, mk: {}, mkq: {}, rates: {}, feeds: {}, off: [], loc: null, cc: null };
+    this.ratesWant = new Set(); this.feedsWant = new Set();
     this.mkWant = { built: [], crypto: new Map(), key: new Set(), sheet: new Set() };
     this.wanted = { sl: new Map(), wx: new Map(), el: new Set(), fx: new Set(), otd: new Set(), url: new Map(), tr: new Map(), near: new Map(), coin: new Map(), hol: new Set() };
     this.status = { tried: 0 };
@@ -135,6 +137,9 @@ export class Live {
     const rates = new Set();
     for (const p of (board && board.pages) || []) for (const z of p.zones) if (z.ch === 'rates') for (const b of ((z.o || {}).banks || [])) rates.add(`${b}:${(z.o || {}).years || 5}`);
     this.ratesWant = rates;
+    const feeds = new Set();
+    for (const p of (board && board.pages) || []) for (const z of p.zones) if (z.ch === 'headlines') for (const f of ((z.o || {}).feeds || [])) if (f && f.url) feeds.add(f.url);
+    this.feedsWant = feeds;
     this.wanted = { sl, wx, el, fx, otd, url, tr, near, coin, hol };
     this.poll();
   }
@@ -160,6 +165,7 @@ export class Live {
     if (this.mkWant.sheet.size && due(this.data.mkq.sheet, SHEET_EVERY)) this.fetchSheet();
     if (this.mkWant.key.size && due(this.data.mkq.key, AV_GAP)) this.fetchOwnKey();
     for (const k of this.ratesWant) if (due(this.data.rates[k], RATES_EVERY)) this.fetchRates(k);
+    for (const u of this.feedsWant) if (due(this.data.feeds[u], FEED_EVERY)) this.fetchFeed(u);
     for (const [k, p] of this.wanted.wx) if (due(this.data.wx[k], WX_EVERY)) this.fetchWx(k, p);
     for (const a of this.wanted.el) { const e = this.data.el[a]; if (due(e, EL_EVERY) || this.elStale(e, now)) this.fetchEl(a); }
     for (const b of this.wanted.fx) if (due(this.data.fx[b], FX_EVERY)) this.fetchFx(b);
@@ -264,6 +270,28 @@ export class Live {
         e.off = false;
       } catch (err) { if (err.off) e.off = true; throw err; }
       if (!e.series.length) throw new Error('empty');
+    });
+  }
+  // A feed (0.9.3): straight from the browser when the feed allows it, else through the
+  // Worker, which fetches only the built-in feeds and ones an account has added. Which way
+  // worked is remembered, so a feed that blocks browsers is not asked directly again.
+  fetchFeed(u) {
+    return this.run('feeds', u, async e => {
+      let text = null;
+      if (e.direct !== false) {
+        try { const r = await fetch(u, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(10e3) }); if (r.ok) { text = await r.text(); e.direct = true; } }
+        catch { e.direct = false; }
+      }
+      if (text == null) {
+        if (!(await dataMode()).worker) throw new Error('no_worker');
+        const r = await fetch(`${DATA}/feed?u=${encodeURIComponent(u)}`, { credentials: 'omit', cache: 'no-store' });
+        if (r.status === 404) { e.notAdded = true; throw new Error('not_added'); }
+        if (!r.ok) throw new Error(r.status);
+        text = await r.text(); e.notAdded = false;
+      }
+      const f = parseFeed(text);
+      if (!f.items.length) throw new Error('empty');
+      e.title = f.title; e.items = f.items;
     });
   }
   // Which sources the Worker has switched off. No Worker (local), nothing is off.

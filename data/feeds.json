@@ -1,0 +1,25 @@
+{
+  "note": "Feeds the Worker may fetch for anyone (0.9.3), so the Headlines templates work without an account. Each is Split-Flap's to keep within its publisher's terms, recorded in src/sources.js. Any other feed has to be added by a signed-in account first. SVT Nyheter is left out until its terms for other sites are checked.",
+  "feeds": [
+    {
+      "url": "https://feeds.bbci.co.uk/news/rss.xml",
+      "name": "BBC News",
+      "lang": "en"
+    },
+    {
+      "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+      "name": "BBC World",
+      "lang": "en"
+    },
+    {
+      "url": "https://www.nasa.gov/feed/",
+      "name": "NASA",
+      "lang": "en"
+    },
+    {
+      "url": "https://hnrss.org/frontpage",
+      "name": "Hacker News (hnrss.org)",
+      "lang": "en"
+    }
+  ]
+}

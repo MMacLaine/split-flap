@@ -22,6 +22,7 @@ import { authOptions } from './auth.js';
 import { sanitizeBoard, sanitizeBlueprint } from '../../src/store.js';
 import { sanitizeConnection } from '../../src/connections.js';
 import { sealKey, seal, unseal } from './seal.js';
+import { beforeFeed, afterSave } from './feeds.js';
 import { data } from './data.js';
 export { Markets } from './markets.js';   // the Durable Object in front of Alpha Vantage (0.9)
 
@@ -33,7 +34,7 @@ const KINDS = {
   boards: { table: 'board', max: MAX_BOARDS, full: 'too_many_boards', ok: sanitizeBoard },
   blueprints: { table: 'blueprint', max: 100, full: 'too_many_blueprints', ok: sanitizeBlueprint },
   // Connections (0.9.2): the value is sealed before it is stored and opened for its owner
-  connections: { table: 'connection', max: 50, full: 'too_many_connections', ok: sanitizeConnection, sealed: true }
+  connections: { table: 'connection', max: 50, full: 'too_many_connections', ok: sanitizeConnection, sealed: true, before: beforeFeed, after: afterSave }
 };
 
 let cached = null;   // one Better Auth instance per Worker instance, not per request
@@ -80,7 +81,7 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-const KNOWN = ['/', '/me', '/boards', '/blueprints', '/connections', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates'];
+const KNOWN = ['/', '/me', '/boards', '/blueprints', '/connections', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates', '/data/feed'];
 // Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
 export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
   : /^\/(boards|blueprints|connections)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints|connections)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
@@ -179,7 +180,10 @@ async function putBoard(req, env, userId, id, kind = KINDS.boards) {
   let toStore = board;
   if (kind.sealed) {   // a connection's value is sealed first; with no key there is no save at all
     const key = await sealKey(env); if (!key) return fail(503, 'not_configured');
-    const clean = kind.ok(board); toStore = Object.assign({}, clean, { value: await seal(key, userId, id, clean.value) });
+    const clean = kind.ok(board);
+    const why = kind.before ? await kind.before(env, userId, id, clean) : null;   // a feed's address, the account's room, today's cap
+    if (why) return fail(why === 'bad_feed' ? 400 : why === 'feeds_full_today' ? 429 : 413, why);   // 429: try again tomorrow
+    toStore = Object.assign({}, clean, { value: await seal(key, userId, id, clean.value) });
   }
   const stored = JSON.stringify(toStore);
   if (stored.length > MAX_BYTES) return fail(413, 'too_big');
@@ -193,11 +197,13 @@ async function putBoard(req, env, userId, id, kind = KINDS.boards) {
       ? await env.DB.prepare(`UPDATE ${kind.table} SET rev = ?, updated = ?, deleted = 0, json = ? WHERE user_id = ? AND id = ? AND rev = ?`).bind(rev, now, stored, userId, id, baseRev).run()
       : await env.DB.prepare(`INSERT OR IGNORE INTO ${kind.table} (user_id, id, rev, updated, deleted, json) VALUES (?, ?, ?, ?, 0, ?)`).bind(userId, id, rev, now, stored).run();
     if (!res.meta.changes) return conflict(await current(env, userId, id, kind));
+    if (kind.after) await kind.after(env, userId, id, kind.ok(board));
     return json({ id, rev, updated: now });
   }
   if (row.rev !== baseRev) return conflict(row);
   const res = await env.DB.prepare(`UPDATE ${kind.table} SET rev = rev + 1, updated = ?, json = ? WHERE user_id = ? AND id = ? AND rev = ?`).bind(now, stored, userId, id, baseRev).run();
   if (!res.meta.changes) return conflict(await current(env, userId, id, kind));
+  if (kind.after) await kind.after(env, userId, id, kind.ok(board));
   return json({ id, rev: baseRev + 1, updated: now });
 }
 
@@ -208,7 +214,7 @@ async function deleteBoard(req, env, userId, id, kind = KINDS.boards) {
   if (!row) return json({ id, rev: 0, deleted: true });                // nothing to delete
   if (row.deleted) return json({ id, rev: row.rev, deleted: true });
   if (row.rev !== baseRev) return conflict(row);
-  const res = await env.DB.prepare(`UPDATE ${kind.table} SET rev = rev + 1, updated = ?, deleted = 1, json = NULL WHERE user_id = ? AND id = ? AND rev = ?`).bind(now, userId, id, baseRev).run();
+  const res = await env.DB.prepare(`UPDATE ${kind.table} SET rev = rev + 1, updated = ?, deleted = 1, json = NULL${kind.after ? ', lookup = NULL' : ''} WHERE user_id = ? AND id = ? AND rev = ?`).bind(now, userId, id, baseRev).run();
   if (!res.meta.changes) return conflict(await current(env, userId, id, kind));
   return json({ id, rev: baseRev + 1, deleted: true });
 }

@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.9.3', date: '2026-09-30',
+    tag: { en: 'Headlines', sv: 'Rubriker' },
+    desc: {
+      en: 'News and other feeds on the board, including on wall screens that never sign in.',
+      sv: 'Nyheter och andra flöden på tavlan, även på väggskärmar som aldrig loggar in.'
+    },
+    items: {
+      en: [
+        '**Headlines.** A new tile shows the latest from a news site or any other RSS, Atom or JSON feed, one headline at a time under the feed\'s name. It works in a ticker row too.',
+        '**Any feed, on any screen.** Most news sites do not let other pages read their feeds, so Split-Flap\'s server fetches them. BBC News, NASA and Hacker News work for everyone. Any other feed works once you have added it signed in, and a wall screen showing it can then read it without signing in.',
+        'A new template, Headlines, in Home.'
+      ],
+      sv: [
+        '**Rubriker.** En ny ruta visar det senaste från en nyhetssajt eller något annat RSS-, Atom- eller JSON-flöde, en rubrik i taget under flödets namn. Den fungerar i en löptextrad också.',
+        '**Alla flöden, på alla skärmar.** De flesta nyhetssajter låter inte andra sidor läsa deras flöden, så Split-Flaps server hämtar dem. BBC News, NASA och Hacker News fungerar för alla. Andra flöden fungerar när du har lagt till dem inloggad, och en väggskärm som visar dem kan sedan läsa dem utan att logga in.',
+        'En ny mall, Rubriker, under Hemma.'
+      ]
+    }
+  },
+  {
     v: '0.9.2', date: '2026-09-30',
     tag: { en: 'Your sources', sv: 'Dina källor' },
     desc: {

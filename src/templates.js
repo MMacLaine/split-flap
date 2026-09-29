@@ -117,6 +117,17 @@ export const TEMPLATES = [
     ] }); }
   },
   {
+    id: 'news', section: 'home', works: 'anywhere', needs: ['feeds'],
+    name: { en: 'Headlines', sv: 'Rubriker' },
+    desc: { en: 'The latest news, one headline at a time, and a ticker of it under the clock.', sv: 'De senaste nyheterna, en rubrik i taget, och en löptext av dem under klockan.' },
+    // BBC World for a Swedish screen, until SVT's terms for other sites are checked (0.9.3 review)
+    make: a => { const c = ctx(a), sv = a.sv, se = sv || (c.P && c.P.cc === 'SE');
+      const feeds = se ? [{ url: 'https://feeds.bbci.co.uk/news/world/rss.xml', name: 'BBC World' }] : [{ url: 'https://feeds.bbci.co.uk/news/rss.xml', name: 'BBC News' }, { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', name: 'BBC World' }];
+      return base(sv ? 'Nyheter' : 'News', { ...c.loc, size: '12x40', rows: 12, cols: 40, pages: [
+        page(sv ? 'Rubriker' : 'Headlines', 'full', 60, [z('headlines', { feeds, every: 12, count: 5 })]),
+        page(sv ? 'Klocka och nyheter' : 'Clock and news', 'ticker', 30, [z('clock', { fmt: c.fmt }), z('headlines', { feeds, every: 6, count: 5 })])] }); }
+  },
+  {
     id: 'weather', section: 'home', works: 'anywhere', needs: ['weather'],
     name: { en: 'Weather station', sv: 'Väderstation' },
     desc: { en: 'Now, the next hours and three days ahead, on a white board.', sv: 'Nu, kommande timmar och tre dagar framåt, på en vit tavla.' },

@@ -23,10 +23,10 @@ const MONTHS = {
 const WORDS = {
   en: { now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
     week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'ADD A WEB ADDRESS', empty: 'NOTHING IN THE FEED', noMessages: 'ADD A MESSAGE', otd: 'ON THIS DAY',
-    deps: 'DEPARTURES', pickStop: 'PICK A STOP', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK', rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
+    deps: 'DEPARTURES', pickStop: 'PICK A STOP', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', headlines: 'HEADLINES', pickFeed: 'ADD A FEED', feedNotAdded: 'SIGN IN TO ADD THIS FEED', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK', rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
   sv: { now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
     week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'LÄGG TILL EN WEBBADRESS', empty: 'INGET I FLÖDET', noMessages: 'LÄGG TILL ETT MEDDELANDE', otd: 'DEN HÄR DAGEN',
-    deps: 'AVGÅNGAR', pickStop: 'VÄLJ EN HÅLLPLATS', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA', rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
+    deps: 'AVGÅNGAR', pickStop: 'VÄLJ EN HÅLLPLATS', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', headlines: 'RUBRIKER', pickFeed: 'LÄGG TILL ETT FLÖDE', feedNotAdded: 'LOGGA IN FÖR ATT LÄGGA TILL FLÖDET', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA', rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
 };
 
 // Hours in words for the word clock, twelve first so hour % 12 indexes it.
@@ -151,7 +151,7 @@ export const QUOTES = {
 };
 
 export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote',
-  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock', 'departures', 'worldtime', 'markets', 'rates'];
+  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock', 'departures', 'worldtime', 'markets', 'rates', 'headlines'];
 // Channels that paint cells directly (pixel font, patterns) instead of printing lines.
 const DRAWN = new Set(['bigclock', 'bigtext', 'art']);
 export const LAYOUTS = ['full', 'header', 'split', 'ticker', 'stacked'];
@@ -299,6 +299,7 @@ export function channelLines(ch, o, z, now, lang, live) {
   // Markets (0.9) draws its own cells: the chart in half flaps and the ticker beside it,
   // with opening times in the Place's time zone and holidays from the exchange's country
   if (ch === 'rates') return { cells: ratesCells(o, z, live, lang) };
+  if (ch === 'headlines') return headlineLines(o, z, now, W, w, live);
   if (ch === 'markets') return { cells: marketsCells(o, z, now, live, { lang, tz: live && live.loc && live.loc.tz,
     closedOn: (ex, day) => { const cc = EXCHANGES[ex] && EXCHANGES[ex].cc, hd = cc && live && live.hol && live.hol[cc]; return !!(hd && hd.days && hd.days[day]); } }) };
   if (ch === 'weather') {
@@ -466,6 +467,26 @@ function slLines(o, z, now, W, w, live) {
     else st.deps.slice(0, each).forEach(x => lines.push(row(x.line, x.dest.toUpperCase(), eta(x), W)));
   }
   return { lines: lines.slice(0, z.h), align: 'left' };
+}
+
+// ---------- Headlines (0.9.3) ----------
+// The latest items from one or more feeds, one at a time, with the feed's name above it.
+// In a ticker row the lines are packed and page through as the ticker does.
+export function headlineLines(o, z, now, W, w, live) {
+  const feeds = (Array.isArray(o.feeds) ? o.feeds : []).filter(f => f && f.url);
+  if (!feeds.length) return { lines: [w.headlines, w.pickFeed], align: 'center' };
+  const per = Math.max(1, Math.min(10, +o.count || 5)), all = [];
+  for (const f of feeds) {
+    const d = live && live.feeds && live.feeds[f.url];
+    if (d && d.items) for (const it of d.items.slice(0, per)) all.push({ src: boardText(f.name || d.title || '').toUpperCase(), text: boardText(it.title).toUpperCase() });
+  }
+  if (!all.length) {
+    const d = live && live.feeds && live.feeds[feeds[0].url];
+    return { lines: [boardText(feeds[0].name || '').toUpperCase(), '', d && d.notAdded ? w.feedNotAdded : d && (d.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+  }
+  const it = all[Math.floor(now / 1000 / Math.max(5, +o.every || 10)) % all.length];
+  const body = wrap(it.text, W).slice(0, Math.max(1, z.h - (z.h >= 3 ? 2 : 0)));
+  return { lines: z.h >= 3 ? [it.src, ''].concat(body) : body, align: z.h >= 3 ? 'left' : 'center' };
 }
 
 // ---------- World clock (0.8) ----------

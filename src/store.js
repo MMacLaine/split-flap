@@ -12,6 +12,7 @@ import { PROFILE_IDS } from './sound.js';
 import { validTz, FX_CURRENCIES } from './place.js';
 import { COINS } from './content.js';
 import { STOP_ID } from './transit.js';
+import { feedUrl } from './feeds.js';
 
 const K = { boards: 'sf_boards', active: 'sf_active', my: 'sf_myboards' };
 const SIZES = ['6x22', '3x15', '12x40', 'fill', 'custom'];
@@ -83,6 +84,10 @@ function sanitizeZone(z) {
     if (o.alert === true) out.alert = true;
     if (o.merge === true) out.merge = true;
     if (o.near === true || o.near === 'rail') out.near = o.near;
+  } else if (ch === 'headlines') {
+    // feed addresses are not secret, and a wall screen needs them to ask for the feed (0.9.3)
+    out.feeds = (Array.isArray(o.feeds) ? o.feeds : []).slice(0, 6).map(f => f && feedUrl(f.url) ? { url: feedUrl(f.url), name: str(f.name, 40) } : null).filter(Boolean);
+    out.every = int(o.every, 5, 120, 10); out.count = int(o.count, 1, 10, 5);
   } else if (ch === 'rates') {
     out.banks = [...new Set((Array.isArray(o.banks) ? o.banks : []).filter(b => ['ecb', 'fed', 'boe', 'riks'].includes(b)))].slice(0, 4);
     if (!out.banks.length) out.banks = ['ecb'];

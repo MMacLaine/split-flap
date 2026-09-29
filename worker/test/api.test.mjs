@@ -144,3 +144,23 @@ test('rates route: only the Bank of England and the Riksbank, and every data ans
   assert.equal(r.headers.get('content-disposition'), 'attachment');
   assert.equal((await fetch(API + '/data/status')).headers.get('x-content-type-options'), 'nosniff');
 });
+
+test('feeds: an address no account has added is not fetched; adding one sets its lookup, deleting clears it', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const q = sql => execFileSync('npx', ['wrangler', 'd1', 'execute', 'split-flap', '--local', '--env', 'dev', '--json', '--command', sql], { cwd: new URL('..', import.meta.url).pathname, stdio: 'pipe' }).toString();
+  const addr = `https://feeds-${run}.example/rss.xml`;
+  let r = await fetch(API + '/data/feed?u=' + encodeURIComponent(addr));
+  assert.equal(r.status, 404);                                                 // nobody has added it
+  assert.equal(r.headers.get('content-type'), 'text/plain; charset=utf-8');
+  assert.equal((await fetch(API + '/data/feed?u=' + encodeURIComponent('https://127.0.0.1/x'))).status, 400);
+  const a = await session(`fd-${run}@example.com`), id = 'cf' + run;
+  r = await call(a, 'PUT', '/connections/' + id, { board: { id, kind: 'feed', name: 'Test feed', value: addr }, baseRev: 0 });
+  assert.equal(r.status, 200);
+  assert.match(q(`SELECT lookup FROM connection WHERE id = '${id}'`), /"lookup":\s*"[0-9a-f]{64}"/);
+  assert.ok(!q(`SELECT lookup, json FROM connection WHERE id = '${id}'`).includes(addr));   // neither the lookup nor the row holds the address in plain text
+  r = await call(a, 'PUT', '/connections/cx' + run, { board: { id: 'cx' + run, kind: 'feed', name: 'x', value: 'https://localhost/feed' }, baseRev: 0 });
+  assert.equal(r.status, 400);
+  r = await call(a, 'DELETE', '/connections/' + id, { baseRev: 1 });
+  assert.equal(r.status, 200);
+  assert.match(q(`SELECT lookup FROM connection WHERE id = '${id}'`), /"lookup":\s*null/);
+});

@@ -62,6 +62,14 @@ fallback. It protects against a leak of the database, not against a Worker that 
 taken over. The export lists connections by name and kind, never their values, and
 deleting the account removes them.
 
+`/split-flap/api/data/feed?u=<address>` (0.9.3) fetches a feed for a screen, signed in or
+not, but only a built-in one (`data/feeds.json`) or one some account has added as a feed
+connection: the row carries an HMAC of the address (a key derived from `CONN_KEY` with
+HKDF), and the route looks for it. https on port 443 to a public host only, re-checked on
+every redirect; the body must start like a feed; 1 MB and 10 seconds at most; 20 feeds per
+account and `FEEDS_PER_DAY` new addresses a day for everyone; kill switch `feeds`. The
+body always goes back as `text/plain` in a sandbox, as an attachment.
+
 `/split-flap/api/data/rates?b=boe|riks&y=1|5` fetches the Bank of England's and the
 Riksbank's policy rates for the app, which cannot read them itself, cached for a day,
 with the kill switch `rates`. Every `/data` answer carries `content-security-policy:

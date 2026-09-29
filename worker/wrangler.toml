@@ -19,6 +19,7 @@ logs = { invocation_logs = false }
 BASE_URL = "https://maclaine.se"
 AV_PER_DAY = "25"   # Alpha Vantage calls a day: the standard free key, 29 Sep 2026
 AV_PER_MIN = "5"
+FEEDS_PER_DAY = "200"   # feed addresses new to everyone, per day (0.9.3, src/feeds.js)
 SOURCES_OFF = ""   # a live data source switched off, e.g. "transit"; see src/data.js. Transitous said yes on 29 Sep 2026 (Robin D, Matrix)
 GOOGLE_CLIENT_ID = "753793711246-04l6hi7vegppvdppu8883dlgiap7e03t.apps.googleusercontent.com"   # not secret
 

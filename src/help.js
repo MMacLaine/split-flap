@@ -48,6 +48,10 @@ export const HELP = {
       'London and New York shares and ETFs are built in, with each trading day\'s close. Swedish shares are priced through their London listings, in kronor. Crypto updates every 15 minutes.',
       'For anything else, such as Stockholm itself or your funds, use your own Alpha Vantage key or a Google Sheet under More options. Both are kept in this browser only, never in the board or its link. A sheet with a history block per symbol gives the line from the first day; the guide linked from the tile shows how. Signed in, your key and sheet are kept with your account too, listed under Account.'
     ] },
+    { h: 'Headlines', p: [
+      'The Headlines tile shows the latest from a feed, one headline at a time under the feed\'s name. BBC News, NASA and Hacker News are there to tick. Any other feed can be added by its address.',
+      'Most news sites do not let other pages read their feeds, so Split-Flap\'s server fetches them. Add a feed while signed in and it is kept with your account under Account; a wall screen showing it can then read it without signing in.'
+    ] },
     { h: 'Where the data comes from', sources: true, p: [
       'Every live tile names its source under its options. These are all of them:'
     ] },
@@ -99,6 +103,10 @@ export const HELP = {
       'Rutan Marknader ritar en aktie, en fond eller ett mynt som en linje av halva flappar, grön där den stiger och röd där den faller, med namn, pris och dagens förändring bredvid, och om marknaden är öppen, i din egen tid.',
       'Aktier och fonder i London och New York finns inbyggda, med varje handelsdags stängningskurs. Svenska aktier prissätts via sina noteringar i London, i kronor. Krypto uppdateras var femtonde minut.',
       'För allt annat, till exempel Stockholmsbörsen eller dina fonder, använd din egen Alpha Vantage-nyckel eller ett Google-kalkylark under Fler alternativ. Båda sparas bara i den här webbläsaren, aldrig i tavlan eller dess länk. Ett kalkylark med ett historikblock per symbol ger linjen från första dagen; guiden som rutan länkar till visar hur. Är du inloggad sparas nyckeln och kalkylarket med ditt konto också, listade under Konto.'
+    ] },
+    { h: 'Rubriker', p: [
+      'Rutan Rubriker visar det senaste från ett flöde, en rubrik i taget under flödets namn. BBC News, NASA och Hacker News finns att bocka för. Andra flöden kan läggas till med sin adress.',
+      'De flesta nyhetssajter låter inte andra sidor läsa deras flöden, så Split-Flaps server hämtar dem. Lägger du till ett flöde inloggad sparas det med ditt konto under Konto; en väggskärm som visar det kan sedan läsa det utan att logga in.'
     ] },
     { h: 'Var datan kommer ifrån', sources: true, p: [
       'Varje liveruta anger sin källa under sina alternativ. Här är alla:'

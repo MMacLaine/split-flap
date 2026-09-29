@@ -67,6 +67,33 @@ try {
   for (let i = 0; i < 40 && !(await ok()); i++) await sleep(500);
   const four = await A.ev(`(async () => { const { compose } = await import('./src/content.js'); const app = splitFlap, d = app.dims(); return compose(app.cur().pages[1], d.rows, d.cols, Date.now(), 'en', app.live.data).map(r => r.join('').trim()).filter(Boolean).join(' | '); })()`);
   check('the rates template draws all four central banks', (await ok()) && (four.match(/%/g) || []).length === 4, four);
+
+  // Headlines (0.9.3). C signs out and is a guest again: the built-in BBC feed still works, through the Worker
+  await C.ev(`splitFlap.account.signOut()`); await sleep(2500);
+  await C.ev(`splitFlap.useTemplate('news')`); await sleep(500);
+  const news = async b => b.ev(`(async () => { const { compose } = await import('./src/content.js'); const app = splitFlap, d = app.dims(); return compose(app.cur().pages[0], d.rows, d.cols, Date.now(), 'en', app.live.data).map(r => r.join('').trim()).filter(Boolean).join(' | '); })()`);
+  for (let i = 0; i < 30 && !/BBC/.test(await news(C)) || (i < 30 && /LOADING/.test(await news(C))); i++) await sleep(500);
+  check('a guest sees the built-in feed\'s headlines', /BBC NEWS|BBC WORLD/.test(await news(C)) && !/LOADING/.test(await news(C)), (await news(C)).slice(0, 120));
+  check('it came through the Worker, since BBC does not let browsers read it', (await C.ev(`JSON.stringify(Object.values(splitFlap.live.data.feeds).map(e => e.direct))`)).includes('false'));
+
+  // A, signed in, adds a feed that is not built in: it becomes a connection, and a signed-out screen can then read it
+  const GH = 'https://github.com/MMacLaine/split-flap/commits/main.atom';
+  await A.ev(`(() => { const app = splitFlap; app.useTemplate('blank'); app.upd(b => { b.pages[0].zones[0] = { ch: 'headlines', o: { feeds: [], every: 10, count: 5 } }; }); app.editor.go({ sec: 'sb', lv: 'board', sb: app.cur().id, bd: app.cur().pages[0].id }); })()`); await sleep(600);
+  await A.ev(`document.querySelector('[data-k=zone-0]') && document.querySelector('[data-k=zone-0]').click()`); await sleep(400);
+  await A.ev(`(() => { const el = document.querySelector('[data-k="f-feeds-url"]'); el.value = '${GH}'; el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); })()`); await sleep(3000);
+  check('adding it signed in keeps it as a feed connection', (await A.ev(`JSON.stringify(splitFlap.connections.filter(c => c.kind === 'feed').map(c => c.value))`)).includes('main.atom'));
+  const shared = await A.ev(`(async () => { const s = await import('./src/store.js'); return s.encodeBoard(splitFlap.cur()); })()`);
+  await C.go('http://localhost:8787/?kiosk=1#b=' + shared); await sleep(1500);
+  const gh = async () => C.ev(`(async () => { const { compose } = await import('./src/content.js'); const app = splitFlap, d = app.dims(); return compose(app.cur().pages[0], d.rows, d.cols, Date.now(), 'en', app.live.data).map(r => r.join('').trim()).filter(Boolean).join(' | '); })()`);
+  for (let i = 0; i < 30 && /LOADING/.test(await gh()); i++) await sleep(500);
+  check('a signed-out wall screen reads that feed through the Worker', !/LOADING|SIGN IN/.test(await gh()) && (await gh()).length > 10, (await gh()).slice(0, 120));
+
+  // opened straight in a tab, a feed answer is plain text in a sandbox: no script of ours or theirs runs
+  await C.go('http://localhost:8787/split-flap/api/data/feed?u=' + encodeURIComponent('https://www.nasa.gov/feed/'));
+  // sent as an attachment it is downloaded, so the tab stays where it was; if a browser did
+  // open it, it would be plain text with an opaque origin from the sandbox
+  const doc = JSON.parse(await C.ev(`JSON.stringify({ href: location.href, type: document.contentType, origin: String(self.origin) })`));
+  check('a feed answer opened in a tab is never a page on maclaine.se', !doc.href.includes('/data/feed') || (doc.type === 'text/plain' && doc.origin === 'null'), JSON.stringify(doc));
 } catch (err) { check('no exception', false, err && err.message); }
 
 console.log(results.join('\n'));
