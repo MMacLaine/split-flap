@@ -5,6 +5,8 @@ Companion to `DESIGN-HANDOVER.md` (how the board looks) and `DESIGN-HANDOVER-edi
 
 ## Where it stands
 
+0.8 makes it work outside Stockholm. The board's location became a Place with a country and a time zone, and every new tile and template starts from it. Departures comes from Transitous, through a cached route on the Worker, with SL kept for Stockholm. Names in any Latin alphabet, Greek and Cyrillic print on the flaps. Holidays by country, a world clock, currency with any base and crypto coins, rain in the next hour, and Explore grouped by use. Every outside source is listed in `src/sources.js`, and the Worker can switch one off with `SOURCES_OFF`. The ideation and Fable's review are in `_local/plans/IDEATION-0.8-content-2026-09-29.md` and `REVIEW-0.8-ideation-2026-09-29.md`.
+
 0.5 adds optional accounts: sign in with Google, boards kept with the account and synced, local first, with guests working as before. A Cloudflare Worker in `worker/` with D1 in the EU jurisdiction and Better Auth. Its own privacy notice. The relay (wall screens following an account live) builds on this and is next.
 
 0.4 is the Letter clock: a grid of letters where the words for the time light up and the rest stay faint, with minute dots in the corners, in English and Swedish. The grids are this board's own layout. Faint flaps are a renderer feature now (`'~' + char`), so other channels could use them.
@@ -90,6 +92,16 @@ All of these need a relay, an account, or both. None of them changes what is bui
 - The free tier covers a lot. Workers allow a hundred thousand requests a day, but KV only allows a thousand writes a day, and writes are what a phone sending messages makes. That points at Durable Objects for board state, which are on the free plan now. A kiosk on a WebSocket with hibernation costs close to nothing. Polling every ten seconds would burn through the allowance with a dozen screens, so the kiosk should hold a socket.
 - Data stays small. A board is a few kilobytes of JSON. No images on the server, since photos become chips in the browser before anything is saved.
 - The README line about no server stays true until the relay ships, and then becomes "no server unless you connect a wall screen".
+
+## Next, from the 0.8 ideation
+
+- **0.9, markets.** Stocks, ETFs and funds through the Worker's data routes, with a provider chosen on its terms for showing prices on a public screen first. Funds are Matthew's call: global ETFs, or a Nordic source for Swedish funds.
+- **Electricity beyond Sweden.** ENTSO-E has day-ahead prices for every European zone with a free token, through the Worker.
+- **Week start from the place.** Sunday first in the week view for the US and others. The week's drag maths assumes Monday, so it needs a careful pass.
+- **Board words in more languages**, as above, now that boards go to more countries.
+- **Live fields in any message**, then rules, then more layout presets. Free zones only if people ask for layouts the presets cannot make.
+- **More weather**: air quality, pollen, UV and marine, all from Open-Meteo.
+- **Headlines, space, sports, flights**: in the ideation's tiers. Flights need a paid source.
 
 ## Not doing
 

@@ -151,7 +151,7 @@ test('sanitizer keeps the new options and drops anything unsafe', () => {
       { layout: 'stacked', zones: [{ ch: 'url', o: { url: 'javascript:alert(1)', every: 3, path: 'a.b;c', tpl: '{{x}}' } }, { ch: 'electricity', o: { area: 'SE9', view: 'chart' } }] },
       { layout: 'full', zones: [{ ch: 'sl', o: { stations: [{ id: 9117, name: 'Odenplan' }, { id: 'x' }], rows: 99, walk: 5 } }] },
       { layout: 'full', zones: [{ ch: 'art', o: { pattern: 'rainbow', palette: ['r', 'Q', 'r', 'y'] } }] },
-      { layout: 'full', zones: [{ ch: 'currency', o: { pairs: ['EUR', 'BTC'] } }] },
+      { layout: 'full', zones: [{ ch: 'currency', o: { pairs: ['EUR', 'XYZ'] } }] },
       { layout: 'full', zones: [{ ch: 'message', o: { cells: [['A']], mode: 'photo' } }] }
     ]
   });

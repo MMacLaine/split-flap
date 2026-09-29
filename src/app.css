@@ -541,3 +541,9 @@ html[data-chrome="light"] .sf-block.alone { background: oklch(0.8 0.1 var(--hue)
 @media (max-width: 380px) { .sf-tabs { padding: 0 6px; } .sf-tab { padding: 0 7px; font-size: 12px; } }
 @media (max-width: 420px) { .sf-sb-open { grid-template-columns: 96px minmax(0,1fr); gap: 10px; } }
 .sf-sb-open .sf-board-text > span:not(.sf-meta):not(.sf-tag) { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 0.8: the data sources in Help, and templates that cannot work for the place yet */
+.sf-sources { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.sf-sources li { padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--pale); font-size: 13px; line-height: 1.45; }
+.sf-sources a { color: var(--text); font-weight: 600; }
+.sf-templates.muted .sf-template { opacity: .55; }

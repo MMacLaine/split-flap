@@ -10,9 +10,11 @@
 import { h, clone } from './dom.js';
 import { THEMES, renderStatic, staticGeom, GEOM } from './renderer.js';
 import { CHIPS, CHIP_NAMES } from './charset.js';
-import { compose, zonesFor, LAYOUTS, newId, blank, templateTokens, fixedCut, vestaboard } from './content.js';
-import { TEMPLATES, fromTemplate } from './templates.js';
-import { searchStations, searchCities, MODE_LETTERS } from './live.js';
+import { compose, zonesFor, LAYOUTS, newId, blank, templateTokens, fixedCut, vestaboard, nearKey } from './content.js';
+import { TEMPLATES, fromTemplate, availableFor, GROUPS as TPL_GROUPS } from './templates.js';
+import { searchStations, searchCities, searchStops, nearStops, MODE_LETTERS } from './live.js';
+import { placeOf, formatsFor, priceMark, screenTz, tzDiffers, FX_CURRENCIES } from './place.js';
+import { SOURCES } from './sources.js';
 import { GROUPS, TILES, tileFor, previewLive, SAMPLE_FEED } from './catalogue.js';
 import { sampleImage, mapImage, stamp, HEART } from './photo.js';
 import { Composer } from './composer.js';
@@ -686,7 +688,8 @@ export class Editor {
     const match = x => !q || [x.name.en, x.name.sv, x.desc ? x.desc.en : '', x.desc ? x.desc.sv : ''].some(s => s.toLowerCase().includes(q));
     const b = this.app.cur(), now = Date.now(), pl = previewLive(this.app.live.data, now);
     const groups = GROUPS.map(([g, label]) => {
-      const tiles = TILES.filter(x => x.g === g && match(x) && !(ticker && (x.id === 'draw' || x.id === 'photo')));
+      const off = this.app.live.data.off || [];
+      const tiles = TILES.filter(x => x.g === g && !x.hide && !(x.src && off.includes(x.src)) && match(x) && !(ticker && (x.id === 'draw' || x.id === 'photo')));
       if (!tiles.length) return null;
       return h('section', { class: 'sf-group' }, h('h3', { class: 'sf-eyebrow' }, this.L(label)),
         h('div', { class: 'sf-tiles' + (wide ? ' one' : '') }, tiles.map(x => x.later
@@ -716,6 +719,14 @@ export class Editor {
     if (tile.id === 'photo') { o.mode = 'photo'; o.cells = this.samplePhoto(zd.h, zd.w, theme || this.app.cur().theme); }
     if (tile.id === 'sl') Object.assign(o, home ? { home: true } : { stations: [{ id: 9117, name: 'Odenplan' }] });
     if (tile.id === 'weather' && !(loc && loc.lat != null)) Object.assign(o, { city: 'Stockholm', lat: 59.33, lon: 18.07 });
+    // 0.8: new tiles start in the Place's formats (12 or 24 hours, °F, the currency)
+    const pl = placeOf(this.app.cur(), this.env()), f = formatsFor(pl);
+    if ('fmt' in o || ['clock', 'bigclock', 'departures', 'worldclock'].includes(tile.id)) o.fmt = f.fmt;
+    if (tile.id === 'weather' && f.units === 'f') o.units = 'f';
+    if (tile.id === 'menu' && f.currency) { const m = priceMark(f.currency); o.suffix = m.suffix; if (m.prefix) o.prefix = m.prefix; o.items = this.lang === 'sv' || f.currency === 'SEK' ? o.items : ['COFFEE 3.50', 'CROISSANT 2.80', 'SANDWICH 6.50', 'SOUP 7']; }
+    if (tile.id === 'currency' && f.currency && FX_CURRENCIES.includes(f.currency)) { o.base = f.currency; o.pairs = ['EUR', 'USD', 'GBP', 'JPY'].filter(c => c !== f.currency).slice(0, 3); }
+    if (tile.id === 'worldtime' && pl.city && pl.tz) o.places = [{ city: pl.city, tz: pl.tz }].concat(o.places.filter(p => p.tz !== pl.tz)).slice(0, 3);
+    if (tile.id === 'departures' && preview) Object.assign(o, { near: false, stops: [{ src: 'tr', id: 'sample', name: pl.city || 'Central' }] });
     if (tile.id === 'url' && preview) o.url = 'sample';
     return o;
   }
@@ -745,6 +756,8 @@ export class Editor {
     switch (f.t) {
       case 'text': return wrap(h('input', { class: 'sf-input mono' + (f.upper ? ' upper' : ''), value: val || '', spellcheck: 'false', autocomplete: 'off', 'data-k': key,
         oninput: e => set(e.target.value.slice(0, f.len || 200), true), onchange: () => this.app.render() }));
+      case 'select': return wrap(h('select', { class: 'sf-input', 'data-k': key, 'aria-label': lab, onchange: e => set(e.target.value) },
+        f.opts.map(([id, l]) => h('option', { value: id, selected: String(val) === String(id) }, this.L(l)))));
       case 'date': return wrap(h('input', { type: 'date', class: 'sf-input', value: val || '', 'data-k': key, onchange: e => set(e.target.value || undefined) }));
       case 'seg': return wrap(h('div', { class: 'sf-row' }, f.opts.map(([id, l]) => h('button', { class: 'sf-seg', 'aria-pressed': String(String(val) === String(id)), 'data-k': `${key}-${id}`,
         onclick: () => set(id) }, l ? this.L(l) : t[f.names][id]))));
@@ -774,6 +787,9 @@ export class Editor {
       }
       case 'search': return wrap(this.cityField(o, key));
       case 'stations': return wrap(this.stationsField(o, key, f.max));
+      case 'stops': return wrap(this.stopsField(o, key, f.max));
+      case 'tzcities': return wrap(this.tzCities(o, key, f.max));
+      case 'credit': return this.credit(f.src);
       case 'textlist': {
         const items = Array.isArray(val) ? val : [];
         return wrap(h('div', { class: 'sf-list' },
@@ -834,6 +850,42 @@ export class Editor {
       list.length < max ? this.searchBox(key, t.addStation, q => searchStations(q), r => { if (!list.some(x => x.id === r.id)) save(list.concat({ id: r.id, name: r.name })); }, note) : null,
       h('span', { class: 'sf-hint' }, t.maxStations));
   }
+  // Departures (0.8): the stops, or the nearest one to the Place until one is picked.
+  stopsField(o, key, max) {
+    const t = this.t, b = this.app.cur(), pl = placeOf(b, this.env()), list = Array.isArray(o.stops) ? o.stops : [];
+    const save = next => this.setO(oo => { oo.stops = next; if (next.length) delete oo.near; });
+    const modeNames = r => (Array.isArray(r.modes) ? r.modes : [...(r.modes || '')].map(m => MODE_LETTERS[m])).filter(m => t.modeNames[m]).map(m => t.modeNames[m]).join(', ');
+    const note = r => [r.note, modeNames(r)].filter(Boolean).join(' · ');
+    const near = pl.lat != null ? this.app.live.data.near[nearKey(pl)] : null, nearList = near && near.stops ? near.stops : null;
+    if (pl.lat != null && !nearList && !this.nearAsked) { this.nearAsked = true; nearStops(pl.lat, pl.lon).then(r => { this.app.live.data.near[nearKey(pl)] = { stops: r, at: Date.now() }; this.nearAsked = false; this.app.render(); }); }
+    const add = r => { if (!list.some(x => x.id === r.id && x.src === r.src)) save(list.concat({ src: r.src || 'tr', id: r.id, name: r.name })); };
+    return h('div', { class: 'sf-list' },
+      !list.length && o.near ? h('p', { class: 'sf-note' }, pl.lat == null ? t.nearNeedsPlace : nearList && nearList[0] ? t.nearIs(nearList[0].name, pl.city) : t.nearLooking,
+        pl.lat == null ? [' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'to-settings', onclick: () => this.go('settings') }, t.viewDisplay)] : null) : null,
+      list.map((s, i) => h('div', { class: 'sf-chosen' },
+        h('span', { class: 'sf-num' }, String(i + 1)), h('span', null, s.name), s.src === 'sl' ? h('span', { class: 'sf-hint' }, 'SL') : null,
+        h('button', { class: 'sf-icon', 'aria-label': t.moveUp, disabled: i === 0, 'data-k': `${key}-up-${i}`, onclick: () => { const n = list.slice(); [n[i - 1], n[i]] = [n[i], n[i - 1]]; save(n); } }, '↑'),
+        h('button', { class: 'sf-icon', 'aria-label': t.remove, 'data-k': `${key}-rm-${i}`, onclick: () => save(list.filter((_, j) => j !== i)) }, '×'))),
+      list.length < max ? this.searchBox(key, t.addStop, q => searchStops(q, this.lang, pl), add, note) : null,
+      list.length < max && nearList && nearList.length ? h('div', { class: 'sf-field' }, h('span', { class: 'sf-label muted' }, t.nearby),
+        h('div', { class: 'sf-row' }, nearList.slice(0, 5).filter(r => !list.some(x => x.id === r.id)).map((r, i) => h('button', { class: 'sf-chip-btn', 'data-k': `${key}-near-${i}`, onclick: () => add(Object.assign({ src: 'tr' }, r)) }, h('span', { 'aria-hidden': 'true' }, '+'), h('span', null, r.name))))) : null,
+      h('span', { class: 'sf-hint' }, t.maxStops));
+  }
+  // World clock: cities with their time zones, from the same city search as the weather.
+  tzCities(o, key, max) {
+    const t = this.t, list = Array.isArray(o.places) ? o.places : [], save = next => this.setO(oo => { oo.places = next; });
+    return h('div', { class: 'sf-list' },
+      list.map((p, i) => h('div', { class: 'sf-chosen' }, h('span', { class: 'sf-num' }, String(i + 1)), h('span', null, p.city), h('span', { class: 'sf-hint' }, p.tz),
+        h('button', { class: 'sf-icon', 'aria-label': t.moveUp, disabled: i === 0, 'data-k': `${key}-up-${i}`, onclick: () => { const n = list.slice(); [n[i - 1], n[i]] = [n[i], n[i - 1]]; save(n); } }, '↑'),
+        h('button', { class: 'sf-icon', 'aria-label': t.remove, 'data-k': `${key}-rm-${i}`, onclick: () => save(list.filter((_, j) => j !== i)) }, '×'))),
+      list.length < max ? this.searchBox(key, t.searchCity, async q => (await searchCities(q, this.lang)).filter(r => r.tz), r => save(list.concat({ city: r.name, tz: r.tz }))) : null);
+  }
+  // Where a tile's data comes from, with the links its sources ask for (sources.js).
+  credit(ids) {
+    const list = ids.map(id => SOURCES[id]).filter(Boolean);
+    return h('p', { class: 'sf-note' }, list.map((s, i) => [i ? ' ' : null, h('a', { href: s.link, target: '_blank', rel: 'noopener' }, s.credit[this.lang] || s.credit.en)]));
+  }
+  env() { return { langs: typeof navigator !== 'undefined' ? navigator.languages : [], tz: screenTz() }; }
   slHome(o) {
     const t = this.t, home = this.app.live.data.home;
     const onMaclaine = /(^|\.)maclaine\.se$/.test(location.hostname) || location.hostname === 'localhost';
@@ -885,8 +937,10 @@ export class Editor {
         h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'tr-preview', onclick: () => app.previewTransition() }, t.preview))),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.boardLoc),
         loc && loc.lat != null ? h('div', { class: 'sf-chosen' }, h('span', null, loc.city), h('button', { class: 'sf-icon', 'aria-label': t.remove, 'data-k': 'loc-clear', onclick: () => app.upd(bb => { delete bb.loc; }) }, '×')) : null,
-        this.searchBox('loc', loc && loc.lat != null ? t.changeCity : t.searchCity, q => searchCities(q, this.lang), r => app.upd(bb => { bb.loc = { city: r.name, lat: r.lat, lon: r.lon }; })),
-        h('span', { class: 'sf-hint' }, t.locHint)),
+        this.searchBox('loc', loc && loc.lat != null ? t.changeCity : t.searchCity, q => searchCities(q, this.lang), r => app.upd(bb => { bb.loc = Object.assign({ city: r.name, lat: r.lat, lon: r.lon }, r.cc ? { cc: r.cc } : {}, r.tz ? { tz: r.tz } : {}); })),
+        h('span', { class: 'sf-hint' }, t.locHint),
+        loc && loc.lat != null && !loc.cc ? h('span', { class: 'sf-hint' }, t.locAgain) : null,
+        tzDiffers(placeOf(b), screenTz()) ? h('span', { class: 'sf-hint' }, t.tzNote(loc.city, loc.tz, screenTz())) : null),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.rolls),
         h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!(b.roll && b.roll.start), 'data-k': 'roll-start', onchange: e => app.upd(bb => { bb.roll = Object.assign({ start: false, hourly: false }, bb.roll, { start: e.target.checked }); }) }), h('span', null, t.rollStart)),
         h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!(b.roll && b.roll.hourly), 'data-k': 'roll-hourly', onchange: e => app.upd(bb => { bb.roll = Object.assign({ start: false, hourly: false }, bb.roll, { hourly: e.target.checked }); }) }), h('span', null, t.rollHourly)),
@@ -910,16 +964,29 @@ export class Editor {
   // Templates to start from. A first visit lands here, with a way to keep the demo board.
   exploreLevel() {
     const t = this.t, app = this.app, first = app.startPending(), now = Date.now();
-    const tplGrid = h('div', { class: 'sf-templates' }, TEMPLATES.map(tp => {
+    // 0.8: grouped by use, built for the place, and the ones that cannot work here last
+    const pl = app.newPlace(), off = app.live.data.off || [], ok = tp => availableFor(tp, pl, off);
+    const card = tp => {
       const nb = this.tplBoard(tp.id), d = app.dimsOf(nb);
       return h('button', { class: 'sf-template', 'data-k': 'tpl-' + tp.id, onclick: () => this.go({ sec: 'ex', lv: 'tpl', tpl: tp.id }) },
-        this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(app.live.data, now)), nb.theme),
+        this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(Object.assign({}, app.live.data, { loc: nb.loc || app.live.data.loc }), now)), nb.theme),
         h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang]), h('span', null, `${tp.desc[this.lang]} · ${t.boardsCount(nb.pages.length)}`)));
-    }));
+    };
+    const tplGrid = h('div', null, TPL_GROUPS.map(([g, label]) => {
+      const list = TEMPLATES.filter(tp => tp.group === g && ok(tp));
+      return list.length ? h('section', { class: 'sf-group' }, h('h3', { class: 'sf-eyebrow' }, label[this.lang]), h('div', { class: 'sf-templates' }, list.map(card))) : null;
+    }), TEMPLATES.some(tp => !ok(tp)) ? h('section', { class: 'sf-group' }, h('h3', { class: 'sf-eyebrow' }, t.notHereYet), h('div', { class: 'sf-templates muted' }, TEMPLATES.filter(tp => !ok(tp)).map(card))) : null);
+    // the first visit asks where the screen is, so the demo and every template fit it
+    const fp = app.firstPlace();
+    const where = first ? h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.whereTitle),
+      fp ? h('div', { class: 'sf-chosen' }, h('span', null, fp.city)) : null,
+      this.searchBox('first-place', fp ? t.changeCity : t.searchCity, q => searchCities(q, this.lang), r => app.setFirstPlace(r)),
+      h('span', { class: 'sf-hint' }, t.whereHint)) : null;
     const file = h('input', { type: 'file', accept: 'application/json,.json', style: 'display:none', onchange: e => app.importFile(e) });
     return h('div', { class: 'sf-level' },
       h('div', { class: 'sf-start-head' }, h('h2', null, t.startTitle), h('p', null, t.exIntro)),
       app.account.available && !app.account.signedIn() ? h('div', { class: 'sf-guest' }, h('span', null, t.startGuest), h('button', { class: 'sf-btn', 'data-k': 'start-signin', onclick: () => app.account.signIn() }, t.signInGoogle)) : null,
+      where,
       first ? h('button', { class: 'sf-btn big', 'data-k': 'skip', onclick: () => { app.markStarted(); this.open(true); } }, t.skip) : null,
       tplGrid,
       h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.importTitle),
@@ -942,8 +1009,8 @@ export class Editor {
   }
   tplBoard(id) {
     this.tplCache = this.tplCache || new Map();
-    const k = id + this.lang;
-    if (!this.tplCache.has(k)) this.tplCache.set(k, fromTemplate(id, this.lang, this.app.live.data.home));
+    const pl = this.app.newPlace(), k = id + this.lang + (pl ? pl.lat + ',' + pl.lon : '');
+    if (!this.tplCache.has(k)) this.tplCache.set(k, fromTemplate(id, this.lang, this.app.live.data.home, pl));
     return this.tplCache.get(k);
   }
 
@@ -1071,6 +1138,7 @@ export class Editor {
         h('h3', null, sec.h),
         sec.fig ? this.helpFig(sec.fig) : null,
         (sec.p || []).map(p => h('p', null, Array.isArray(p) ? p.map(part) : p)),
+        sec.sources ? h('ul', { class: 'sf-sources' }, Object.values(SOURCES).map(x => h('li', null, h('a', { href: x.link, target: '_blank', rel: 'noopener' }, x.name), ' ', x.credit[this.lang] || x.credit.en))) : null,
         sec.keys ? h('dl', { class: 'sf-keys' }, sec.keys.map(([k, d]) => h('div', null, h('dt', null, k.split(' ').map(x => h('kbd', null, x))), h('dd', null, d)))) : null)));
   }
   helpFig(kind) {
@@ -1103,7 +1171,8 @@ export class Editor {
           h('span', { class: 'sf-log-tag' }, r.tag[lang]),
           h('time', { class: 'sf-log-date', datetime: r.date }, r.date)),
         h('p', { class: 'sf-log-desc' }, r.desc[lang]),
-        h('ul', { class: 'sf-log-list' }, r.items[lang].map(it => h('li', null, it)))))),
+        // an item may open with a **bold lead** (0.8), as CHANGELOG.md shows it
+        h('ul', { class: 'sf-log-list' }, r.items[lang].map(it => { const m = /^\*\*(.+?)\*\*\s*(.*)$/.exec(it); return h('li', null, m ? [h('strong', null, m[1]), ' ', m[2]] : it); }))))),
       h('p', { class: 'sf-note' }, t.logNote, ' ', h('a', { href: 'https://github.com/MMacLaine/split-flap/blob/main/CHANGELOG.md' }, 'GitHub'), '.'));
   }
 

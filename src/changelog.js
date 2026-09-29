@@ -3,6 +3,40 @@
 
 export const CHANGELOG = [
   {
+    v: '0.8.0', date: '2026-09-29',
+    tag: { en: 'Anywhere', sv: 'Var som helst' },
+    desc: {
+      en: 'Split-Flap was built around Stockholm. This release makes it work for a screen almost anywhere, starting from one city search.',
+      sv: 'Split-Flap byggdes kring Stockholm. Den här versionen får den att fungera för en skärm nästan var som helst, med en sökning på staden som start.'
+    },
+    items: {
+      en: [
+        '**The place.** Search for your city in Display and new boards start from it: the weather, the nearest stop, the holidays, the currency, and 12 or 24 hours. A first visit asks where the screen is and builds the demo for it.',
+        '**Departures, almost anywhere.** A new Departures tile finds the stop nearest your place and shows its next trains, buses and trams, from Transitous, which covers most of Europe and North America. Stockholm stops still come from SL.',
+        '**Station board.** Departures can look like a railway station, with the time, the destination, the platform and on time, late or cancelled.',
+        '**Names in any alphabet.** Łódź prints as LODZ and Москва as MOSKVA. Before, letters the flaps do not carry came out blank.',
+        '**Holidays for your country.** Today shows the public holidays of the place\'s country, and Countdown can count to the next one. Sweden keeps its flag days.',
+        '**World clock.** A new tile with the time in a few cities, marked +1 or -1 when a city is on another day.',
+        '**Currency in your currency.** Any of about thirty currencies can be the base, and bitcoin and a few other coins can go on the list, with a green or red flap for their day.',
+        '**Rain soon.** The weather says when rain starts or stops in the next two hours.',
+        '**Explore by use.** Templates are grouped (home, commute, office, café, money and fun), built for your place, and there are three new ones: Morning, World clock wall and Currency board.',
+        'Every live tile names its source under its options, and Help lists them all.'
+      ],
+      sv: [
+        '**Platsen.** Sök efter din stad under Visning så utgår nya tavlor från den: vädret, närmaste hållplats, helgdagarna, valutan och 12 eller 24 timmar. Vid första besöket frågar appen var skärmen finns och bygger demon för platsen.',
+        '**Avgångar, nästan var som helst.** En ny ruta, Avgångar, hittar hållplatsen närmast platsen och visar nästa tåg, bussar och spårvagnar, från Transitous, som täcker större delen av Europa och Nordamerika. Hållplatser i Stockholm kommer fortfarande från SL.',
+        '**Stationstavla.** Avgångar kan se ut som på en järnvägsstation, med tid, destination, spår och i tid, sen eller inställd.',
+        '**Namn i alla alfabet.** Łódź skrivs LODZ och Москва MOSKVA. Förut blev bokstäver som flapparna saknar tomma.',
+        '**Helgdagar för ditt land.** Idag visar helgdagarna i platsens land, och Nedräkning kan räkna till nästa. Sverige behåller sina flaggdagar.',
+        '**Världsklocka.** En ny ruta med tiden i några städer, märkt +1 eller -1 när en stad är på en annan dag.',
+        '**Valuta i din valuta.** En av ett trettiotal valutor kan vara basen, och bitcoin och några andra mynt kan stå på listan, med en grön eller röd flapp för dygnet.',
+        '**Regn snart.** Vädret säger när regn börjar eller slutar inom två timmar.',
+        '**Utforska efter användning.** Mallarna är grupperade (hemma, pendling, kontor, kafé, pengar och lek), byggda för din plats, och det finns tre nya: Morgon, Världsklocka och Valutatavla.',
+        'Varje liveruta anger sin källa under sina alternativ, och Hjälp listar alla.'
+      ]
+    }
+  },
+  {
     v: '0.7.3', date: '2026-09-28',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

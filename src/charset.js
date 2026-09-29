@@ -26,18 +26,46 @@ const FOLD_MAP = {
   'È': 'E', 'Ê': 'E', 'Ë': 'E', 'Á': 'A', 'À': 'A', 'Â': 'A', 'Í': 'I', 'Ì': 'I', 'Ó': 'O', 'Ò': 'O',
   'Ô': 'O', 'Ú': 'U', 'Ù': 'U', 'Ñ': 'N', 'Ç': 'C', 'ß': 'SS',
   '\u2764': '♥', '\u2661': '♥',   // ❤ and ♡: a phone keyboard's hearts
-  '\u2019': "'", '\u2018': "'", '\u201C': '"', '\u201D': '"', '\u2013': '-', '\u2014': '-', '\u00B4': "'", '`': "'"
+  '\u2019': "'", '\u2018': "'", '\u201C': '"', '\u201D': '"', '\u2013': '-', '\u2014': '-', '\u00B4': "'", '`': "'",
+  // Latin letters that Unicode does not split into a letter and a mark (0.8). Hungarian's
+  // long umlauts read as the umlauts the drum has.
+  'Ł': 'L', 'Đ': 'D', 'Ħ': 'H', 'Œ': 'OE', 'Þ': 'TH', 'Ð': 'D', 'Ŀ': 'L', 'Ŧ': 'T', 'Ŋ': 'NG', 'Ə': 'E', 'Ő': 'Ö', 'Ű': 'Ü'
+};
+
+// Greek and Cyrillic, letter by letter, the way departure boards in Athens and Kyiv
+// print them for visitors. Hard and soft signs print nothing.
+const TRANSLIT = {
+  'Α': 'A', 'Β': 'V', 'Γ': 'G', 'Δ': 'D', 'Ε': 'E', 'Ζ': 'Z', 'Η': 'I', 'Θ': 'TH', 'Ι': 'I', 'Κ': 'K', 'Λ': 'L', 'Μ': 'M',
+  'Ν': 'N', 'Ξ': 'X', 'Ο': 'O', 'Π': 'P', 'Ρ': 'R', 'Σ': 'S', 'Τ': 'T', 'Υ': 'Y', 'Φ': 'F', 'Χ': 'CH', 'Ψ': 'PS', 'Ω': 'O',
+  'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'E', 'Ж': 'ZH', 'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K',
+  'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'KH', 'Ц': 'TS',
+  'Ч': 'CH', 'Ш': 'SH', 'Щ': 'SHCH', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'YU', 'Я': 'YA',
+  'І': 'I', 'Ї': 'YI', 'Є': 'YE', 'Ґ': 'G', 'Ў': 'U', 'Ђ': 'DJ', 'Ј': 'J', 'Љ': 'LJ', 'Њ': 'NJ', 'Ћ': 'C', 'Џ': 'DZ', 'Ѓ': 'GJ', 'Ќ': 'KJ', 'Ѕ': 'DZ'
 };
 
 export const isChip = ch => ch === 'f' || Object.prototype.hasOwnProperty.call(CHIPS, ch);
 
+// One character to what the flaps print for it: itself, a stand-in of one or more
+// letters, '' for a letter that prints nothing, or null when there is no stand-in.
+// Accents the drum has no flap for are dropped (Ł is a table entry, ș splits into s and
+// a mark), and Å Ä Ö Ü É keep their own flaps because they are looked up first.
+function fold(ch) {
+  const u = String(ch).toUpperCase();
+  if (u.length === 1 && DRUM_IDX[u] !== undefined) return u;
+  const f = FOLD_MAP[u] ?? FOLD_MAP[ch] ?? TRANSLIT[u];
+  if (f != null) return f;
+  const bare = u.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (bare && bare !== u) { const parts = [...bare].map(fold); return parts.includes(null) ? null : parts.join(''); }
+  return null;
+}
+// Greek writes the sound u as two letters, and letter by letter it would print OY.
+const preFold = s => String(s || '').replace(/[οΟ][υύΥΎ]/g, 'OU');
+
 // One typed character to one flap. valid:false means it had no stand-in and became blank.
 export function cleanChar(ch) {
   if (ch == null || ch === '' || ch === '\n' || ch === '\t') return { ch: ' ', valid: true };
-  const u = String(ch).toUpperCase();
-  if (u.length === 1 && DRUM_IDX[u] !== undefined) return { ch: u, valid: true };
-  const f = FOLD_MAP[u] || FOLD_MAP[ch];
-  if (f && f.length === 1) return { ch: f, valid: true };
+  const f = fold(ch);
+  if (f != null && f.length === 1) return { ch: f, valid: true };
   return { ch: ' ', valid: false };
 }
 
@@ -52,18 +80,38 @@ export function cellChar(ch) {
 export const isDim = ch => typeof ch === 'string' && ch.length > 1 && ch[0] === '~';
 export const baseChar = ch => isDim(ch) ? ch.slice(1) : ch;
 
-// Free text to flaps, expanding multi-letter stand-ins (ß to SS). Chips are not
+// Free text to flaps, expanding multi-letter stand-ins (ß to SS, Ж to ZH). Chips are not
 // reachable from free text on purpose: lowercase letters must print as capitals.
 export function textToCells(s) {
   const out = [];
-  for (const ch of String(s || '')) {
+  for (const ch of preFold(s)) {
     if (ch === '\uFE0F') continue;   // emoji presentation selector, sent after ❤ by phones
-    const u = ch.toUpperCase();
-    const f = FOLD_MAP[u] || FOLD_MAP[ch];
-    if (f && f.length > 1) { out.push(...f); continue; }
-    out.push(cleanChar(ch).ch);
+    if (ch === '\n' || ch === '\t') { out.push(' '); continue; }
+    const f = fold(ch);
+    out.push(...(f == null ? ' ' : f));
   }
   return out;
+}
+// The same, as a string: what a name from a data source prints, so lines are measured
+// and cut at the length they will have on the board.
+export const boardText = s => textToCells(s).join('');
+
+// How much of a name the flaps can print, from 0 to 1: letters and digits that survive
+// folding, over the letters and digits there were.
+function printableShare(s) {
+  let all = 0, ok = 0;
+  for (const ch of preFold(s)) {
+    if (!/[\p{L}\p{N}]/u.test(ch)) continue;
+    all++; const f = fold(ch); if (f != null && /[A-Z0-9ÅÄÖÆØÜÉ]/.test(f)) ok++;
+  }
+  return all ? ok / all : 0;
+}
+// The first of several names for the same thing (the local name, the English one, a stop
+// code) that the board can mostly print, as board text. Never a row of blanks: a name in
+// a script the drum does not carry falls through to the next one, and '' if none fit.
+export function printable(...names) {
+  const hit = names.find(n => n != null && String(n).trim() && printableShare(n) >= 0.6);
+  return hit == null ? '' : boardText(hit).replace(/\s{2,}/g, ' ').trim();
 }
 
 // What the composer's hidden input receives, to flaps. The coloured squares on a phone
@@ -76,7 +124,8 @@ export function composerInput(s) {
   for (const ch of String(s || '')) {
     if (ch === '\uFE0F') continue;
     if (EMOJI_CHIPS[ch]) { out.push(EMOJI_CHIPS[ch]); continue; }
-    const r = cleanChar(ch); if (!r.valid) invalid.push(ch); out.push(r.ch);
+    if (ch === '\n' || ch === '\t') { out.push(' '); continue; }
+    const f = fold(ch); if (f == null) { invalid.push(ch); out.push(' '); } else out.push(...f);
   }
   return { cells: out, invalid };
 }

@@ -9,6 +9,9 @@ import { CHANNELS, LAYOUTS, AREAS, defaultBoard, newId } from './content.js';
 import { cellChar, CHIP_KEYS } from './charset.js';
 import { PATTERNS } from './pixels.js';
 import { PROFILE_IDS } from './sound.js';
+import { validTz, FX_CURRENCIES } from './place.js';
+import { COINS } from './content.js';
+import { STOP_ID } from './transit.js';
 
 const K = { boards: 'sf_boards', active: 'sf_active', my: 'sf_myboards' };
 const SIZES = ['6x22', '3x15', 'fill', 'custom'];
@@ -25,8 +28,12 @@ const time = (v, dflt) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : dflt;
 const num = (v, lo, hi) => { const n = +v; return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 const list = (v, n, len) => (Array.isArray(v) ? v : []).slice(0, n).map(x => str(x, len));
 const chipList = v => [...new Set((Array.isArray(v) ? v : []).filter(k => CHIP_KEYS.includes(k)))].slice(0, 9);
-const place = o => { const lat = num(o.lat, -90, 90), lon = num(o.lon, -180, 180); return lat != null && lon != null ? { lat, lon, city: str(o.city, 80) } : null; };
-const CURRENCIES = ['EUR', 'USD', 'GBP', 'NOK', 'DKK', 'SEK', 'CHF', 'JPY', 'PLN'];
+// A city with its coordinates; since 0.8 also its country and time zone (the Place).
+const place = o => {
+  const lat = num(o.lat, -90, 90), lon = num(o.lon, -180, 180);
+  if (lat == null || lon == null) return null;
+  return Object.assign({ lat, lon, city: str(o.city, 80) }, /^[A-Z]{2}$/.test(o.cc) ? { cc: o.cc } : {}, validTz(o.tz) ? { tz: o.tz } : {});
+};
 
 function sanitizeZone(z) {
   const ch = pick(z && z.ch, CHANNELS, 'message'), o = (z && typeof z.o === 'object' && z.o) || {}, out = {};
@@ -39,6 +46,7 @@ function sanitizeZone(z) {
   else if (ch === 'countdown') {
     out.label = str(o.label, 60); out.date = /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : '2027-06-25';
     if (o.dir === 'up') out.dir = 'up';
+    if (o.to === 'holiday') out.to = 'holiday';
     if (o.unit === 'days') out.unit = 'days';
   }
   else if (ch === 'bigclock') { out.fmt = o.fmt === '12' ? '12' : '24'; out.color = color(o.color); }
@@ -58,23 +66,45 @@ function sanitizeZone(z) {
     out.eta = pick(o.eta, ['min', 'clock', 'cycle'], 'min'); out.fmt = o.fmt === '12' ? '12' : '24';
     if (o.rows != null) out.rows = int(o.rows, 1, 12, 3);
     if (o.walk) out.walk = int(o.walk, 0, 30, 0);
+  } else if (ch === 'departures') {
+    // stops from Transitous (id as it writes them) or SL (a site number), up to four (0.8)
+    out.stops = (Array.isArray(o.stops) ? o.stops : []).slice(0, 4).map(x => {
+      if (!x || typeof x !== 'object') return null;
+      if (x.src === 'sl') { const id = int(x.id, 1, 99999999, null); return id ? { src: 'sl', id, name: str(x.name, 80) } : null; }
+      return x.src === 'tr' && STOP_ID.test(x.id || '') ? { src: 'tr', id: x.id, name: str(x.name, 80) } : null;
+    }).filter(Boolean);
+    if (Array.isArray(o.modes)) out.modes = o.modes.filter(m => MODES.includes(m));
+    out.eta = pick(o.eta, ['min', 'clock', 'cycle'], 'min'); out.fmt = o.fmt === '12' ? '12' : '24';
+    if (o.view === 'board') out.view = 'board';
+    if (o.rows != null) out.rows = int(o.rows, 1, 12, 3);
+    if (o.walk) out.walk = int(o.walk, 0, 30, 0);
+    if (typeof o.lines === 'string' && o.lines.trim()) out.lines = str(o.lines, 60);
+    if (o.cancelled === 'hide') out.cancelled = 'hide';
+    if (o.alert === true) out.alert = true;
+    if (o.merge === true) out.merge = true;
+    if (o.near === true || o.near === 'rail') out.near = o.near;
+  } else if (ch === 'worldtime') {
+    out.places = (Array.isArray(o.places) ? o.places : []).slice(0, 6).filter(x => x && typeof x === 'object' && validTz(x.tz)).map(x => ({ city: str(x.city, 40), tz: x.tz }));
+    out.fmt = o.fmt === '12' ? '12' : '24';
   } else if (ch === 'weather') {
     const pl = place(o); if (pl) Object.assign(out, pl);
     out.view = pick(o.view, ['now', 'hours', 'days'], 'now');
     if (o.units === 'f') out.units = 'f';
     if (o.wind === false) out.wind = false;
+    if (o.soon === false) out.soon = false;
   } else if (ch === 'quote') { if (o.set === 'work') out.set = 'work'; }
   else if (ch === 'rotating') {
     out.messages = list(o.messages, 12, 120); out.interval = int(o.interval, 3, 120, 8);
     if (o.order === 'shuffle') out.order = 'shuffle';
   } else if (ch === 'menu') {
-    out.title = str(o.title, 60); out.items = list(o.items, 16, 60); out.suffix = pick(o.suffix, ['', ' KR', ':-'], '');
+    out.title = str(o.title, 60); out.items = list(o.items, 16, 60); out.suffix = /^[ A-Z:$.-]{0,5}$/.test(o.suffix || '') ? o.suffix || '' : '';
+    if (o.prefix === '$') out.prefix = '$';   // 0.8: dollar prices, $3.50
   } else if (ch === 'letterclock') { if (o.dots === false) out.dots = false; }
   else if (ch === 'today') { if (o.week === false) out.week = false; if (o.sun === false) out.sun = false; if (o.days === false) out.days = false; if (o.doy) out.doy = true; }
   else if (ch === 'electricity') { out.area = AREAS[o.area] ? o.area : 'SE3'; out.view = o.view === 'chart' ? 'chart' : 'now'; if (o.vat === false) out.vat = false; }
   else if (ch === 'currency') {
-    out.base = o.base === 'EUR' ? 'EUR' : 'SEK'; out.dec = int(o.dec, 0, 4, 2);
-    const pairs = [...new Set((Array.isArray(o.pairs) ? o.pairs : []).filter(c => CURRENCIES.includes(c)))].slice(0, 6);
+    out.base = FX_CURRENCIES.includes(o.base) ? o.base : 'SEK'; out.dec = int(o.dec, 0, 4, 2);
+    const pairs = [...new Set((Array.isArray(o.pairs) ? o.pairs : []).filter(c => FX_CURRENCIES.includes(c) || COINS[c]))].slice(0, 6);
     out.pairs = pairs.length ? pairs : ['EUR', 'USD', 'GBP'];
   } else if (ch === 'url') {
     // https only: a page on https cannot read http anyway, and it keeps javascript: and data: out.
