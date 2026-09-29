@@ -2,6 +2,13 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.9.2 (2026-09-30): Your sources
+
+Your own keys and sheets are kept with your account, and a new tile shows central banks' interest rates.
+
+- **Your sources, with your account.** An Alpha Vantage key or a published sheet you add is kept with your account and reaches your other devices. On the server it is encrypted. Account lists them, and signing out removes them from that browser.
+- **Interest rates.** A new tile shows the policy rate of the Riksbank, the ECB, the Bank of England or the Fed, with the date it last changed and a line over one or five years. A new template in Finance shows your own central bank and then all four.
+
 ## v0.9.1 (2026-09-30): Sheets
 
 Your own Google Sheet can give the Markets tile its history.

@@ -83,6 +83,12 @@ function sanitizeZone(z) {
     if (o.alert === true) out.alert = true;
     if (o.merge === true) out.merge = true;
     if (o.near === true || o.near === 'rail') out.near = o.near;
+  } else if (ch === 'rates') {
+    out.banks = [...new Set((Array.isArray(o.banks) ? o.banks : []).filter(b => ['ecb', 'fed', 'boe', 'riks'].includes(b)))].slice(0, 4);
+    if (!out.banks.length) out.banks = ['ecb'];
+    out.years = o.years === 1 ? 1 : 5;
+    if (o.view === 'list') out.view = 'list';
+    if (o.line === 'thick') out.line = 'thick';
   } else if (ch === 'markets') {
     // symbols and how they look; never a key or a sheet link, which stay in this browser (0.9)
     out.source = pick(o.source, ['built', 'crypto', 'key', 'sheet'], 'built');

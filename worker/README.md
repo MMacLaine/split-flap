@@ -38,6 +38,35 @@ To switch a source off without a release, set the `SOURCES_OFF` variable (for ex
 503 and the app hides its tile and the templates that use it within half an hour, or at
 the next load. Empty it to switch the source back on.
 
+## Connections (0.9.2)
+
+`/split-flap/api/connections` keeps an account's own sources (an Alpha Vantage key, a
+published sheet), with the same revision and delete rules as boards and blueprints. Each
+value is sealed with AES-GCM before it reaches D1 (`src/seal.js`): a random IV for each
+value, the account and connection ids bound in, and a `v1:` prefix for rotating the key.
+The key is `CONN_KEY`, 32 random bytes in base64, a secret. Cloudflare never shows a
+secret back, so keep a copy before setting it:
+
+```sh
+openssl rand -base64 32              # copy the output into your password manager as "Split-Flap CONN_KEY"
+npx wrangler secret put CONN_KEY     # paste it when asked
+```
+
+**Never generate it again.** A new `CONN_KEY` makes every sealed value in D1 unreadable
+for good. A browser that still holds a value sends it back and it is sealed again
+(`healBroken` in `src/sync.js`), but a device with none gets nothing. To rotate the key
+one day, add a `v2` key beside `v1` and seal new values with it, never replace `v1`.
+
+Without it, `/connections` answers 503 and stores nothing; there is no plain text
+fallback. It protects against a leak of the database, not against a Worker that has been
+taken over. The export lists connections by name and kind, never their values, and
+deleting the account removes them.
+
+`/split-flap/api/data/rates?b=boe|riks&y=1|5` fetches the Bank of England's and the
+Riksbank's policy rates for the app, which cannot read them itself, cached for a day,
+with the kill switch `rates`. Every `/data` answer carries `content-security-policy:
+sandbox` and `content-disposition: attachment`, so none can run as a page on maclaine.se.
+
 ## Run it locally
 
 ```sh

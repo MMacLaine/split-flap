@@ -12,6 +12,7 @@
 
 import { newId } from './content.js';
 import { formatsFor, priceMark } from './place.js';
+import { bankFor as bankOf } from './rates.js';
 
 const page = (name, layout, dur, zones, win = null) => ({ id: newId('p'), name, layout, dur, wins: win ? [win] : [], zones });
 const z = (ch, o = {}) => ({ ch, o });
@@ -65,7 +66,7 @@ function menu(c, sv, kind) {
 // Explore's sections (0.9), each with a page of its own; Finance is split by kind.
 export const SECTIONS = [
   { id: 'start', name: { en: 'To start with', sv: 'Att börja med' } },
-  { id: 'finance', name: { en: 'Finance', sv: 'Ekonomi' }, groups: [['stocks', { en: 'Stocks', sv: 'Aktier' }], ['etfs', { en: 'ETFs', sv: 'Börshandlade fonder' }], ['crypto', { en: 'Crypto', sv: 'Krypto' }], ['currency', { en: 'Currency', sv: 'Valuta' }]] },
+  { id: 'finance', name: { en: 'Finance', sv: 'Ekonomi' }, groups: [['stocks', { en: 'Stocks', sv: 'Aktier' }], ['etfs', { en: 'ETFs', sv: 'Börshandlade fonder' }], ['crypto', { en: 'Crypto', sv: 'Krypto' }], ['currency', { en: 'Currency', sv: 'Valuta' }], ['rates', { en: 'Interest rates', sv: 'Räntor' }]] },
   { id: 'travel', name: { en: 'Travel', sv: 'Resor' } },
   { id: 'home', name: { en: 'Home', sv: 'Hemma' } },
   { id: 'work', name: { en: 'Work and shop', sv: 'Arbete och butik' } },
@@ -199,6 +200,15 @@ export const TEMPLATES = [
         page(sv ? 'Dygnet' : 'The day', 'full', 12, [z('markets', { source: 'crypto', symbols: [{ s: 'BTC' }], period: '1d', cur })])] }); }
   },
   {
+    id: 'rates', section: 'finance', group: 'rates', works: 'anywhere', needs: ['rates'],
+    name: { en: 'Interest rates', sv: 'Räntor' },
+    desc: { en: 'Your central bank\'s rate over five years, then four banks side by side.', sv: 'Din centralbanks ränta över fem år, sedan fyra banker bredvid varandra.' },
+    make: a => { const c = ctx(a), sv = a.sv, own = bankOf(c.P && c.P.cc);
+      return base(sv ? 'Räntor' : 'Interest rates', { ...c.loc, size: '12x40', rows: 12, cols: 40, speed: 'gentle', pages: [
+        page(sv ? 'Styrräntan' : 'Policy rate', 'full', 20, [z('rates', { banks: [own], years: 5 })]),
+        page(sv ? 'Fyra banker' : 'Four banks', 'full', 15, [z('rates', { banks: ['riks', 'ecb', 'boe', 'fed'], years: 1, view: 'list' })])] }); }
+  },
+  {
     id: 'colour', section: 'fun', works: 'anywhere', needs: [],
     name: { en: 'Colour mosaic', sv: 'Färgmosaik' },
     desc: { en: 'No words at all: flags, rain, waves and confetti, flap by flap.', sv: 'Inga ord alls: flaggor, regn, vågor och konfetti, blad för blad.' },
@@ -235,7 +245,7 @@ export const TEMPLATES = [
 
 // A template for a place: works says the countries it has data for, and needs the
 // sources it reads, so one switched off hides only the templates that depend on it.
-export const availableFor = (tp, place, off = []) => (tp.works === 'anywhere' || !place || !place.cc || tp.works.includes(place.cc)) && !tp.needs.some(n => off.includes(n === 'departures' ? 'transit' : n));
+export const availableFor = (tp, place, off = []) => (tp.works === 'anywhere' || !place || !place.cc || tp.works.includes(place.cc)) && !tp.needs.some(n => off.includes(n === 'departures' ? 'transit' : n));   // rates' Worker half: 'rates'
 export const sectionOf = id => SECTIONS.find(x => x.id === id) || null;
 
 export function fromTemplate(id, lang, home, place) {
