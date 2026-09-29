@@ -17,7 +17,7 @@ logs = { invocation_logs = false }
 
 [vars]
 BASE_URL = "https://maclaine.se"
-SOURCES_OFF = "transit"   # off until Transitous answers (29 Sep 2026); empty it to switch Departures on. See src/data.js
+SOURCES_OFF = ""   # a live data source switched off, e.g. "transit"; see src/data.js. Transitous said yes on 29 Sep 2026 (Robin D, Matrix)
 GOOGLE_CLIENT_ID = "753793711246-04l6hi7vegppvdppu8883dlgiap7e03t.apps.googleusercontent.com"   # not secret
 
 [[d1_databases]]
