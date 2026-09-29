@@ -3,9 +3,9 @@
 // and never in a board, a blueprint, a board link, an export or the account sync, since a
 // key is a secret and a sheet is yours. Syncing them with the account is planned for 0.9.1.
 //
-// A sheet cannot publish price history (Google keeps GOOGLEFINANCE history inside the
-// sheet), so this screen builds the line itself: it keeps every price it reads today, and
-// the last one of each day, and the chart grows from them.
+// A sheet with a history block per symbol gives its closes directly (parseSheetHistory).
+// Without one, this screen builds the line itself: it keeps every price it reads today,
+// and the last one of each day, and the chart grows from them.
 
 import { refresh, tried, exchangeOf, avDaily, EXCHANGES } from './markets.js';
 
@@ -99,3 +99,35 @@ export async function ownKeyStep(cache, symbols, key, now, getJson) {
   return cache;
 }
 export const exchangeTz = ex => (EXCHANGES[ex] || EXCHANGES.US).tz;
+
+// History from a published sheet (0.9.1). A sheet can publish GOOGLEFINANCE's history
+// after all (Matthew's test sheet, 30 September, gave 20 closes), so a sheet may carry a
+// block per symbol: a row naming the symbol, and under it the Date and Close columns the
+// function fills in. Dates come as the sheet's locale writes them: 01/09/2026 in the UK,
+// 9/1/2026 in the US, 2026-09-01 in Sweden, each with a time after it.
+const HEAD_DATE = /^(date|datum)$/i, HEAD_CLOSE = /^(close|stängning|stängningskurs)/i;
+function parseDates(cells) {
+  const parts = cells.map(s => /^(\d{4})-(\d{2})-(\d{2})/.exec(s) ? { iso: s.slice(0, 10) } : (m => m ? { a: +m[1], b: +m[2], y: +m[3] } : null)(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s)));
+  const two = n => String(n).padStart(2, '0');
+  const as = dmy => parts.map(p => !p ? null : p.iso ? p.iso : dmy ? `${p.y}-${two(p.b)}-${two(p.a)}` : `${p.y}-${two(p.a)}-${two(p.b)}`);
+  if (parts.some(p => p && !p.iso && p.a > 12)) return as(true);
+  if (parts.some(p => p && !p.iso && p.b > 12)) return as(false);
+  // no day above 12 yet: the order that runs forward is the right one
+  const d = as(true), inc = l => l.filter(Boolean).every((x, i, a) => !i || a[i - 1] < x);
+  return inc(d) ? d : as(false);
+}
+export function parseSheetHistory(text) {
+  const rows = csvRows(String(text || '')), out = {};
+  for (let i = 1; i < rows.length; i++) {
+    if (!HEAD_DATE.test((rows[i][0] || '').trim()) || !HEAD_CLOSE.test((rows[i][1] || '').trim())) continue;
+    // the symbol is the nearest row above with text in its first cell that is not a number
+    let sym = null;
+    for (let k = i - 1; k >= Math.max(0, i - 3); k--) { const c = (rows[k][0] || '').trim(); if (c && num(c) == null) { sym = c.toUpperCase().slice(0, 30); break; } }
+    if (!sym) continue;
+    const block = [];
+    for (let j = i + 1; j < rows.length && (rows[j][0] || '').trim(); j++) block.push(rows[j]);
+    const dates = parseDates(block.map(r => (r[0] || '').trim()));
+    out[sym] = block.map((r, j) => ({ d: dates[j], c: num(r[1]) })).filter(x => x.d && Number.isFinite(x.c)).slice(-400);
+  }
+  return out;
+}

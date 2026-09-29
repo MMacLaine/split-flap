@@ -2,6 +2,12 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.9.1 (2026-09-30): Sheets
+
+Your own Google Sheet can give the Markets tile its history.
+
+- **History from your sheet.** I thought a published sheet could not share price history, but it can. Add a row with the symbol, and under it GOOGLEFINANCE's closes, and the line starts from the first day instead of building up over weeks. The guide linked from the tile shows how.
+
 ## v0.9.0 (2026-09-30): Markets
 
 Shares, ETFs and crypto on the board, drawn as a line in a new kind of flap.

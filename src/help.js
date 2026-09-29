@@ -46,7 +46,7 @@ export const HELP = {
     { h: 'Markets', p: [
       'The Markets tile draws a share, an ETF or a coin as a line of half flaps, green where it rises and red where it falls, with its name, price and the day\'s change beside it, and whether its market is open, in your own time.',
       'London and New York shares and ETFs are built in, with each trading day\'s close. Swedish shares are priced through their London listings, in kronor. Crypto updates every 15 minutes.',
-      'For anything else, such as Stockholm itself or your funds, use your own Alpha Vantage key or a Google Sheet under More options. Both are kept in this browser only, never in the board or its link. A sheet gives the price, and the screen builds the line as the days go by.'
+      'For anything else, such as Stockholm itself or your funds, use your own Alpha Vantage key or a Google Sheet under More options. Both are kept in this browser only, never in the board or its link. A sheet with a history block per symbol gives the line from the first day; the guide linked from the tile shows how.'
     ] },
     { h: 'Where the data comes from', sources: true, p: [
       'Every live tile names its source under its options. These are all of them:'
@@ -98,7 +98,7 @@ export const HELP = {
     { h: 'Marknader', p: [
       'Rutan Marknader ritar en aktie, en fond eller ett mynt som en linje av halva flappar, grön där den stiger och röd där den faller, med namn, pris och dagens förändring bredvid, och om marknaden är öppen, i din egen tid.',
       'Aktier och fonder i London och New York finns inbyggda, med varje handelsdags stängningskurs. Svenska aktier prissätts via sina noteringar i London, i kronor. Krypto uppdateras var femtonde minut.',
-      'För allt annat, till exempel Stockholmsbörsen eller dina fonder, använd din egen Alpha Vantage-nyckel eller ett Google-kalkylark under Fler alternativ. Båda sparas bara i den här webbläsaren, aldrig i tavlan eller dess länk. Ett kalkylark ger priset, och skärmen bygger linjen allteftersom dagarna går.'
+      'För allt annat, till exempel Stockholmsbörsen eller dina fonder, använd din egen Alpha Vantage-nyckel eller ett Google-kalkylark under Fler alternativ. Båda sparas bara i den här webbläsaren, aldrig i tavlan eller dess länk. Ett kalkylark med ett historikblock per symbol ger linjen från första dagen; guiden som rutan länkar till visar hur.'
     ] },
     { h: 'Var datan kommer ifrån', sources: true, p: [
       'Varje liveruta anger sin källa under sina alternativ. Här är alla:'
