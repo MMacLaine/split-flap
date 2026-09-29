@@ -3,6 +3,22 @@
 
 export const CHANGELOG = [
   {
+    v: '0.9.1', date: '2026-09-30',
+    tag: { en: 'Sheets', sv: 'Kalkylark' },
+    desc: {
+      en: 'Your own Google Sheet can give the Markets tile its history.',
+      sv: 'Ditt eget Google-kalkylark kan ge rutan Marknader dess historik.'
+    },
+    items: {
+      en: [
+        '**History from your sheet.** I thought a published sheet could not share price history, but it can. Add a row with the symbol, and under it GOOGLEFINANCE\'s closes, and the line starts from the first day instead of building up over weeks. The guide linked from the tile shows how.'
+      ],
+      sv: [
+        '**Historik från ditt kalkylark.** Jag trodde att ett publicerat kalkylark inte kunde dela kurshistorik, men det kan det. Lägg till en rad med symbolen och under den GOOGLEFINANCE-funktionens stängningskurser, så börjar linjen från första dagen i stället för att byggas upp under veckor. Guiden som rutan länkar till visar hur.'
+      ]
+    }
+  },
+  {
     v: '0.9.0', date: '2026-09-30',
     tag: { en: 'Markets', sv: 'Marknader' },
     desc: {

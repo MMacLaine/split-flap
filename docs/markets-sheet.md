@@ -2,7 +2,7 @@
 
 Split-Flap has London and New York shares and ETFs built in. For anything else, such as Stockholm itself, OMXS30 or your funds, you can use a Google Sheet of your own. The sheet looks the prices up with `GOOGLEFINANCE`, you publish it as a CSV file, and the board reads it every five minutes.
 
-Google doesn't let a published sheet show price history, so the board draws the line itself from the prices it reads. You see today's line straight away, and the week and the month fill in as the days go by on that screen.
+For a line from the first day, add a history block for each symbol (below). Without one, the board draws the line itself from the prices it reads, so you see today's line straight away and the week and the month fill in as the days go by on that screen.
 
 ## Make the sheet
 
@@ -19,8 +19,15 @@ Google doesn't let a published sheet show price history, so the board draws the 
    The Symbol column is what you type in the Markets tile. It can be anything, as long as it matches.
    If a price cell shows `#N/A`, look the share up on [Google Finance](https://www.google.com/finance) and use the code it shows, for example `STO:ERIC-B`.
 
-4. Go to File, Share, Publish to web, choose the sheet, pick "Comma-separated values (.csv)", and press Publish.
-5. Copy the link. It ends in `output=csv`.
+4. For history, leave a blank row under the table, then for each symbol:
+   - a row with just the symbol in column A, for example `OMXS30`
+   - under it, `=GOOGLEFINANCE("INDEXNASDAQ:OMXS30","close",TODAY()-400,TODAY())`, which fills in a Date and a Close column
+   - a blank row before the next symbol
+
+   The board takes the symbol from the row above each Date and Close header.
+
+5. Go to File, Share, Publish to web, choose the sheet, pick "Comma-separated values (.csv)", and press Publish.
+6. Copy the link. It ends in `output=csv`.
 
 ## Use it on the board
 

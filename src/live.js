@@ -15,7 +15,7 @@ import { stoptimes, stops as stopList, upstream, roundLL } from './transit.js';
 import { COINS } from './content.js';
 import { placeOf } from './place.js';
 import { lastClose, avDaily, exchangeOf, PERIOD_DAYS } from './markets.js';
-import { getConn, parseSheet, recordPoint, historyOf, loadHist, saveHist, loadAv, saveAv, ownKeyStep, exchangeTz } from './connections.js';
+import { getConn, parseSheet, parseSheetHistory, recordPoint, historyOf, loadHist, saveHist, loadAv, saveAv, ownKeyStep, exchangeTz } from './connections.js';
 
 // Markets (0.9): the coins CoinGecko knows by id, and their names on the board.
 export const COIN_IDS = { BTC: ['bitcoin', 'BITCOIN'], ETH: ['ethereum', 'ETHER'], SOL: ['solana', 'SOLANA'], XRP: ['ripple', 'XRP'], ADA: ['cardano', 'CARDANO'], DOGE: ['dogecoin', 'DOGECOIN'] };
@@ -211,13 +211,18 @@ export class Live {
       let text;
       try { const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: ac.signal }); if (!r.ok) throw new Error(r.status); text = await r.text(); }
       finally { clearTimeout(timer); }
-      const rows = parseSheet(text), hist = loadHist(), now = Date.now();
+      const rows = parseSheet(text), hists = parseSheetHistory(text), hist = loadHist(), now = Date.now();
       for (const s of this.mkWant.sheet) {
-        const x = rows[s]; if (!x) { this.data.mk['sheet:' + s] = { fails: 4 }; continue; }
-        const ex = /^(LON|STO|US|FRK|PAR|AMS|TYO|HKG)$/.test(x.ex) ? x.ex : exchangeOf(s);
-        recordPoint(hist, s, x.price, now, exchangeTz(ex));
-        this.data.mk['sheet:' + s] = { name: x.name, cur: x.cur, ex, price: x.price,
-          prev: Number.isFinite(x.pct) ? x.price / (1 + x.pct / 100) : null, closes: historyOf(hist, s) };
+        // a symbol can be a row in the table (its price and name), a history block, or both;
+        // the sheet's own history wins, else this screen builds the line from the prices it reads
+        const x = rows[s], hc = hists[s];
+        if (!x && !(hc && hc.length)) { this.data.mk['sheet:' + s] = { status: 'no_data' }; continue; }
+        const ex = x && /^(LON|STO|US|FRK|PAR|AMS|TYO|HKG)$/.test(x.ex) ? x.ex : exchangeOf(s);
+        const price = x ? x.price : hc[hc.length - 1].c;
+        if (x) recordPoint(hist, s, x.price, now, exchangeTz(ex));
+        const closes = hc && hc.length ? hc.concat(x && hc[hc.length - 1].d < new Date(now).toISOString().slice(0, 10) && x.price !== hc[hc.length - 1].c ? [{ d: new Date(now).toISOString(), c: x.price }] : []) : historyOf(hist, s);
+        const prev = x && Number.isFinite(x.pct) ? x.price / (1 + x.pct / 100) : hc && hc.length > 1 ? hc[hc.length - 2].c : null;
+        this.data.mk['sheet:' + s] = { name: x ? x.name : s, cur: x ? x.cur : '', ex, price, prev, closes, ...(x ? {} : { closeOnly: true }) };
       }
       saveHist(hist);
     });

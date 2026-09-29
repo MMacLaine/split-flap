@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lineChart, marketState, marketsCells, price, exchangeOf, currentSymbol, inPeriod, avDaily, lastClose } from '../src/markets.js';
-import { parseSheet, num, recordPoint, historyOf, ownKeyStep } from '../src/connections.js';
+import { parseSheet, parseSheetHistory, num, recordPoint, historyOf, ownKeyStep } from '../src/connections.js';
 import { refresh } from '../src/markets.js';
 import { HALF } from '../src/charset.js';
 import { sanitizeBoard } from '../src/store.js';
@@ -152,4 +152,17 @@ test('an English sheet\'s thousands, and a sheet\'s day in the exchange\'s own t
   const h = {};
   recordPoint(h, 'T', 100, Date.parse('2026-09-28T23:30:00Z'), 'Asia/Tokyo');
   assert.equal(h.T.day, '2026-09-29');
+});
+
+test('a sheet\'s history blocks: the symbol above Date and Close, in UK, US or ISO dates', () => {
+  // the shape Matthew's test sheet published on 30 September, with a symbol row added
+  const uk = 'Symbol,Name,Price\nISF,FTSE 100 ETF,1034.2\n\nISF\nDate,Close\n01/09/2026 16:30:00,1057.8\n02/09/2026 16:30:00,1054.8\n28/09/2026 16:30:00,1038.6\n';
+  assert.deepEqual(parseSheetHistory(uk), { ISF: [{ d: '2026-09-01', c: 1057.8 }, { d: '2026-09-02', c: 1054.8 }, { d: '2026-09-28', c: 1038.6 }] });
+  // a US sheet: 9/28/2026 has 28 in the second place, so it is month first
+  assert.deepEqual(parseSheetHistory('SPX\nDate,Close\n9/25/2026 16:00:00,5400\n9/28/2026 16:00:00,"5,432"\n'), { SPX: [{ d: '2026-09-25', c: 5400 }, { d: '2026-09-28', c: 5432 }] });
+  // nothing above 12 and both orders run forward: day first, as most of the world writes it
+  assert.deepEqual(parseSheetHistory('X\nDate,Close\n01/09/2026,1\n02/09/2026,2\n').X.map(x => x.d), ['2026-09-01', '2026-09-02']);
+  assert.deepEqual(parseSheetHistory('OMX\nDatum,Stängning\n2026-09-28 17:30:00,"2 512,4"\n'), { OMX: [{ d: '2026-09-28', c: 2512.4 }] });
+  // the published test sheet as it is, with no symbol row: nothing to guess from
+  assert.deepEqual(parseSheetHistory('1034.2,\n,\nDate,Close\n01/09/2026 16:30:00,1057.8\n'), {});
 });
