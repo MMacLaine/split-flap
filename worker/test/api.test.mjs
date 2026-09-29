@@ -109,3 +109,38 @@ test('export includes live blueprints, and deleting the account removes them', a
   const again = await session(email);
   assert.deepEqual((await call(again, 'GET', '/blueprints')).body.blueprints, []);
 });
+
+// Connections (0.9.2): sealed at rest, opened for their owner only, never in an export.
+test('connections: stored sealed, read back by their owner, invisible to another account', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const email = `cn-${run}@example.com`, a = await session(email), other = await session(`cx-${run}@example.com`);
+  const conn = { id: 'c' + run + 'k', kind: 'av', name: 'My key', value: 'SECRETKEY' + run.toUpperCase().replace(/[^A-Z0-9]/g, 'X'), updated: 1 };
+  let r = await call(a, 'PUT', '/connections/' + conn.id, { board: conn, baseRev: 0 });
+  assert.deepEqual([r.status, r.body.rev], [200, 1]);
+  r = await call(a, 'GET', '/connections');
+  assert.equal(r.body.connections.find(x => x.id === conn.id).board.value, conn.value);
+  // in D1 the value is ciphertext, never the key itself
+  const raw = execFileSync('npx', ['wrangler', 'd1', 'execute', 'split-flap', '--local', '--env', 'dev', '--json', '--command', `SELECT json FROM connection WHERE id = '${conn.id}'`], { cwd: new URL('..', import.meta.url).pathname, stdio: 'pipe' }).toString();
+  assert.ok(raw.includes('v1:') && !raw.includes(conn.value), 'sealed at rest');
+  r = await call(other, 'GET', '/connections');
+  assert.ok(!r.body.connections.some(x => x.id === conn.id));
+  // a bad value is refused before anything is sealed
+  r = await call(a, 'PUT', '/connections/cbad' + run, { board: { id: 'cbad' + run, kind: 'sheet', name: 'x', value: 'http://not-https.example/x' }, baseRev: 0 });
+  assert.equal(r.status, 400);
+  // the export names it, without its value
+  r = await call(a, 'GET', '/export');
+  assert.deepEqual(r.body.connections.find(x => x.id === conn.id), { id: conn.id, kind: 'av', name: 'My key' });
+  assert.ok(!JSON.stringify(r.body).includes(conn.value));
+  // deleting the account removes them
+  await call(a, 'DELETE', '/account', {});
+  const left = execFileSync('npx', ['wrangler', 'd1', 'execute', 'split-flap', '--local', '--env', 'dev', '--json', '--command', `SELECT COUNT(*) AS n FROM connection WHERE id = '${conn.id}'`], { cwd: new URL('..', import.meta.url).pathname, stdio: 'pipe' }).toString();
+  assert.match(left, /"n":\s*0/);
+});
+
+test('rates route: only the Bank of England and the Riksbank, and every data answer is data, not a page', async () => {
+  const r = await fetch(API + '/data/rates?b=nope');
+  assert.equal(r.status, 400);
+  assert.equal(r.headers.get('content-security-policy'), "sandbox; default-src 'none'");
+  assert.equal(r.headers.get('content-disposition'), 'attachment');
+  assert.equal((await fetch(API + '/data/status')).headers.get('x-content-type-options'), 'nosniff');
+});

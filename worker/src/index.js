@@ -11,6 +11,7 @@
 //   PUT    /boards/:id   { board, baseRev }: saved if baseRev matches, else 409 with ours
 //   DELETE /boards/:id   { baseRev }: a tombstone, so other devices remove it too
 //   GET    /blueprints, PUT and DELETE /blueprints/:id   My boards (0.7.1), the same rules
+//   GET    /connections, PUT and DELETE /connections/:id your own sources (0.9.2), values sealed
 //   GET    /export       the account, its boards and its blueprints as one JSON file
 //   DELETE /account      the account, its sessions, its boards and its blueprints
 //   GET    /data/*       live data for tiles, cached, no sign-in (0.8, see data.js)
@@ -19,6 +20,8 @@ import { betterAuth } from 'better-auth';
 import { makeSignature } from 'better-auth/crypto';
 import { authOptions } from './auth.js';
 import { sanitizeBoard, sanitizeBlueprint } from '../../src/store.js';
+import { sanitizeConnection } from '../../src/connections.js';
+import { sealKey, seal, unseal } from './seal.js';
 import { data } from './data.js';
 export { Markets } from './markets.js';   // the Durable Object in front of Alpha Vantage (0.9)
 
@@ -28,7 +31,9 @@ const MAX_BOARDS = 50, MAX_BYTES = 262144;
 // the check differ. A storyboard is a stored board; a blueprint is one board in My boards.
 const KINDS = {
   boards: { table: 'board', max: MAX_BOARDS, full: 'too_many_boards', ok: sanitizeBoard },
-  blueprints: { table: 'blueprint', max: 100, full: 'too_many_blueprints', ok: sanitizeBlueprint }
+  blueprints: { table: 'blueprint', max: 100, full: 'too_many_blueprints', ok: sanitizeBlueprint },
+  // Connections (0.9.2): the value is sealed before it is stored and opened for its owner
+  connections: { table: 'connection', max: 50, full: 'too_many_connections', ok: sanitizeConnection, sealed: true }
 };
 
 let cached = null;   // one Better Auth instance per Worker instance, not per request
@@ -75,10 +80,10 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-const KNOWN = ['/', '/me', '/boards', '/blueprints', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets'];
+const KNOWN = ['/', '/me', '/boards', '/blueprints', '/connections', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates'];
 // Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
 export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
-  : /^\/(boards|blueprints)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
+  : /^\/(boards|blueprints|connections)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints|connections)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
 
 async function route(req, env, url) {
   const path = url.pathname.slice(API.length) || '/', auth = authFor(env);
@@ -95,10 +100,14 @@ async function route(req, env, url) {
   if (path === '/me' && req.method === 'GET') return json({ id: user.id, name: String(user.name || '').split(/\s+/)[0], email: user.email });
   if (path === '/boards' && req.method === 'GET') return json({ boards: await listBoards(env, user.id) });
   if (path === '/blueprints' && req.method === 'GET') return json({ blueprints: await listBoards(env, user.id, KINDS.blueprints) });
+  if (path.startsWith('/connections') && !(await sealKey(env))) return fail(503, 'not_configured');   // never stored in plain text
+  if (path === '/connections' && req.method === 'GET') return json({ connections: await listBoards(env, user.id, KINDS.connections) });
   if (path === '/export' && req.method === 'GET') {
     const live = async k => (await listBoards(env, user.id, k)).filter(b => !b.deleted).map(b => b.board);
     const boards = await live(KINDS.boards), blueprints = await live(KINDS.blueprints);
-    return json({ app: 'split-flap', exported: new Date().toISOString(), account: { email: user.email, name: user.name, created: user.createdAt }, boards, blueprints }, 200,
+    // connections by name and kind only: an export is a file, and a key does not belong in one
+    const connections = (await sealKey(env)) ? (await live(KINDS.connections)).map(c => ({ id: c.id, kind: c.kind, name: c.name })) : [];
+    return json({ app: 'split-flap', exported: new Date().toISOString(), account: { email: user.email, name: user.name, created: user.createdAt }, boards, blueprints, connections }, 200,
       { 'content-disposition': 'attachment; filename="split-flap-export.json"' });
   }
   if (path === '/account' && req.method === 'DELETE') {
@@ -113,7 +122,7 @@ async function route(req, env, url) {
     }
     return json({ deleted: true });
   }
-  const m = /^\/(boards|blueprints)\/([A-Za-z0-9_-]{1,40})$/.exec(path);
+  const m = /^\/(boards|blueprints|connections)\/([A-Za-z0-9_-]{1,40})$/.exec(path);
   if (m && (req.method === 'PUT' || req.method === 'DELETE')) {
     if (env.WRITES) { const { success } = await env.WRITES.limit({ key: user.id }); if (!success) return fail(429, 'too_many_writes'); }
     const kind = KINDS[m[1]];
@@ -146,11 +155,17 @@ function withNoStore(res) {
 
 async function listBoards(env, userId, kind = KINDS.boards) {
   const { results } = await env.DB.prepare(`SELECT id, rev, updated, deleted, json FROM ${kind.table} WHERE user_id = ?`).bind(userId).all();
-  return results.map(r => ({ id: r.id, rev: r.rev, updated: r.updated, deleted: !!r.deleted, board: r.deleted ? null : JSON.parse(r.json) }));
+  return Promise.all(results.map(async r => ({ id: r.id, rev: r.rev, updated: r.updated, deleted: !!r.deleted, board: r.deleted ? null : await opened(env, userId, kind, JSON.parse(r.json)) })));
+}
+// A sealed value opened for its owner; one that will not open comes back empty, never as ciphertext.
+async function opened(env, userId, kind, board) {
+  if (!kind.sealed || !board) return board;
+  const key = await sealKey(env), value = key ? await unseal(key, userId, board.id, board.value) : null;
+  return Object.assign({}, board, { value: value || '' }, value ? {} : { broken: true });
 }
 async function current(env, userId, id, kind = KINDS.boards) {
   const r = await env.DB.prepare(`SELECT id, rev, updated, deleted, json FROM ${kind.table} WHERE user_id = ? AND id = ?`).bind(userId, id).first();
-  return r ? { id: r.id, rev: r.rev, updated: r.updated, deleted: !!r.deleted, board: r.deleted ? null : JSON.parse(r.json) } : null;
+  return r ? { id: r.id, rev: r.rev, updated: r.updated, deleted: !!r.deleted, board: r.deleted ? null : await opened(env, userId, kind, JSON.parse(r.json)) } : null;
 }
 const conflict = row => json({ error: 'conflict', current: row }, 409);
 
@@ -161,7 +176,12 @@ async function putBoard(req, env, userId, id, kind = KINDS.boards) {
   const board = body && body.board, baseRev = Number.isInteger(body && body.baseRev) ? body.baseRev : -1;
   if (!board || typeof board !== 'object' || board.id !== id) return fail(400, 'bad_board');
   if (!kind.ok(board)) return fail(400, 'bad_board');           // validated, then stored as sent
-  const stored = JSON.stringify(board);
+  let toStore = board;
+  if (kind.sealed) {   // a connection's value is sealed first; with no key there is no save at all
+    const key = await sealKey(env); if (!key) return fail(503, 'not_configured');
+    const clean = kind.ok(board); toStore = Object.assign({}, clean, { value: await seal(key, userId, id, clean.value) });
+  }
+  const stored = JSON.stringify(toStore);
   if (stored.length > MAX_BYTES) return fail(413, 'too_big');
   const now = Date.now(), row = await current(env, userId, id, kind);
   if (!row || row.deleted) {

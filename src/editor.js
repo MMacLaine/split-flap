@@ -17,7 +17,7 @@ import { placeOf, formatsFor, priceMark, screenTz, tzDiffers, FX_CURRENCIES } fr
 import { SOURCES } from './sources.js';
 import { COIN_IDS } from './live.js';
 import { EXCHANGES } from './markets.js';
-import { getConn, setConn } from './connections.js';
+import { bankFor } from './rates.js';
 
 // The built-in symbols, loaded once when the Markets picker first searches.
 let MARKET_LIST = null;
@@ -735,6 +735,7 @@ export class Editor {
     if (tile.id === 'menu' && f.currency) { const m = priceMark(f.currency); o.suffix = m.suffix; if (m.prefix) o.prefix = m.prefix; o.items = this.lang === 'sv' || f.currency === 'SEK' ? o.items : ['COFFEE 3.50', 'CROISSANT 2.80', 'SANDWICH 6.50', 'SOUP 7']; }
     if (tile.id === 'currency' && f.currency && FX_CURRENCIES.includes(f.currency)) { o.base = f.currency; o.pairs = ['EUR', 'USD', 'GBP', 'JPY'].filter(c => c !== f.currency).slice(0, 3); }
     // Markets starts on the place's own market: a FTSE 100 tracker in the UK, Investor in Sweden
+    if (tile.id === 'rates') o.banks = [bankFor(pl.cc)];
     if (tile.id === 'markets') o.symbols = pl.cc === 'GB' ? [{ s: 'ISF.LON' }] : pl.cc === 'SE' ? [{ s: '0NC6.LON' }] : [{ s: 'SPY' }];
     if (tile.id === 'worldtime' && pl.city && pl.tz) o.places = [{ city: pl.city, tz: pl.tz }].concat(o.places.filter(p => p.tz !== pl.tz)).slice(0, 3);
     if (tile.id === 'departures' && preview) Object.assign(o, { near: false, stops: [{ src: 'tr', id: 'sample', name: pl.city || 'Central' }] });
@@ -902,14 +903,24 @@ export class Editor {
       onkeydown: e => { if (e.key === 'Enter') { const v = e.target.value.trim().toUpperCase(); if (/^[A-Z0-9][A-Z0-9.\-:^]{0,29}$/.test(v)) add(v); } } });
     return h('div', { class: 'sf-list' }, chosen, list.length < max ? input : null, h('span', { class: 'sf-hint' }, t.ownSymbolHint));
   }
-  // Your own key or sheet link, kept in this browser only, never in the board (0.9).
+  // Your own key or sheet (0.9): a connection, kept in this browser and with your account
+  // (0.9.2), never in the board. Typing one here saves or updates your first of that kind.
   connField(o) {
-    const t = this.t, c = getConn(), key = o.source === 'key';
-    const reset = () => { const d = this.app.live.data; d.mkq.key = null; d.mkq.sheet = null; this.app.live.poll(true); };
+    const t = this.t, kind = o.source === 'key' ? 'av' : 'sheet', key = kind === 'av', c = this.app.connections.find(x => x.kind === kind);
     return h('div', { class: 'sf-field' }, h('span', { class: 'sf-label' }, key ? t.yourKey : t.yourSheet),
-      h('input', { class: 'sf-input mono', type: key ? 'password' : 'url', value: key ? c.av : c.sheet, 'data-k': 'f-conn', autocomplete: 'off', spellcheck: 'false', placeholder: key ? 'ABCD1234EFGH5678' : 'https://docs.google.com/spreadsheets/d/e/…/pub?output=csv',
-        onchange: e => { setConn(key ? { av: e.target.value.trim() } : { sheet: e.target.value.trim() }); reset(); this.app.render(); } }),
+      h('input', { class: 'sf-input mono', type: key ? 'password' : 'url', value: c ? c.value : '', 'data-k': 'f-conn', autocomplete: 'off', spellcheck: 'false', placeholder: key ? 'ABCD1234EFGH5678' : 'https://docs.google.com/spreadsheets/d/e/…/pub?output=csv',
+        onchange: e => { const v = e.target.value.trim(); const ok = c ? (v ? this.app.updateConnection(c.id, { value: v }) : (this.app.removeConnection(c.id), true)) : v ? !!this.app.addConnection(kind, v) : true; if (ok === false || ok === null) this.app.flash(t.connBad); this.app.render(); } }),
       h('span', { class: 'sf-hint' }, key ? t.keyHint : t.sheetHint, ' ', h('a', { href: key ? 'https://www.alphavantage.co/support/#api-key' : 'https://github.com/MMacLaine/split-flap/blob/main/docs/markets-sheet.md', target: '_blank', rel: 'noopener' }, key ? t.getKey : t.sheetHow)));
+  }
+  // Account's Connections (0.9.2): each of your own sources with its kind, renamed or
+  // removed here. The value is never shown in full.
+  connectionsEl() {
+    const t = this.t, app = this.app, list = app.connections, mask = c => c.kind === 'av' ? '••••' + c.value.slice(-4) : c.value.replace(/^https:\/\/([^/]+).*$/, '$1');
+    return h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.connections),
+      list.length ? h('div', { class: 'sf-list' }, list.map(c => h('div', { class: 'sf-chosen' },
+        h('span', null, c.name), h('span', { class: 'sf-hint' }, `${t.connKinds[c.kind]} · ${mask(c)}`),
+        h('button', { class: 'sf-icon', 'aria-label': `${t.remove}: ${c.name}`, 'data-k': 'conn-rm-' + c.id, onclick: () => app.removeConnection(c.id) }, '×')))) : null,
+      h('span', { class: 'sf-hint' }, !list.length ? t.connNone : !app.account.signedIn() ? t.connLocal : app.account.cn.notConfigured ? t.connLocalOnly : t.connSynced));
   }
   // World clock: cities with their time zones, from the same city search as the weather.
   tzCities(o, key, max) {
@@ -1162,12 +1173,13 @@ export class Editor {
   // The first sign-in offer (0.6.3, two groups from 0.7.1): every storyboard and every board
   // in My boards from before, all ticked, and Keep counts the ticks.
   offerEl() {
-    const t = this.t, a = this.app.account, sb = a.offer, my = a.offerMy(), all = sb.concat(my), n = all.filter(id => !a.unticked.has(id)).length;
+    const t = this.t, a = this.app.account, sb = a.offer, my = a.offerMy(), cn = a.offerConn(), all = sb.concat(my, cn), n = all.filter(id => !a.unticked.has(id)).length;
     const item = (id, name) => h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !a.unticked.has(id), 'data-k': 'offer-' + id, onchange: () => a.toggleOffer(id) }), h('span', null, name));
     const group = (title, ids, find) => ids.length ? h('div', { class: 'sf-offer-list' }, h('span', { class: 'sf-eyebrow' }, title), ids.map(id => { const x = find(id); return x ? item(id, x.name) : null; })) : null;
     return h('section', { class: 'sf-field sf-offer' },
       h('strong', null, t.offerTitle2(sb.length, my.length)), h('span', { class: 'sf-hint' }, t.offerBody(all.length)),
-      all.length > 1 ? [group(t.secStoryboards, sb, id => this.app.boards.find(x => x.id === id)), group(t.secMyBoards, my, id => this.app.blueprints.find(x => x.id === id))] : null,
+      all.length > 1 ? [group(t.secStoryboards, sb, id => this.app.boards.find(x => x.id === id)), group(t.secMyBoards, my, id => this.app.blueprints.find(x => x.id === id)),
+        group(t.connections, cn, id => this.app.connections.find(x => x.id === id))] : null,
       h('div', { class: 'sf-row' },
         h('button', { class: 'sf-btn primary', 'data-k': 'offer-keep', disabled: !n, onclick: () => a.answerOffer(true) }, all.length > 1 ? t.offerKeepN(n) : t.offerKeep),
         h('button', { class: 'sf-btn', 'data-k': 'offer-leave', onclick: () => a.answerOffer(false) }, t.offerLeave(all.length))));
@@ -1181,7 +1193,7 @@ export class Editor {
       h('div', { class: 'sf-secs' },
         row('open-help', t.help, t.helpSub, () => this.go({ sec: 'acc', lv: 'help' })),
         row('version', t.versionLog, `v${VERSION}`, () => this.go({ sec: 'acc', lv: 'log' }))),
-      h('div', { class: 'sf-later' }, h('strong', null, t.connections), h('span', null, t.laterShort)),
+      this.connectionsEl(),
       h('div', { class: 'sf-later' }, h('strong', null, t.submissions), h('span', null, t.laterShort))];
   }
 

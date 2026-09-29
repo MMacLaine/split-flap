@@ -13,6 +13,8 @@
 import { wxKey, wxPlace, slStations, AREAS, stockholmWall, depStops, nearKey } from './content.js';
 import { stoptimes, stops as stopList, upstream, roundLL } from './transit.js';
 import { COINS } from './content.js';
+import { upstream as rateUrl, ecbSeries, fedSeries } from './rates.js';
+const RATES_EVERY = 6 * 36e5;
 import { placeOf } from './place.js';
 import { lastClose, avDaily, exchangeOf, PERIOD_DAYS } from './markets.js';
 import { getConn, parseSheet, parseSheetHistory, recordPoint, historyOf, loadHist, saveHist, loadAv, saveAv, ownKeyStep, exchangeTz } from './connections.js';
@@ -72,7 +74,8 @@ async function get(url) {
 export class Live {
   constructor(onUpdate) {
     this.onUpdate = onUpdate;
-    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, mk: {}, mkq: {}, off: [], loc: null, cc: null };
+    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, mk: {}, mkq: {}, rates: {}, off: [], loc: null, cc: null };
+    this.ratesWant = new Set();
     this.mkWant = { built: [], crypto: new Map(), key: new Set(), sheet: new Set() };
     this.wanted = { sl: new Map(), wx: new Map(), el: new Set(), fx: new Set(), otd: new Set(), url: new Map(), tr: new Map(), near: new Map(), coin: new Map(), hol: new Set() };
     this.status = { tried: 0 };
@@ -128,6 +131,10 @@ export class Live {
     const list = [...built].sort(), chunks = [];
     for (let i = 0; i < list.length; i += 8) chunks.push(list.slice(i, i + 8));
     this.mkWant = { built: chunks, crypto, key, sheet };
+    // interest rates (0.9.2): each bank and period on the board
+    const rates = new Set();
+    for (const p of (board && board.pages) || []) for (const z of p.zones) if (z.ch === 'rates') for (const b of ((z.o || {}).banks || [])) rates.add(`${b}:${(z.o || {}).years || 5}`);
+    this.ratesWant = rates;
     this.wanted = { sl, wx, el, fx, otd, url, tr, near, coin, hol };
     this.poll();
   }
@@ -152,6 +159,7 @@ export class Live {
     for (const [k, days] of this.mkWant.crypto) if (due(this.data.mkq['c:' + k], MK_EVERY)) this.fetchCrypto(k, days);
     if (this.mkWant.sheet.size && due(this.data.mkq.sheet, SHEET_EVERY)) this.fetchSheet();
     if (this.mkWant.key.size && due(this.data.mkq.key, AV_GAP)) this.fetchOwnKey();
+    for (const k of this.ratesWant) if (due(this.data.rates[k], RATES_EVERY)) this.fetchRates(k);
     for (const [k, p] of this.wanted.wx) if (due(this.data.wx[k], WX_EVERY)) this.fetchWx(k, p);
     for (const a of this.wanted.el) { const e = this.data.el[a]; if (due(e, EL_EVERY) || this.elStale(e, now)) this.fetchEl(a); }
     for (const b of this.wanted.fx) if (due(this.data.fx[b], FX_EVERY)) this.fetchFx(b);
@@ -234,12 +242,28 @@ export class Live {
       const key = getConn().av, now = Date.now();
       if (!key) { for (const s of this.mkWant.key) this.data.mk['key:' + s] = { needsKey: true }; return; }
       const cache = await ownKeyStep(loadAv(), [...this.mkWant.key], key, now, get);
+      // the key was changed or removed while the call was out: that answer is not this key's
+      if (getConn().av !== key) { for (const s of this.mkWant.key) this.data.mk['key:' + s] = getConn().av ? { status: 'queued' } : { needsKey: true }; return; }
       saveAv(cache);
       for (const s of this.mkWant.key) {
         const c = cache[s];
         if (c && c.closes && c.closes.length) { const cl = c.closes; this.data.mk['key:' + s] = { ex: exchangeOf(s), closes: cl, closeOnly: true, price: cl[cl.length - 1].c, prev: cl.length > 1 ? cl[cl.length - 2].c : null }; }
         else this.data.mk['key:' + s] = { status: c && c.error === 'no_data' ? 'no_data' : cache._limit ? 'budget' : 'queued' };
       }
+    });
+  }
+  // A central bank's rate over one or five years: the ECB and the Fed from the browser, the
+  // Bank of England and the Riksbank through the Worker, which they need (no CORS).
+  fetchRates(k) {
+    const [b, y] = k.split(':');
+    return this.run('rates', k, async e => {
+      const now = Date.now(), to = new Date(now).toISOString().slice(0, 10), from = new Date(now - (+y || 5) * 366 * 864e5).toISOString().slice(0, 10);
+      try {
+        e.series = b === 'ecb' ? ecbSeries(await get(rateUrl.ecb(from))) : b === 'fed' ? fedSeries(await get(rateUrl.fed(from, to)))
+          : (await viaWorker(`/rates?b=${b}&y=${y}`, null, null)).series || [];
+        e.off = false;
+      } catch (err) { if (err.off) e.off = true; throw err; }
+      if (!e.series.length) throw new Error('empty');
     });
   }
   // Which sources the Worker has switched off. No Worker (local), nothing is off.

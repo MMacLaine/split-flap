@@ -1,5 +1,6 @@
 # The app's tests and the Worker's, on every push and pull request. The Worker's API tests
 # run against wrangler dev with a local D1, so no Cloudflare login or secret is needed.
+# CONN_KEY here is a published test value, for sealing in CI only.
 name: test
 on: [push, pull_request]
 jobs:
@@ -25,7 +26,7 @@ jobs:
       - name: Start the Worker
         working-directory: worker
         run: |
-          npx wrangler dev --env dev --port 8787 --var DEV_TEST:1 --var BETTER_AUTH_SECRET:ci-only-not-a-secret-0123456789abcdef --var GOOGLE_CLIENT_SECRET:ci-only > ../wrangler.log 2>&1 &
+          npx wrangler dev --env dev --port 8787 --var DEV_TEST:1 --var BETTER_AUTH_SECRET:ci-only-not-a-secret-0123456789abcdef --var GOOGLE_CLIENT_SECRET:ci-only --var CONN_KEY:AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8= --var ALPHAVANTAGE_KEY:none > ../wrangler.log 2>&1 &
           for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:8787/split-flap/api/me && exit 0; sleep 1; done
           cat ../wrangler.log; exit 1
       - name: Worker tests

@@ -14,11 +14,28 @@ const ls = () => { try { return window.localStorage; } catch { return null; } };
 const read = (k, d) => { try { return JSON.parse((ls() && ls().getItem(k)) || 'null') || d; } catch { return d; } };
 const write = (k, v) => { try { ls() && ls().setItem(k, JSON.stringify(v)); } catch { /* full or blocked: the chart just starts again */ } };
 
-export function getConn() {
-  const j = read(CONN, {});
-  return { av: typeof j.av === 'string' && /^[A-Za-z0-9]{8,64}$/.test(j.av) ? j.av : '', sheet: typeof j.sheet === 'string' && /^https:\/\/[^\s]{8,490}$/.test(j.sheet) ? j.sheet : '' };
+// Your connections, as a list in this browser (0.9.2). The 0.9 shape, one key and one
+// sheet under sf_connections, becomes two entries the first time the list is read.
+const LIST = 'sf_conns';
+export function loadConns() {
+  let list = read(LIST, null);
+  if (!Array.isArray(list)) {
+    const old = read(CONN, {}), now = Date.now(); list = [];
+    if (typeof old.av === 'string' && old.av) list.push({ id: 'c' + now.toString(36) + 'a', kind: 'av', name: 'Alpha Vantage', value: old.av, updated: now });
+    if (typeof old.sheet === 'string' && old.sheet) list.push({ id: 'c' + now.toString(36) + 's', kind: 'sheet', name: 'Sheet', value: old.sheet, updated: now });
+    write(LIST, list);
+    try { ls() && ls().removeItem(CONN); } catch { /* blocked */ }
+  }
+  return list.map(sanitizeConnection).filter(Boolean).slice(0, 50);
 }
-export function setConn(patch) { write(CONN, Object.assign(getConn(), patch)); }
+export const saveConns = list => write(LIST, list.map(sanitizeConnection).filter(Boolean));
+// The value a tile uses: the connection it names, else the first of that kind.
+export function connFor(list, kind, id) {
+  const x = (id && list.find(c => c.id === id && c.kind === kind)) || list.find(c => c.kind === kind);
+  return x ? x.value : '';
+}
+// The 0.9 calls, kept for the fetchers: the first key and the first sheet.
+export function getConn() { const l = loadConns(); return { av: connFor(l, 'av'), sheet: connFor(l, 'sheet') }; }
 
 // A published sheet's CSV: one row per symbol, found by its header names in any order
 // (Symbol, Name, Price, Change %, Currency, Exchange). Numbers may use a decimal comma and
@@ -130,4 +147,20 @@ export function parseSheetHistory(text) {
     out[sym] = block.map((r, j) => ({ d: dates[j], c: num(r[1]) })).filter(x => x.d && Number.isFinite(x.c)).slice(-400);
   }
   return out;
+}
+
+// ---------- Connections (0.9.2) ----------
+// A connection is one source of your own: { id, kind, name, value, updated }. kind is av
+// (an Alpha Vantage key), sheet (a published CSV link), feed (RSS or Atom, 0.9.3) or json.
+// value is the key or the link: a secret, so it is sealed on the server and never goes
+// into a board, a link, a blueprint or an export. Tiles name a connection by id.
+export const CONN_KINDS = ['av', 'sheet', 'feed', 'json'];
+const HTTPS = /^https:\/\/[^\s/?#]+\.[^\s/?#]+[^\s]{0,480}$/;
+export function sanitizeConnection(x) {
+  if (!x || typeof x !== 'object' || !CONN_KINDS.includes(x.kind)) return null;
+  const id = typeof x.id === 'string' && /^c[A-Za-z0-9_-]{1,39}$/.test(x.id) ? x.id : null;
+  const value = typeof x.value === 'string' ? x.value.trim() : '';
+  const ok = x.kind === 'av' ? /^[A-Za-z0-9]{8,64}$/.test(value) : HTTPS.test(value);
+  if (!id || !ok) return null;
+  return { id, kind: x.kind, name: (typeof x.name === 'string' ? x.name.trim() : '').slice(0, 60) || x.kind, value, updated: Number.isFinite(+x.updated) ? +x.updated : 0 };
 }

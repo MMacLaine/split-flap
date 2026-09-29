@@ -15,6 +15,8 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 - **Time:** clock and date, a big clock, a word clock ("QUARTER PAST TEN", "KVART ÖVER TIO"), a letter clock where the words for the time light up in a grid of faint letters, countdowns that can also count up from a date, and Today, with the week number, Swedish red days and flag days, and sunrise and sunset.
 - **Live:** departures from up to four stops, from Transitous almost anywhere and from SL in Stockholm, as a list or a station board. Weather with rain in the next hour, public holidays for your country, a world clock, exchange rates in any of about thirty currencies and a few crypto coins, Swedish electricity spot prices, On this day from Wikipedia, and Follow a URL, which prints lines from any JSON or text address that lets other sites read it.
 - **Markets:** shares, ETFs and coins as a line of half flaps, green up and red down, with the price and whether the market is open. London and New York are built in through the Worker, which asks Alpha Vantage once a day per symbol for every screen; crypto comes from CoinGecko; anything else from your own key or Google Sheet, kept in your browser ([how to set up the sheet](docs/markets-sheet.md)).
+- **Interest rates:** the policy rate of the Riksbank, the ECB, the Bank of England or the Fed, when it last moved, and a line over one or five years.
+- **Your own sources:** an Alpha Vantage key or a published sheet, kept in your browser and, signed in, with your account, encrypted on the server (`worker/src/seal.js`).
 - **The place:** one city search in Display, and new boards start from it: the weather, the nearest stop, the holidays, the currency and 12 or 24 hours. Names in Greek and Cyrillic are spelled in Latin letters, and accents the flaps lack are dropped, so no letter prints blank.
 - **Pictures:** paint with the colour chips, turn a photo into chips in the browser, or run an animated pattern (Nordic flags, rain, waves, confetti).
 - **Templates:** ten to start from, including Home dashboard, Station board, Café, Office lobby, Letter clock and Everything at once, which fills the screen and rolls every flap the long way round.
@@ -105,6 +107,7 @@ The visual design (tile anatomy, fold shading, themes, timing) came from a desig
 
 - Departures: [Transitous](https://transitous.org), with timetables from [these sources](https://transitous.org/sources/) and map data from [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, and in Stockholm [SL](https://sl.se) through [Trafiklab](https://www.trafiklab.se).
 - Public holidays: [Nager.Date](https://date.nager.at).
+- Interest rates: the [ECB Data Portal](https://data.ecb.europa.eu/), the [Federal Reserve Bank of New York](https://www.newyorkfed.org/markets/reference-rates/effr), the [Bank of England](https://www.bankofengland.co.uk/boeapps/database/) and [Sveriges Riksbank](https://www.riksbank.se/en-gb/statistics/).
 - Stock and ETF prices: [Alpha Vantage](https://www.alphavantage.co), through Split-Flap's place in its programme for open-source projects.
 - Crypto prices: [CoinGecko](https://www.coingecko.com).
 - Weather and city search: [Open-Meteo](https://open-meteo.com), CC BY 4.0 (Creative Commons Attribution 4.0).

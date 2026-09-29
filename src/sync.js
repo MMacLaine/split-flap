@@ -186,3 +186,26 @@ export function switchUser(boards, state, user) {
   }
   return { boards: keep, state: { user, boards: entries } };
 }
+
+// Connections (0.9.2, from Fable's review): a key left on a shared computer is worse than
+// an unpushed change lost, so on sign out every connection the account owns leaves this
+// browser, pushed or not. Ones that never joined the account (a guest's) stay.
+export function signOutAll(items, state) {
+  const user = state.user;
+  return { boards: items.filter(b => { const e = state.boards[b.id]; return !e || e.owner !== user; }), state: emptyState() };
+}
+// Another account signs in: the last one's connections leave, whatever their state, and
+// are never carried from one account to another.
+export function switchUserAll(items, state, user) {
+  const keep = [], entries = {};
+  for (const b of items) { const e = state.boards[b.id]; if (!e || e.owner === user) { keep.push(b); if (e) entries[b.id] = e; } }
+  return { boards: keep, state: { user, boards: entries } };
+}
+
+// Connections (0.9.2 review): a value the server could not open (a wrong CONN_KEY, say)
+// comes back empty and marked broken. A browser that still holds it sends it again, so
+// the next push seals it with the current key and new devices get it back. Returns the ids.
+export function healBroken(remote, local, state) {
+  const have = new Map(local.map(x => [x.id, x]));
+  return (remote || []).filter(r => r && !r.deleted && r.board && r.board.broken && have.has(r.id) && have.get(r.id).value && state.boards[r.id]).map(r => r.id);
+}

@@ -192,3 +192,17 @@ test('markets route: the answer is cached a minute only while something is on it
     assert.deepEqual(put, ['public, s-maxage=60', 'public, s-maxage=900', 'public, s-maxage=60']);
   } finally { delete globalThis.caches; }
 });
+
+test('seal: a value opens for its row and account only, and there is no key without CONN_KEY', async () => {
+  const { sealKey, seal, unseal } = await import('../src/seal.js');
+  assert.equal(await sealKey({}), null);
+  assert.equal(await sealKey({ CONN_KEY: btoa('too short') }), null);          // not 32 bytes
+  const key = await sealKey({ CONN_KEY: btoa(String.fromCharCode(...new Uint8Array(32).map((_, i) => i))) });
+  const s1 = await seal(key, 'user1', 'c1', 'MYSECRETKEY'), s2 = await seal(key, 'user1', 'c1', 'MYSECRETKEY');
+  assert.ok(s1.startsWith('v1:') && !s1.includes('MYSECRET'));
+  assert.notEqual(s1, s2);                                                    // a new IV each time
+  assert.equal(await unseal(key, 'user1', 'c1', s1), 'MYSECRETKEY');
+  assert.equal(await unseal(key, 'user2', 'c1', s1), null);                   // another account
+  assert.equal(await unseal(key, 'user1', 'c2', s1), null);                   // another row
+  assert.equal(await unseal(key, 'user1', 'c1', 'MYSECRETKEY'), null);        // never plain text
+});

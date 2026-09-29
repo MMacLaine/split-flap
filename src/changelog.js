@@ -3,6 +3,24 @@
 
 export const CHANGELOG = [
   {
+    v: '0.9.2', date: '2026-09-30',
+    tag: { en: 'Your sources', sv: 'Dina källor' },
+    desc: {
+      en: 'Your own keys and sheets are kept with your account, and a new tile shows central banks\' interest rates.',
+      sv: 'Dina egna nycklar och kalkylark sparas med ditt konto, och en ny ruta visar centralbankernas räntor.'
+    },
+    items: {
+      en: [
+        '**Your sources, with your account.** An Alpha Vantage key or a published sheet you add is kept with your account and reaches your other devices. On the server it is encrypted. Account lists them, and signing out removes them from that browser.',
+        '**Interest rates.** A new tile shows the policy rate of the Riksbank, the ECB, the Bank of England or the Fed, with the date it last changed and a line over one or five years. A new template in Finance shows your own central bank and then all four.'
+      ],
+      sv: [
+        '**Dina källor, med ditt konto.** En Alpha Vantage-nyckel eller ett publicerat kalkylark som du lägger till sparas med ditt konto och följer med till dina andra enheter. På servern är den krypterad. Konto listar dem, och när du loggar ut tas de bort från den webbläsaren.',
+        '**Räntor.** En ny ruta visar styrräntan hos Riksbanken, ECB, Bank of England eller Fed, med datumet den senast ändrades och en linje över ett eller fem år. En ny mall under Ekonomi visar din egen centralbank och sedan alla fyra.'
+      ]
+    }
+  },
+  {
     v: '0.9.1', date: '2026-09-30',
     tag: { en: 'Sheets', sv: 'Kalkylark' },
     desc: {

@@ -8,6 +8,7 @@
 //   GET /transit/search?text=&lang=       stops by name
 //   GET /transit/near?lat=&lon=           the stops nearest a place
 //   GET /markets?s=SPY,ISF.LON             daily closes for listed symbols (0.9, markets.js)
+//   GET /rates?b=boe|riks&y=1|5           a central bank's policy rate (0.9.2, src/rates.js)
 //
 // Only known sources with checked parameters are fetched; this is not a relay for
 // arbitrary addresses. SOURCES_OFF (a Worker variable, comma separated) switches a source
@@ -15,23 +16,33 @@
 
 import { stoptimes, stops, upstream, STOP_ID, roundLL } from '../../src/transit.js';
 import LIST from '../../data/markets.json' with { type: 'json' };
+import { upstream as rateUrl, boeSeries, riksSeries } from '../../src/rates.js';
 
 // The built-in symbols (0.9): only these reach Split-Flap's Alpha Vantage key, so no one
 // can spend its allowance on symbols of their own. Up to eight per request, one board.
 export const LISTED = new Map(LIST.symbols.map(x => [x.s, x]));
 
 const UA = 'split-flap/0.8 (+https://maclaine.se/en/split-flap; github.com/MMacLaine/split-flap)';
-const TTL = { departures: 60, search: 86400, near: 86400, markets: 900 };
+const TTL = { departures: 60, search: 86400, near: 86400, markets: 900, rates: 86400 };
 export const offList = env => String(env.SOURCES_OFF || '').split(',').map(s => s.trim()).filter(Boolean);
 
+// Every answer is data, never a document (0.9.2 review): even opened directly in a tab it
+// cannot run script on maclaine.se.
 const reply = (body, status, maxAge) => new Response(JSON.stringify(body), { status, headers: {
   'content-type': 'application/json; charset=utf-8', 'x-content-type-options': 'nosniff',
+  'content-security-policy': "sandbox; default-src 'none'", 'content-disposition': 'attachment',
   'cache-control': status === 200 && maxAge ? `public, max-age=${Math.min(maxAge, 60)}` : 'no-store'
 } });
 
 // The checked request, or null: each route names its parameters and their shapes.
 export function parseData(path, q) {
   if (path === '/data/status') return { kind: 'status' };
+  if (path === '/data/rates') {
+    const b = q.get('b'), y = q.get('y') === '1' ? 1 : 5;
+    if (b !== 'boe' && b !== 'riks') return null;
+    const to = new Date().toISOString().slice(0, 10), from = new Date(Date.now() - y * 366 * 864e5).toISOString().slice(0, 10);
+    return { kind: 'rates', src: 'rates', bank: b, key: `r/${b}/${y}/${to}`, url: b === 'boe' ? rateUrl.boe(from) : rateUrl.riks(from, to) };
+  }
   if (path === '/data/markets') {
     const list = [...new Set((q.get('s') || '').split(',').map(x => x.trim()).filter(Boolean))];
     if (!list.length || list.length > 8 || !list.every(x => LISTED.has(x))) return null;
@@ -67,10 +78,17 @@ export async function data(req, env, ctx, url) {
   if (p.kind === 'markets') return markets(p, env, ctx, cache, cacheKey);
   let body;
   try {
-    const r = await fetch(p.url, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(10e3) });
+    // the Riksbank's SWEA answers an empty 200 unless asked for JSON by name: keep this accept
+    const r = await fetch(p.url, { headers: { 'user-agent': UA, accept: p.bank === 'boe' ? 'text/csv, */*' : 'application/json' }, signal: AbortSignal.timeout(10e3) });
     if (!r.ok) return reply({ error: 'upstream_' + r.status }, 502);
-    const j = await r.json();
-    body = p.kind === 'departures' ? stoptimes(j) : { stops: stops(j) };
+    if (p.kind === 'rates') {
+      const series = p.bank === 'boe' ? boeSeries(await r.text()) : riksSeries(await r.json());
+      if (!series.length) return reply({ error: 'no_data' }, 502);
+      body = { series };
+    } else {
+      const j = await r.json();
+      body = p.kind === 'departures' ? stoptimes(j) : { stops: stops(j) };
+    }
   } catch {
     return reply({ error: 'upstream_failed' }, 502);
   }

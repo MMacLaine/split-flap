@@ -50,7 +50,7 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'list' })`); await sleep(500);
   await ev(`document.querySelector('[data-k=sec-finance]').click()`); await sleep(500);
   check('Finance has a page of its own', (await at()) === '#/explore/finance', await at());
-  check('with Stocks, ETFs, Crypto and Currency in that order', (await ev(`[...document.querySelectorAll('.sf-level .sf-group > .sf-eyebrow')].map(e => e.textContent).join(', ')`)) === 'Stocks, ETFs, Crypto, Currency', await ev(`[...document.querySelectorAll('.sf-level .sf-group > .sf-eyebrow')].map(e => e.textContent).join(', ')`));
+  check('with Stocks, ETFs, Crypto, Currency and Interest rates in that order', (await ev(`[...document.querySelectorAll('.sf-level .sf-group > .sf-eyebrow')].map(e => e.textContent).join(', ')`)) === 'Stocks, ETFs, Crypto, Currency, Interest rates', await ev(`[...document.querySelectorAll('.sf-level .sf-group > .sf-eyebrow')].map(e => e.textContent).join(', ')`));
   await ev(`document.querySelector('[data-k=tpl-stocks]').click()`); await sleep(400);
   check('a template opens inside its section', (await at()) === '#/explore/finance/stocks', await at());
   await ev(`document.querySelector('[data-k=back]').click()`); await sleep(400);
@@ -69,7 +69,7 @@ try {
   const hasField = await ev(`String(!!document.querySelector('[data-k=f-conn]'))`);
   await ev(`(() => { const el = document.querySelector('[data-k=f-conn]'); el.value = 'TESTKEY0123456789'; el.dispatchEvent(new Event('change')); })()`); await sleep(400);
   check('the key field is there under More options', hasField === 'true');
-  check('the key is kept in this browser', (await ev(`JSON.parse(localStorage.getItem('sf_connections')).av`)) === 'TESTKEY0123456789');
+  check('the key is kept in this browser', (await ev(`JSON.parse(localStorage.getItem('sf_conns')).some(c => c.kind === 'av' && c.value === 'TESTKEY0123456789')`)) === true);
   const leaks = await ev(`(async () => { const s = await import('./src/store.js'); const b = splitFlap.cur(); const out = [];
     if (JSON.stringify(b).includes('TESTKEY')) out.push('board');
     if (String(s.encodeBoard(b)).includes('TESTKEY') || JSON.stringify(s.decodeBoard(s.encodeBoard(b)) || {}).includes('TESTKEY')) out.push('link');
@@ -79,7 +79,7 @@ try {
     return out.join(', ') || 'none'; })()`);
   check('and never in the board, its link, the saved storyboards or a blueprint', leaks === 'none', leaks);
   const needs = await composed(`app.cur().pages[0]`);
-  await ev(`localStorage.removeItem('sf_connections'); splitFlap.live.data.mkq.key = null; splitFlap.live.poll(true)`); await sleep(1500);
+  await ev(`splitFlap.connections.slice().forEach(c => splitFlap.removeConnection(c.id))`); await sleep(1500);
   check('without a key the board says it needs one, never an error', /NEEDS YOUR KEY/.test(await composed(`app.cur().pages[0]`)), (await composed(`app.cur().pages[0]`)).replace(/\s{2,}/g, ' ').slice(0, 100));
 } catch (err) { check('no exception', false, err && err.message); }
 

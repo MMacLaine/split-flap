@@ -10,6 +10,7 @@ import { drawPixels, pixelPages, pixelWidth, drawPattern } from './pixels.js';
 import { isoWeek, dayOfYear, swedishDay, sunTimes } from './almanac.js';
 import { wallIn } from './place.js';
 import { marketsCells, EXCHANGES } from './markets.js';
+import { ratesCells } from './rates.js';
 
 const DAYS = {
   en: ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
@@ -150,7 +151,7 @@ export const QUOTES = {
 };
 
 export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote',
-  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock', 'departures', 'worldtime', 'markets'];
+  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock', 'departures', 'worldtime', 'markets', 'rates'];
 // Channels that paint cells directly (pixel font, patterns) instead of printing lines.
 const DRAWN = new Set(['bigclock', 'bigtext', 'art']);
 export const LAYOUTS = ['full', 'header', 'split', 'ticker', 'stacked'];
@@ -297,6 +298,7 @@ export function channelLines(ch, o, z, now, lang, live) {
   if (ch === 'worldtime') return worldLines(o, z, now, W, w);
   // Markets (0.9) draws its own cells: the chart in half flaps and the ticker beside it,
   // with opening times in the Place's time zone and holidays from the exchange's country
+  if (ch === 'rates') return { cells: ratesCells(o, z, live, lang) };
   if (ch === 'markets') return { cells: marketsCells(o, z, now, live, { lang, tz: live && live.loc && live.loc.tz,
     closedOn: (ex, day) => { const cc = EXCHANGES[ex] && EXCHANGES[ex].cc, hd = cc && live && live.hol && live.hol[cc]; return !!(hd && hd.days && hd.days[day]); } }) };
   if (ch === 'weather') {

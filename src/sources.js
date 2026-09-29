@@ -44,6 +44,14 @@ export const SOURCES = {
     terms: 'Split-Flap was approved for Alpha Vantage\'s programme for open-source projects on 29 September 2026. The key it granted answers as a standard free key, 25 calls a day.', checked: '2026-09-29', contact: 'support@alphavantage.co',
     credit: { en: 'Stock and ETF prices from Alpha Vantage.', sv: 'Aktie- och fondkurser från Alpha Vantage.' }, link: 'https://www.alphavantage.co/'
   },
+  ratesEcb: { name: 'ECB Data Portal', tier: 'browser', tiles: ['rates'], every: 'once every six hours', terms: 'ECB statistics, free to reuse with the source named.', checked: '2026-09-30', contact: 'data.ecb.europa.eu',
+    credit: { en: 'ECB rates from the ECB Data Portal.', sv: 'ECB:s räntor från ECB Data Portal.' }, link: 'https://data.ecb.europa.eu/' },
+  ratesFed: { name: 'Federal Reserve Bank of New York', tier: 'browser', tiles: ['rates'], every: 'once every six hours', terms: 'Public reference rates, free to use with credit.', checked: '2026-09-30', contact: 'newyorkfed.org',
+    credit: { en: 'Fed rates from the Federal Reserve Bank of New York.', sv: 'Feds räntor från Federal Reserve Bank of New York.' }, link: 'https://www.newyorkfed.org/markets/reference-rates/effr' },
+  ratesBoe: { name: 'Bank of England', tier: 'worker', tiles: ['rates'], every: 'once a day, through the Worker', terms: 'Bank of England database, free to reuse with credit.', checked: '2026-09-30', contact: 'bankofengland.co.uk',
+    credit: { en: 'Bank Rate from the Bank of England.', sv: 'Bank Rate från Bank of England.' }, link: 'https://www.bankofengland.co.uk/boeapps/database/' },
+  ratesRiks: { name: 'Sveriges Riksbank', tier: 'worker', tiles: ['rates'], every: 'once a day, through the Worker', terms: 'Open data from the Riksbank\'s SWEA API.', checked: '2026-09-30', contact: 'riksbank.se',
+    credit: { en: 'The policy rate from Sveriges Riksbank.', sv: 'Styrräntan från Sveriges riksbank.' }, link: 'https://www.riksbank.se/en-gb/statistics/' },
   crypto: {
     name: 'CoinGecko', tier: 'browser', tiles: ['currency', 'markets'], every: 'every five minutes for the coins on a board',
     terms: 'Public API without a key, around 30 calls a minute, attribution required.', checked: '2026-09-29', contact: 'coingecko.com',
