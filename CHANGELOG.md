@@ -2,6 +2,21 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.8.0 (2026-09-29): Anywhere
+
+Split-Flap was built around Stockholm. This release makes it work for a screen almost anywhere, starting from one city search.
+
+- **The place.** Search for your city in Display and new boards start from it: the weather, the nearest stop, the holidays, the currency, and 12 or 24 hours. A first visit asks where the screen is and builds the demo for it.
+- **Departures, almost anywhere.** A new Departures tile finds the stop nearest your place and shows its next trains, buses and trams, from Transitous, which covers most of Europe and North America. Stockholm stops still come from SL.
+- **Station board.** Departures can look like a railway station, with the time, the destination, the platform and on time, late or cancelled.
+- **Names in any alphabet.** Łódź prints as LODZ and Москва as MOSKVA. Before, letters the flaps do not carry came out blank.
+- **Holidays for your country.** Today shows the public holidays of the place's country, and Countdown can count to the next one. Sweden keeps its flag days.
+- **World clock.** A new tile with the time in a few cities, marked +1 or -1 when a city is on another day.
+- **Currency in your currency.** Any of about thirty currencies can be the base, and bitcoin and a few other coins can go on the list, with a green or red flap for their day.
+- **Rain soon.** The weather says when rain starts or stops in the next two hours.
+- **Explore by use.** Templates are grouped (home, commute, office, café, money and fun), built for your place, and there are three new ones: Morning, World clock wall and Currency board.
+- Every live tile names its source under its options, and Help lists them all.
+
 ## v0.7.3 (2026-09-28): Fixes
 
 Fixes from a full test of the live site, across the editor, the content, accounts and the pages around it.

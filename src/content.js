@@ -5,9 +5,10 @@
 // Ported from the design handoff (design/board-content.js); the mock SL and weather
 // tables are replaced by the live cache, and the strings moved to strings.js.
 
-import { textToCells, isChip } from './charset.js';
+import { textToCells, isChip, boardText, printable } from './charset.js';
 import { drawPixels, pixelPages, pixelWidth, drawPattern } from './pixels.js';
 import { isoWeek, dayOfYear, swedishDay, sunTimes } from './almanac.js';
+import { wallIn } from './place.js';
 
 const DAYS = {
   en: ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
@@ -19,9 +20,11 @@ const MONTHS = {
 };
 const WORDS = {
   en: { now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
-    week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'ADD A WEB ADDRESS', empty: 'NOTHING IN THE FEED', noMessages: 'ADD A MESSAGE', otd: 'ON THIS DAY' },
+    week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'ADD A WEB ADDRESS', empty: 'NOTHING IN THE FEED', noMessages: 'ADD A MESSAGE', otd: 'ON THIS DAY',
+    deps: 'DEPARTURES', pickStop: 'PICK A STOP', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK', rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
   sv: { now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
-    week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'LÄGG TILL EN WEBBADRESS', empty: 'INGET I FLÖDET', noMessages: 'LÄGG TILL ETT MEDDELANDE', otd: 'DEN HÄR DAGEN' }
+    week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'LÄGG TILL EN WEBBADRESS', empty: 'INGET I FLÖDET', noMessages: 'LÄGG TILL ETT MEDDELANDE', otd: 'DEN HÄR DAGEN',
+    deps: 'AVGÅNGAR', pickStop: 'VÄLJ EN HÅLLPLATS', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA', rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
 };
 
 // Hours in words for the word clock, twelve first so hour % 12 indexes it.
@@ -146,7 +149,7 @@ export const QUOTES = {
 };
 
 export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote',
-  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock'];
+  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock', 'departures', 'worldtime'];
 // Channels that paint cells directly (pixel font, patterns) instead of printing lines.
 const DRAWN = new Set(['bigclock', 'bigtext', 'art']);
 export const LAYOUTS = ['full', 'header', 'split', 'ticker', 'stacked'];
@@ -267,7 +270,13 @@ export function channelLines(ch, o, z, now, lang, live) {
     return { lines: lines.slice(-z.h), align: 'center' };
   }
   if (ch === 'countdown') {
-    const target = new Date((o.date || '2027-06-25') + 'T00:00:00').getTime(), label = (o.label || '').toUpperCase();
+    let date = o.date || '2027-06-25', label = (o.label || '').toUpperCase();
+    if (o.to === 'holiday') {   // 0.8: the next public holiday, with its own name
+      const nh = nextHoliday(now, lang, live);
+      if (!nh) return { lines: [w.holiday, '', live && live.hol && live.cc && live.hol[live.cc] && (live.hol[live.cc].fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+      date = nh.date; label = nh.name;
+    }
+    const target = new Date(date + 'T00:00:00').getTime();
     // Count up ("days since") once the date has passed; before it, it counts down as usual.
     if (o.dir === 'up' && now >= target) {
       const days = Math.floor((now - target) / 864e5), val = days === 0 ? w.today : `${days} ${days === 1 ? w.day : w.days}`;
@@ -283,12 +292,14 @@ export function channelLines(ch, o, z, now, lang, live) {
   if (ch === 'letterclock') return letterClock(o, z, d, lang);
   if (ch === 'today') return todayLines(o, z, d, W, lang, w, live);
   if (ch === 'sl') return slLines(o, z, now, W, w, live);
+  if (ch === 'departures') return depLines(o, z, now, W, w, live);
+  if (ch === 'worldtime') return worldLines(o, z, now, W, w);
   if (ch === 'weather') {
     const place = wxPlace(o, live);
     if (!place) return { lines: [w.weather, w.pickCity], align: 'center' };
     const city = (place.city || '').toUpperCase(), data = live && live.wx && live.wx[wxKey(place)];
     if (!data || data.t == null) return { lines: [city, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
-    return weatherLines(o, city, data, z, W, lang, w);
+    return weatherLines(o, city, data, z, W, lang, w, now);
   }
   if (ch === 'quote') {
     const set = QUOTES[o.set] || QUOTES.proverbs, list = set[lang] || set.en, q = list[Math.floor(now / 60000) % list.length];
@@ -302,23 +313,15 @@ export function channelLines(ch, o, z, now, lang, live) {
     return { lines: wrap(msgs[i].toUpperCase(), W), align: 'center' };
   }
   if (ch === 'menu') {
-    const sfx = o.suffix || '', rows = (o.items || []).map(x => String(x || '').trim().toUpperCase()).filter(Boolean).map(x => {
+    const sfx = o.suffix || '', pre = o.prefix === '$' ? '$' : '', rows = (o.items || []).map(x => String(x || '').trim().toUpperCase()).filter(Boolean).map(x => {
       const m = /^(.*?)\s+(\d+(?:[.,]\d+)?)$/.exec(x);   // a price at the end lines up on the right
-      return m ? lr(m[1], m[2] + sfx, W) : x;
+      return m ? lr(m[1], pre + m[2] + sfx, W) : x;
     });
     const title = String(o.title || '').toUpperCase();
     return { lines: (title && z.h > rows.length ? [title] : []).concat(rows), align: 'left' };
   }
   if (ch === 'electricity') return powerLines(o, z, now, W, w, live);
-  if (ch === 'currency') {
-    const base = o.base === 'EUR' ? 'EUR' : 'SEK', data = live && live.fx && live.fx[base];
-    const pairs = (Array.isArray(o.pairs) && o.pairs.length ? o.pairs : ['EUR', 'USD', 'GBP']).filter(p => p !== base);
-    if (!data || !data.rates) return { lines: [base, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
-    const dec = o.dec == null ? 2 : +o.dec;
-    const val = p => { const r = data.rates[p]; if (!r) return '-'; const v = (1 / r).toFixed(dec); return lang === 'sv' ? v.replace('.', ',') : v; };
-    if (z.h === 1) return { lines: [pairs.map(p => `${p} ${val(p)}`).join('  ')], align: 'center' };
-    return { lines: pairs.map(p => lr(W >= 14 ? `1 ${p}` : p, W >= 14 ? `${val(p)} ${base}` : val(p), W)), align: 'left' };
-  }
+  if (ch === 'currency') return currencyLines(o, z, W, lang, w, live);
   if (ch === 'onthisday') {
     const data = live && live.otd && live.otd[lang === 'sv' ? 'sv' : 'en'], md = `${two(d.getMonth() + 1)}-${two(d.getDate())}`;
     if (!data || data.md !== md || !data.items || !data.items.length) return { lines: [w.otd, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
@@ -356,11 +359,35 @@ export function wxPlace(o, live) {
   const l = live && live.loc; return l && l.lat != null ? { lat: l.lat, lon: l.lon, city: l.city || '' } : null;
 }
 
+// Holidays (0.8): Sweden's red and flag days are worked out here, as before; any other
+// country's public holidays come from Nager.Date through live.hol. Which country is the
+// board's Place, else the browser's (live.cc), and Sweden when neither is known.
+const isoDay = d => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
+const ownDays = live => !live || !live.cc || live.cc === 'SE';
+export function holidayOn(d, lang, live) {
+  if (ownDays(live)) { const sd = swedishDay(d); return sd ? { name: sd[lang === 'sv' ? 'sv' : 'en'], red: sd.red, flag: sd.flag } : null; }
+  const h = live.hol && live.hol[live.cc] && live.hol[live.cc].days && live.hol[live.cc].days[isoDay(d)];
+  if (!h) return null;
+  const name = lang === 'sv' ? printable(h.local, h.en) : printable(h.en, h.local);
+  return name ? { name, red: true, flag: false } : null;
+}
+// The next public holiday from a day on (today counts), or null while the list loads.
+export function nextHoliday(now, lang, live) {
+  const d0 = new Date(now); d0.setHours(0, 0, 0, 0);
+  if (ownDays(live)) {
+    for (let i = 0; i < 400; i++) { const d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + i), sd = swedishDay(d); if (sd && sd.red) return { date: isoDay(d), name: sd[lang === 'sv' ? 'sv' : 'en'] }; }
+    return null;
+  }
+  const days = live.hol && live.hol[live.cc] && live.hol[live.cc].days; if (!days) return null;
+  const k = Object.keys(days).sort().find(x => x >= isoDay(d0)); if (!k) return null;
+  return { date: k, name: lang === 'sv' ? printable(days[k].local, days[k].en) : printable(days[k].en, days[k].local) };
+}
+
 function todayLines(o, z, d, W, lang, w, live) {
   const day = DAYS[lang][d.getDay()], mon = MONTHS[lang][d.getMonth()], date = `${d.getDate()} ${mon} ${d.getFullYear()}`;
-  const sd = o.days !== false ? swedishDay(d) : null;
+  const sd = o.days !== false ? holidayOn(d, lang, live) : null;
   // Chips before the name: red for a red day, blue and yellow for a flag day.
-  const special = sd ? [...(sd.red ? ['r', ' '] : sd.flag ? ['b', 'y', ' '] : []), ...textToCells(sd[lang === 'sv' ? 'sv' : 'en'])].slice(0, W) : null;
+  const special = sd ? [...(sd.red ? ['r', ' '] : sd.flag ? ['b', 'y', ' '] : []), ...textToCells(sd.name)].slice(0, W) : null;
   let sun = null;
   if (o.sun !== false && live && live.loc && live.loc.lat != null) {
     const s = sunTimes(d, live.loc.lat, live.loc.lon);
@@ -434,6 +461,145 @@ function slLines(o, z, now, W, w, live) {
   return { lines: lines.slice(0, z.h), align: 'left' };
 }
 
+// ---------- World clock (0.8) ----------
+// The time in a few cities, from the browser's own time zone data, so it needs no
+// source. A city a day ahead of or behind this screen gets +1 or -1 after its time.
+export function worldLines(o, z, now, W, w) {
+  const list = (Array.isArray(o.places) ? o.places : []).filter(p => p && p.tz).slice(0, 6);
+  if (!list.length) return { lines: [w.worldClock, w.pickCity], align: 'center' };
+  const here = new Date(now).getDay();
+  const rows = list.map(p => {
+    let t; try { t = wallIn(p.tz, now); } catch { return lr(boardText(p.city).toUpperCase(), '--:--', W); }
+    const hh = o.fmt === '12' ? `${(t.h % 12) || 12}:${two(t.m)} ${t.h < 12 ? 'AM' : 'PM'}` : `${two(t.h)}:${two(t.m)}`;
+    const diff = ((t.dow - here + 7) % 7), mark = diff === 1 ? ' +1' : diff === 6 ? ' -1' : '';
+    return lr(boardText(p.city).toUpperCase(), hh + (W >= 16 ? mark : ''), W);
+  });
+  return { lines: rows.slice(0, z.h), align: 'left' };
+}
+
+// ---------- Currency and crypto ----------
+// Any of Frankfurter's currencies as the base (0.8, it was SEK or EUR), and coins from
+// CoinGecko priced in the same base, each with a green or red chip for its day.
+export const COINS = { BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', XRP: 'ripple', ADA: 'cardano', DOGE: 'dogecoin' };
+const group = (v, dec, lang) => {   // 612345.5 to 612 345 (a space every three digits, as SV and SI write it)
+  const [i, f] = Math.abs(v).toFixed(dec).split('.'), g = i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return (v < 0 ? '-' : '') + g + (f ? (lang === 'sv' ? ',' : '.') + f : '');
+};
+function currencyLines(o, z, W, lang, w, live) {
+  const base = o.base || 'SEK', data = live && live.fx && live.fx[base];
+  const pairs = (Array.isArray(o.pairs) && o.pairs.length ? o.pairs : ['EUR', 'USD', 'GBP']).filter(p => p !== base);
+  const coins = pairs.filter(p => COINS[p]), cdata = coins.length ? live && live.coin && live.coin[base] : null;
+  const ready = (!pairs.some(p => !COINS[p]) || (data && data.rates)) && (!coins.length || (cdata && cdata.prices));
+  if (!ready) return { lines: [base, '', ((data && data.fails) || (cdata && cdata.fails) || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+  const dec = o.dec == null ? 2 : +o.dec;
+  const val = p => {
+    if (COINS[p]) { const c = cdata.prices[COINS[p]]; return c && c.price != null ? group(c.price, c.price >= 1000 ? 0 : dec, lang) : '-'; }
+    const r = data.rates[p]; return r ? group(1 / r, dec, lang) : '-';
+  };
+  const chip = p => { const c = COINS[p] && cdata.prices[COINS[p]]; return c && c.change != null ? (c.change >= 0 ? 'g' : 'r') : null; };
+  if (z.h === 1) return { lines: [pairs.map(p => `${p} ${val(p)}`).join('  ')], align: 'center' };
+  return { lines: pairs.map(p => {
+    const line = lr(W >= 14 ? `1 ${p}` : p, W >= 14 ? `${val(p)} ${base}` : val(p), W - (chip(p) ? 2 : 0)), c = chip(p);
+    return c ? [c, ' ', ...textToCells(line)] : line;
+  }), align: 'left' };
+}
+
+// ---------- Departures (0.8) ----------
+// A stop is { src, id, name }: src 'tr' is Transitous (anywhere), 'sl' is SL's own API
+// (Stockholm, with its deviations). Both become { line, dest, m, clock, platform,
+// cancelled, late, mode } here, so the layouts below never know which one answered.
+// near: the stop nearest the board's Place, found by live.js (templates use it, so they
+// can be built for a place before anyone has picked a stop).
+export const nearKey = loc => loc && loc.lat != null ? `${Math.round(loc.lat * 1000) / 1000},${Math.round(loc.lon * 1000) / 1000}` : null;
+export function depStops(o, live) {
+  const own = (Array.isArray(o.stops) ? o.stops : []).filter(s => s && s.id != null && (s.src === 'tr' || s.src === 'sl'));
+  if (own.length || !o.near) return own;
+  const k = nearKey(live && live.loc), n = k && live.near && live.near[k];
+  // near: 'rail' (the station board) takes the nearest stop that has trains, if there is one
+  const st = n && n.stops && ((o.near === 'rail' && n.stops.find(x => (x.modes || []).includes('TRAIN'))) || n.stops[0]);
+  return st ? [{ src: 'tr', id: st.id, name: st.name }] : [];
+}
+const CLOCKS = new Map();
+function clockIn(tz, t, fmt) {
+  const k = (tz || '') + fmt;
+  if (!CLOCKS.has(k)) { try { CLOCKS.set(k, new Intl.DateTimeFormat('en-GB', { timeZone: tz || undefined, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })); } catch { CLOCKS.set(k, new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })); } }
+  const hhmm = CLOCKS.get(k).format(new Date(t)), hh = +hhmm.slice(0, 2);
+  return fmt === '12' ? `${(hh % 12) || 12}:${hhmm.slice(3)} ${hh < 12 ? 'AM' : 'PM'}` : hhmm;
+}
+export function stopDeps(stop, now, fmt, live) {
+  if (stop.src === 'sl') {
+    const d = live && live.sl && live.sl[stop.id];
+    if (!d || !d.deps) return { fails: d ? d.fails || 0 : 0 };
+    return { deps: d.deps.map(x => {
+      const ts = x.expected || x.scheduled, m = depMinutes(ts, now), hhmm = ts ? ts.slice(11, 16) : '', hh = +hhmm.slice(0, 2);
+      const late = x.expected && x.scheduled ? depMinutes(x.expected, now) - depMinutes(x.scheduled, now) : 0;
+      return { line: x.line, dest: String(x.dest || '').toUpperCase(), m, clock: fmt === '12' ? `${(hh % 12) || 12}:${hhmm.slice(3)} ${hh < 12 ? 'AM' : 'PM'}` : hhmm,
+        sched: x.scheduled ? x.scheduled.slice(11, 16) : hhmm, platform: '', cancelled: false, late, mode: x.mode };
+    }) };
+  }
+  const d = live && live.tr && live.tr[stop.id];
+  if (!d || !d.deps) return { fails: d ? d.fails || 0 : 0, off: !!(d && d.off) };
+  return { alert: d.alert, deps: d.deps.map(x => {
+    const t = Date.parse(x.time), s0 = Date.parse(x.sched || x.time);
+    return { line: x.line, dest: x.dest, m: Math.floor((t - now) / 60000), clock: clockIn(d.tz, t, fmt), sched: clockIn(d.tz, s0, '24'), platform: x.platform || '',
+      cancelled: !!x.cancelled, late: Math.round((t - s0) / 60000), mode: x.mode };
+  }) };
+}
+function depLines(o, z, now, W, w, live) {
+  const stops = depStops(o, live);
+  if (!stops.length) return { lines: [w.deps, o.near && live && live.loc ? w.loading : w.pickStop], align: 'center' };
+  const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null, walk = +o.walk || 0;
+  const only = String(o.lines || '').toUpperCase().split(/[\s,]+/).filter(Boolean);
+  const showClock = o.eta === 'clock' || (o.eta === 'cycle' && Math.floor(now / 6000) % 2 === 1);
+  const eta = x => x.cancelled ? w.canc : showClock ? x.clock : x.m <= 0 ? w.now : `${x.m} ${w.min}`;
+  const per = stops.map(st => {
+    const r = stopDeps(st, now, o.fmt, live);
+    const deps = (r.deps || []).filter(x => x.m != null && x.m >= walk && (!modes || modes.includes(x.mode)) && (!only.length || only.includes(String(x.line).toUpperCase()))
+      && !(x.cancelled && o.cancelled === 'hide')).sort((a, b) => a.m - b.m);
+    const wait = r.off ? w.off : (r.fails || 0) >= 4 ? w.nodata : w.loading;
+    return { name: boardText(st.name).toUpperCase(), got: !!r.deps, wait, deps, alert: r.alert };
+  });
+  // Several stops merged into one list, soonest first, when asked (the commute board).
+  if (o.merge && per.length > 1) {
+    const all = per.flatMap(p => p.deps).sort((a, b) => a.m - b.m);
+    if (!per.some(p => p.got)) return { lines: [w.deps, '', per[0].wait], align: 'center' };
+    per.splice(0, per.length, { name: String(o.title || w.deps).toUpperCase(), got: true, deps: all, alert: per.map(p => p.alert).find(Boolean) });
+  }
+  // The line column is as wide as the longest line shown (2 for SL's 17, 6 for IC 1300),
+  // so a train number never runs into its destination.
+  const lw = Math.min(6, Math.max(2, ...per.flatMap(p => p.deps.slice(0, z.h).map(x => String(x.line).length))));
+  // The station board: time, line, destination, platform and a remark, when the zone is wide.
+  const board = o.view === 'board' && W >= 28;
+  // Station boards lead with the time and the destination; the line goes in from 40 flaps.
+  const wide = W >= 38, rw = wide ? 9 : 7;
+  const boardRight = x => `${(x.platform || '').padStart(4)} ${(x.cancelled ? (wide ? w.cancelled : w.canc) : x.late >= 2 ? x.clock : w.onTime).padEnd(rw).slice(0, rw)}`;
+  // Only the destination is ever cut, so the time, the line and the platform always show.
+  const cut = (prefix, dest, right) => prefix + dest.slice(0, Math.max(0, W - right.length - 1 - prefix.length));
+  const rowOf = x => {
+    const ln = String(x.line).padEnd(lw).slice(0, lw) + ' ';
+    if (!board) { const r = eta(x); return lr(cut(ln, x.dest, r), r, W); }
+    return lr(cut(`${x.sched} ${wide ? ln : ''}`, x.dest, boardRight(x)), boardRight(x), W);
+  };
+  const alertLine = p => o.alert && p.alert ? [p.alert] : [];
+  if (per.length === 1) {
+    const p = per[0];
+    if (!p.got) return { lines: [p.name, '', p.wait], align: 'center' };
+    if (!p.deps.length) return { lines: [p.name, '', w.nodeps], align: 'center' };
+    const head = board ? lr(p.name, w.plat.padStart(4) + ' '.repeat(rw + 1), W) : p.name, al = alertLine(p);
+    const n = Math.min(z.h - 1 - al.length, o.rows || Infinity);
+    return { lines: [head].concat(p.deps.slice(0, Math.max(1, n)).map(rowOf), al.map(a => a.slice(0, W))), align: 'left' };
+  }
+  const each = Math.max(1, Math.min(o.rows || Infinity, Math.floor((z.h - per.length) / per.length)));
+  const lines = [];
+  for (const p of per) {
+    lines.push(p.name);
+    if (!p.got) lines.push(p.wait);
+    else if (!p.deps.length) lines.push(w.nodeps);
+    else p.deps.slice(0, each).forEach(x => lines.push(rowOf(x)));
+  }
+  return { lines: lines.slice(0, z.h), align: 'left' };
+}
+
 // Spot prices from elprisetjustnu.se, stored as 24 hourly averages (öre per kWh before
 // VAT) per Stockholm date. The market prices in 15 minute slots, so each hour is the
 // mean of its four. Hours are coloured by where they sit in the day's range.
@@ -471,7 +637,7 @@ const two = n => String(n).padStart(2, '0');
 
 // Three weather views. Chip icons are placed as cells (arrays) so they are not
 // uppercased into letters on the way to the grid.
-function weatherLines(o, city, d, z, W, lang, w) {
+function weatherLines(o, city, d, z, W, lang, w, now) {
   const view = o.view || 'now', deg = t => `${Math.round(o.units === 'f' ? t * 9 / 5 + 32 : t)}°`;
   const word = weatherWord(d.code, lang), today = (d.daily || [])[0] || {};
   const dayName = date => DAYS[lang][new Date(date + 'T12:00:00').getDay()].slice(0, 3);
@@ -502,10 +668,24 @@ function weatherLines(o, city, d, z, W, lang, w) {
     const a = `${w.feels} ${deg(d.feels)}`, b = `${w.wind} ${Math.round(d.wind)}`;
     lines.push(o.wind === false ? a : [`${a}  ${b} M/S`, `${a} ${b} M/S`, `${a}  ${b}`, `${a} ${b}`].find(s => s.length <= W) || a);
   }
-  if (z.h >= 5) lines.push(today.pp != null ? `${w.rain} ${today.pp}%  ${(today.sum || 0).toFixed(1)} MM` : w.dry);
+  const soon = o.soon === false ? null : rainSoon(d, now, w);
+  if (z.h >= 5) lines.push(soon || (today.pp != null ? `${w.rain} ${today.pp}%  ${(today.sum || 0).toFixed(1)} MM` : w.dry));
+  else if (soon && z.h === 4 && lines.length === 3) lines[2] = soon;
   if (z.h >= 6 && today.sunrise) lines.push(`${w.sun} ${today.sunrise.slice(11, 16)} / ${today.sunset.slice(11, 16)}`);
   if (z.h < 4) lines.length = Math.min(lines.length, z.h);
   return { lines, align: W >= 18 ? 'left' : 'center' };
+}
+
+// Rain starting or stopping within two hours, from the 15-minute forecast (0.8), or null
+// when nothing changes. A slot counts as rain from 0.2 mm, so a stray drop is not rain.
+function rainSoon(d, now, w = WORDS.en) {
+  if (!d.soon || !d.soon.length) return null;
+  const ago = d.at ? Math.max(0, (now - d.at) / 60e3) : 0, slots = d.soon.map(x => ({ min: x.min - ago, wet: x.mm >= 0.2 })).filter(x => x.min > -15 && x.min <= 120);
+  if (!slots.length) return null;
+  const nowWet = slots[0].wet, change = slots.find(x => x.wet !== nowWet && x.min > 0);
+  const mins = change ? Math.max(5, Math.round(change.min / 5) * 5) : null;
+  if (nowWet) return mins ? w.dryIn(mins) : w.rainNow;
+  return mins ? w.rainIn(mins) : null;
 }
 
 export function compose(page, R, C, now, lang, live) {

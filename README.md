@@ -1,6 +1,6 @@
 # Split-Flap Board
 
-A free split-flap message board for any screen. Put a spare monitor on the wall, open the page, and it flips through your messages, the time, Stockholm public transport departures, the weather, electricity prices and countdowns, one letter at a time like a railway board.
+A free split-flap message board for any screen. Put a spare monitor on the wall, open the page, and it flips through your messages, the time, departures from the stop nearest you, the weather, exchange rates and countdowns, one letter at a time like a railway board. It starts from one city search, and works almost anywhere in Europe and North America.
 
 **Live:** [maclaine.se/split-flap](https://maclaine.se/split-flap)
 
@@ -13,7 +13,8 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 - **A physical-looking board.** Each flap steps forward through the drum to its letter, folds over its hinge with light and shadow, and settles with a small rebound. Drawn on one canvas, so a Raspberry Pi keeps up.
 - **Words:** messages with colour chips, rotating messages, big text drawn in colour chips, quotes, and menus with prices lined up on the right.
 - **Time:** clock and date, a big clock, a word clock ("QUARTER PAST TEN", "KVART ÖVER TIO"), a letter clock where the words for the time light up in a grid of faint letters, countdowns that can also count up from a date, and Today, with the week number, Swedish red days and flag days, and sunrise and sunset.
-- **Live:** SL departures for up to six stops in Storstockholms Lokaltrafik, or the home station you starred on the [Stockholm SL map](https://maclaine.se/en/stockholm-sl-map). Weather from Open-Meteo, electricity spot prices by price area, exchange rates, On this day from Wikipedia, and Follow a URL, which prints lines from any JSON or text address that lets other sites read it.
+- **Live:** departures from up to four stops, from Transitous almost anywhere and from SL in Stockholm, as a list or a station board. Weather with rain in the next hour, public holidays for your country, a world clock, exchange rates in any of about thirty currencies and a few crypto coins, Swedish electricity spot prices, On this day from Wikipedia, and Follow a URL, which prints lines from any JSON or text address that lets other sites read it.
+- **The place:** one city search in Display, and new boards start from it: the weather, the nearest stop, the holidays, the currency and 12 or 24 hours. Names in Greek and Cyrillic are spelled in Latin letters, and accents the flaps lack are dropped, so no letter prints blank.
 - **Pictures:** paint with the colour chips, turn a photo into chips in the browser, or run an animated pattern (Nordic flags, rain, waves, confetti).
 - **Templates:** ten to start from, including Home dashboard, Station board, Café, Office lobby, Letter clock and Everything at once, which fills the screen and rolls every flap the long way round.
 - **Storyboards and boards:** a storyboard is what a screen plays, its boards in order and when each one shows. A board is one screen at a time, one zone or two (header and body, split, ticker row, or stacked halves for portrait screens), each showing a different channel. `GLOSSARY.md` has the words.
@@ -79,11 +80,14 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `src/schedule.js` | Board timers, times by day or date, Show alone, quiet hours, and the week and Today's playlist from the same rule. |
 | `src/week.js` | The week view and Today's playlist. |
 | `src/route.js` | The editor's addresses after `#`, and Back as one level up. |
-| `src/live.js` | The fetchers (SL, Open-Meteo, electricity, exchange rates, Wikipedia, Follow a URL), station and city search. |
+| `src/live.js` | The fetchers (departures, SL, Open-Meteo, holidays, electricity, exchange rates and coins, Wikipedia, Follow a URL), stop and city search. |
+| `src/place.js` | The place: country, time zone, 12 or 24 hours, and the currency for each country. |
+| `src/transit.js` | Transitous replies to departures and stops, shared by the app and the Worker. |
+| `src/sources.js` | Every outside source, its terms and its credit. |
 | `src/store.js` | localStorage, board links, and the sanitizer every imported board goes through (the Worker uses it too). |
 | `src/account.js` | Signing in, and keeping this browser's boards in step with the account. |
 | `src/sync.js` | The sync rules as pure functions: merging, deletes, and whose boards are whose. |
-| `worker/` | The accounts API: a Cloudflare Worker with D1 and Better Auth. |
+| `worker/` | The accounts API (a Cloudflare Worker with D1 and Better Auth), and the cached data routes for departures. |
 | `privacy.html` | The privacy notice (the Swedish one is in `site/`). |
 | `src/app.js` | Control bar, share, kiosk mode, and the board state the editor works on. |
 | `src/editor.js` | The editor drawer: the sections, storyboards, a board with its content, Explore, Account, and the more menu. |
@@ -95,12 +99,14 @@ The visual design (tile anatomy, fold shading, themes, timing) came from a desig
 
 ## Data and credits
 
-- Departures: [SL](https://sl.se) through [Trafiklab](https://www.trafiklab.se).
+- Departures: [Transitous](https://transitous.org), with timetables from [these sources](https://transitous.org/sources/) and map data from [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, and in Stockholm [SL](https://sl.se) through [Trafiklab](https://www.trafiklab.se).
+- Public holidays: [Nager.Date](https://date.nager.at).
+- Crypto prices: [CoinGecko](https://www.coingecko.com).
 - Weather and city search: [Open-Meteo](https://open-meteo.com), CC BY 4.0 (Creative Commons Attribution 4.0).
 - Electricity prices: [elprisetjustnu.se](https://www.elprisetjustnu.se).
 - Exchange rates: European Central Bank reference rates through [Frankfurter](https://frankfurter.dev).
 - On this day: [Wikipedia](https://www.wikipedia.org), CC BY-SA 4.0 (Creative Commons Attribution-ShareAlike 4.0).
-- Every source is keyless and read straight from your browser. Follow a URL only reads the addresses you give it.
+- Every source is keyless. Transitous is asked through the Worker, which caches each stop for a minute so every screen watching it shares one request; the rest are read straight from your browser. `src/sources.js` lists each source with its terms, the date they were read and who to contact. Follow a URL only reads the addresses you give it.
 - QR codes: [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase, MIT, vendored in `src/vendor/`.
 - Fonts: DM Mono, Schibsted Grotesk, Plus Jakarta Sans and Cormorant Garamond, all SIL Open Font License 1.1.
 

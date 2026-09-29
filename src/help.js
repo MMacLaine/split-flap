@@ -35,8 +35,16 @@ export const HELP = {
       ['Quiet hours in ', { k: 'settings', t: 'Display' }, ' dim or blank the screen overnight.']
     ] },
     { h: 'The display', p: [
-      ['Grid size, theme, transition, sound and location are in ', { k: 'settings', t: 'Display' }, ', next to Week and Boards on a storyboard. Language is under ', { k: 'account', t: 'Account' }, '.'],
-      'The location is used for sunrise and sunset, and for weather zones that have no city of their own.'
+      ['Grid size, theme, transition, sound and the place are in ', { k: 'settings', t: 'Display' }, ', next to Week and Boards on a storyboard. Language is under ', { k: 'account', t: 'Account' }, '.'],
+      'The place is where the screen is. New boards start from it: the weather, the nearest stop, the holidays, the currency, and 12 or 24 hours. Sunrise and sunset use it too.'
+    ] },
+    { h: 'Live data, almost anywhere', p: [
+      ['Set the place in ', { k: 'settings', t: 'Display' }, ' by searching for your city, and new boards start from it. Departures picks the nearest stop, the weather and the holidays follow the country, prices are in its currency, and clocks use 12 or 24 hours the way it does. Each tile says what it chose, and you can pick something else.'],
+      'Departures covers most of Europe and North America, with platforms, delays and cancelled trains where the operator publishes them. In Stockholm it uses SL directly. Station board, under More options, shows it the way a railway station does.',
+      'Names in other alphabets are spelled in Latin letters, so Москва prints as MOSKVA. Where there is no Latin spelling, the English name is used.'
+    ] },
+    { h: 'Where the data comes from', sources: true, p: [
+      'Every live tile names its source under its options. These are all of them:'
     ] },
     { h: 'Putting it on a wall', p: [
       'Press Share for a link or a QR code that carries the whole storyboard. Tick the kiosk option for a wall screen, so the controls stay hidden.',
@@ -75,7 +83,15 @@ export const HELP = {
     ] },
     { h: 'Skärmen', p: [
       ['Storlek på rutnätet, tema, övergång, ljud och plats finns under ', { k: 'settings', t: 'Visning' }, ', bredvid Vecka och Tavlor på en storyboard. Språk finns under ', { k: 'account', t: 'Konto' }, '.'],
-      'Platsen används för soluppgång och solnedgång, och för väderzoner som inte har en egen stad.'
+      'Platsen är där skärmen finns. Nya tavlor utgår från den: vädret, närmaste hållplats, helgdagar, valutan och 12 eller 24 timmar. Soluppgång och solnedgång använder den också.'
+    ] },
+    { h: 'Livedata, nästan var som helst', p: [
+      ['Välj platsen under ', { k: 'settings', t: 'Visning' }, ' genom att söka efter din stad, så utgår nya tavlor från den. Avgångar väljer närmaste hållplats, vädret och helgdagarna följer landet, priser står i dess valuta och klockor visar 12 eller 24 timmar som där. Varje ruta säger vad den valde, och du kan välja något annat.'],
+      'Avgångar täcker större delen av Europa och Nordamerika, med spår, förseningar och inställda tåg där operatören publicerar dem. I Stockholm används SL direkt. Stationstavla, under Fler alternativ, visar det som på en järnvägsstation.',
+      'Namn i andra alfabet stavas med latinska bokstäver, så Москва skrivs MOSKVA. Där det inte finns någon latinsk stavning används det engelska namnet.'
+    ] },
+    { h: 'Var datan kommer ifrån', sources: true, p: [
+      'Varje liveruta anger sin källa under sina alternativ. Här är alla:'
     ] },
     { h: 'Sätta upp den på en vägg', p: [
       'Tryck Dela för en länk eller en QR-kod som bär hela storyboarden. Bocka i kioskläget för en väggskärm, så att kontrollerna hålls dolda.',

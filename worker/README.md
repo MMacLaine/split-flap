@@ -10,6 +10,34 @@ The account (Google's account id, the full name, email), the sessions (no IP add
 user agent), and the boards as the app sent them. No Google tokens, no profile picture,
 no telemetry. Deleting the account deletes all of it.
 
+## Live data (0.8)
+
+`/split-flap/api/data/*` answers without a sign-in. It asks Transitous for departures,
+stop searches and the stops near a place, with a User-Agent that names the app, and keeps
+each answer in Cloudflare's edge cache (departures for a minute, stops for a day), so
+every screen watching one stop shares one request. Only the routes and parameter shapes
+in `src/data.js` are fetched. It is not a relay for other addresses. Uncached requests
+are limited to 120 a minute per address by the `DATA` rate limit, and nothing about them
+is stored or logged beyond the failure line every route has.
+
+Every request to `/data/*` runs the Worker, cache hit or not, and the free plan allows
+100 000 Worker requests a day for the whole account, the accounts API included. A screen
+polls a stop every two minutes (every minute on a station board), about 720 requests a
+day, so roughly 130 screen-stops use the allowance up. Watch the daily count in the
+Worker's metrics; Workers Paid ($5 a month) is the answer past about half of it.
+
+When the daily limit is reached, Cloudflare either fails open (requests go on to Pages,
+which answers 404) or fails closed (an error page), set under the zone's Workers Routes.
+Either way the app on maclaine.se never goes to Transitous directly: it decides once per
+page load whether a Worker is there, and on maclaine.se there always is one, so
+departures show their last data with its age until the Worker answers again. Fail open
+also hides the account controls for that time, as for any other outage of the API.
+
+To switch a source off without a release, set the `SOURCES_OFF` variable (for example
+`transit`) in the dashboard under the Worker's Settings, Variables. Its routes answer
+503 and the app hides its tile and the templates that use it within half an hour, or at
+the next load. Empty it to switch the source back on.
+
 ## Run it locally
 
 ```sh

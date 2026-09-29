@@ -3,7 +3,7 @@
 // copied from the implementation's own expressions.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DRUM, cleanChar, drumPath, textToCells, fromVestaboardText, VB_CODES } from '../src/charset.js';
+import { DRUM, cleanChar, drumPath, textToCells, fromVestaboardText, VB_CODES, boardText, printable, composerInput } from '../src/charset.js';
 import { inWindow, inQuiet, nextPage } from '../src/schedule.js';
 import { wrap, toCells, depMinutes, channelLines, compose, zonesFor } from '../src/content.js';
 import { sanitizeBoard, encodeBoard, decodeBoard } from '../src/store.js';
@@ -12,6 +12,35 @@ import { sanitizeBoard, encodeBoard, decodeBoard } from '../src/store.js';
 test('drum holds 74 flaps', () => {
   // 1 blank + 26 letters + 7 Nordic (Å Ä Ö Æ Ø Ü É) + 10 digits + 20 punctuation + the heart + 9 chips
   assert.equal(DRUM.length, 74);
+});
+
+// Names from the places 0.8's sources cover, and what the flaps print for each (worked
+// out by hand: accents the drum lacks are dropped, Nordic letters and Ü É keep their
+// flaps, Greek and Cyrillic are spelled letter by letter in Latin).
+test('place names across Europe print without gaps', () => {
+  const T = [
+    ['München', 'MÜNCHEN'], ['Zürich HB', 'ZÜRICH HB'], ['Ålesund', 'ÅLESUND'], ['Kraków', 'KRAKOW'], ['Reykjavík', 'REYKJAVIK'],
+    ['Łódź Fabryczna', 'LODZ FABRYCZNA'], ['Plzeň', 'PLZEN'], ['İstanbul', 'ISTANBUL'], ['Brașov', 'BRASOV'], ['Timișoara', 'TIMISOARA'],
+    ['Győr', 'GYÖR'], ['Debrecen', 'DEBRECEN'], ['Šiauliai', 'SIAULIAI'], ['Rīga', 'RIGA'], ['Tallinn Balti jaam', 'TALLINN BALTI JAAM'],
+    ['Þingvellir', 'THINGVELLIR'], ['Øresund', 'ØRESUND'], ['Æbeltoft', 'ÆBELTOFT'], ['Straße', 'STRASSE'], ['Château-d\'Œx', "CHATEAU-D'OEX"],
+    ['São Paulo', 'SAO PAULO'], ['Kōbe', 'KOBE'], ['Split', 'SPLIT'], ['Đakovo', 'DAKOVO'], ['Paris Gare de l’Est', "PARIS GARE DE L'EST"],
+    ['Αθήνα', 'ATHINA'], ['Θεσσαλονίκη', 'THESSALONIKI'], ['Μουσείο', 'MOUSEIO'],
+    ['Москва', 'MOSKVA'], ['Санкт-Петербург', 'SANKT-PETERBURG'], ['Шереметьево', 'SHEREMETEVO'], ['Београд', 'BEOGRAD'], ['Ярославль', 'YAROSLAVL']
+  ];
+  for (const [name, want] of T) assert.equal(boardText(name), want, name);
+});
+
+test('a name the drum cannot carry falls through to the next, never to blanks', () => {
+  assert.equal(printable('東京', 'Tokyo'), 'TOKYO');
+  assert.equal(printable('القاهرة', 'Cairo'), 'CAIRO');
+  assert.equal(printable('Москва', 'Moscow'), 'MOSKVA');   // Cyrillic prints, so it is kept
+  assert.equal(printable('東京', '', null), '');
+  assert.equal(printable('9022 東京駅', '1234'), '1234');     // mostly unprintable
+});
+
+test('the composer expands stand-ins of several letters', () => {
+  assert.deepEqual(composerInput('ßЖ'), { cells: ['S', 'S', 'Z', 'H'], invalid: [] });
+  assert.deepEqual(composerInput('東'), { cells: [' '], invalid: ['東'] });
 });
 
 test('Z to B goes forward the long way round', () => {

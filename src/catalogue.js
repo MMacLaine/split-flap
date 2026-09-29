@@ -9,6 +9,7 @@
 // "More options"; `show` hides it unless the zone's options pass the test.
 
 import { PATTERNS } from './pixels.js';
+import { FX_CURRENCIES } from './place.js';
 
 const t2 = (en, sv) => ({ en, sv });
 const SEG = (k, label, opts, extra) => Object.assign({ k, t: 'seg', label, opts }, extra);
@@ -33,7 +34,8 @@ export const TILES = [
     def: { title: 'TODAY', items: ['KAFFE 30', 'KANELBULLE 35', 'SMÖRGÅS 65', 'SOPPA 95'], suffix: ' KR' },
     fields: [{ k: 'title', t: 'text', label: t2('Heading', 'Rubrik'), upper: 1, len: 60 },
       { k: 'items', t: 'textlist', label: t2('Items', 'Rätter'), add: t2('Add an item', 'Lägg till rätt'), max: 16, len: 60, hint: t2('End a line with the price and it lines up on the right.', 'Avsluta raden med priset så hamnar det till höger.') },
-      SEG('suffix', t2('After the price', 'Efter priset'), [['', t2('Nothing', 'Inget')], [' KR', t2('KR', 'KR')], [':-', t2(':-', ':-')]], { dflt: '', adv: 1 })] },
+      SEG('suffix', t2('After the price', 'Efter priset'), [['', t2('Nothing', 'Inget')], [' KR', t2('KR', 'KR')], [':-', t2(':-', ':-')], [' EUR', t2('EUR', 'EUR')], [' GBP', t2('GBP', 'GBP')], [' CHF', t2('CHF', 'CHF')]], { dflt: '', adv: 1 }),
+      SEG('prefix', t2('Before the price', 'Före priset'), [['', t2('Nothing', 'Inget')], ['$', t2('$', '$')]], { dflt: '', adv: 1, hint: t2('The flaps have $ but no € or £, so those print as EUR and GBP after the price.', 'Flapparna har $ men inte € eller £, så de skrivs som EUR och GBP efter priset.') })] },
 
   { id: 'clock', g: 'time', ch: 'clock', name: t2('Clock and date', 'Klocka och datum'), desc: t2('The time with the day and date', 'Tiden med dag och datum'), def: { fmt: '24' },
     fields: [FMT, TOG('date', t2('Show the date', 'Visa datum'), { dflt: true, adv: 1 }), TOG('week', t2('Show the week number', 'Visa veckonummer'), { dflt: false, adv: 1 })] },
@@ -44,15 +46,37 @@ export const TILES = [
   { id: 'letterclock', g: 'time', ch: 'letterclock', name: t2('Letter clock', 'Bokstavsklocka'), desc: t2('The time lit up in a grid of letters', 'Tiden tänd i ett rutnät av bokstäver'), def: {},
     fields: [TOG('dots', t2('Minute dots in the corners', 'Minutprickar i hörnen'), { dflt: true }),
       { t: 'note', label: t2('Follows your language in Account. The grid needs a zone of 9 × 13, and 11 × 15 for the minute dots. The Letter clock template sets that up.', 'Följer ditt språk under Konto. Rutnätet behöver en zon på 9 × 13, och 11 × 15 för minutprickarna. Mallen Bokstavsklocka ställer in det.') }] },
+  { id: 'worldtime', g: 'time', ch: 'worldtime', name: t2('World clock', 'Världsklocka'), desc: t2('The time in a few cities', 'Tiden i några städer'),
+    def: { places: [{ city: 'London', tz: 'Europe/London' }, { city: 'New York', tz: 'America/New_York' }, { city: 'Tokyo', tz: 'Asia/Tokyo' }], fmt: '24' },
+    fields: [{ k: 'places', t: 'tzcities', label: t2('Cities', 'Städer'), max: 6 }, FMT,
+      { t: 'note', label: t2('A city already on tomorrow shows +1 after its time, and one still on yesterday shows -1.', 'En stad som redan är på morgondagen visar +1 efter tiden, och en som fortfarande är på gårdagen visar -1.') }] },
   { id: 'countdown', g: 'time', ch: 'countdown', name: t2('Countdown', 'Nedräkning'), desc: t2('Days to a date, or days since one', 'Dagar till ett datum, eller sedan ett'), def: { label: 'MIDSOMMAR', date: '2027-06-25' },
-    fields: [{ k: 'label', t: 'text', label: t2('Label', 'Etikett'), upper: 1, len: 60 }, { k: 'date', t: 'date', label: t2('Date', 'Datum') },
-      SEG('dir', t2('Count', 'Räkna'), [['down', t2('Down to the date', 'Ner till datumet')], ['up', t2('Up from the date', 'Upp från datumet')]], { dflt: 'down' }),
+    fields: [SEG('to', t2('Count to', 'Räkna till'), [['date', t2('A date', 'Ett datum')], ['holiday', t2('The next public holiday', 'Nästa helgdag')]], { dflt: 'date', hint: t2('The holiday follows the country of the place in Display.', 'Helgdagen följer landet för platsen under Visning.') }),
+      { k: 'label', t: 'text', label: t2('Label', 'Etikett'), upper: 1, len: 60, show: o => o.to !== 'holiday' }, { k: 'date', t: 'date', label: t2('Date', 'Datum'), show: o => o.to !== 'holiday' },
+      SEG('dir', t2('Count', 'Räkna'), [['down', t2('Down to the date', 'Ner till datumet')], ['up', t2('Up from the date', 'Upp från datumet')]], { dflt: 'down', show: o => o.to !== 'holiday' }),
       SEG('unit', t2('Count in', 'Räkna i'), [['auto', t2('Days, then hours', 'Dagar, sedan timmar')], ['days', t2('Days only', 'Bara dagar')]], { dflt: 'auto', adv: 1, show: o => o.dir !== 'up' })] },
-  { id: 'today', g: 'time', ch: 'today', name: t2('Today', 'Idag'), desc: t2('Date, week, red days and sun times', 'Datum, vecka, röda dagar och soltider'), def: {},
-    fields: [TOG('days', t2('Red days and flag days', 'Röda dagar och flaggdagar'), { dflt: true }), TOG('week', t2('Week number', 'Veckonummer'), { dflt: true }),
+  { id: 'today', g: 'time', ch: 'today', name: t2('Today', 'Idag'), desc: t2('Date, week, public holidays and sun times', 'Datum, vecka, helgdagar och soltider'), def: {},
+    fields: [TOG('days', t2('Public holidays (and flag days in Sweden)', 'Helgdagar (och flaggdagar i Sverige)'), { dflt: true, hint: t2('For the country of the place in Display.', 'För landet för platsen under Visning.') }), TOG('week', t2('Week number', 'Veckonummer'), { dflt: true }),
       TOG('sun', t2('Sunrise and sunset', 'Soluppgång och solnedgång'), { dflt: true }), { t: 'locnote' }, TOG('doy', t2('Day of the year', 'Dag på året'), { dflt: false, adv: 1 })] },
 
-  { id: 'sl', g: 'live', ch: 'sl', name: t2('SL departures', 'SL-avgångar'), desc: t2('Next departures from Storstockholms Lokaltrafik (SL)', 'Nästa avgångar från Storstockholms Lokaltrafik (SL)'), def: { eta: 'min' },
+  // Departures (0.8): one tile for every stop, anywhere Transitous has timetables, with SL's
+  // own API for Stockholm stops. The SL tile below stays for boards made before 0.8 (and
+  // for the SL map's home station), but the picker no longer offers it.
+  { id: 'departures', g: 'live', ch: 'departures', src: 'transit', name: t2('Departures', 'Avgångar'), desc: t2('The next trains, buses and trams from a stop, almost anywhere', 'Nästa tåg, bussar och spårvagnar från en hållplats, nästan var som helst'),
+    def: { eta: 'min', near: true },
+    fields: [{ k: 'stops', t: 'stops', label: t2('Stops', 'Hållplatser'), max: 4 },
+      { k: 'modes', t: 'chips', label: t2('Show', 'Visa'), all: 1, opts: [['TRAIN', t2('Train', 'Tåg')], ['METRO', t2('Metro', 'Tunnelbana')], ['TRAM', t2('Tram', 'Spårvagn')], ['BUS', t2('Bus', 'Buss')], ['SHIP', t2('Boat', 'Båt')]] },
+      SEG('eta', t2('Departure time as', 'Avgångstid som'), [['min', t2('Minutes to go', 'Minuter kvar')], ['clock', t2('Clock time', 'Klockslag')], ['cycle', t2('Both, taking turns', 'Båda, växelvis')]], { dflt: 'min' }),
+      SEG('view', t2('Look', 'Utseende'), [['list', t2('A list', 'En lista')], ['board', t2('Station board', 'Stationstavla')]], { dflt: 'list', adv: 1, hint: t2('The station board adds the platform and on time, late or cancelled. It needs a zone about 30 flaps wide.', 'Stationstavlan visar också spår och i tid, sen eller inställd. Den behöver en zon som är ungefär 30 flappar bred.') }),
+      Object.assign({}, FMT, { adv: 1, show: o => o.eta === 'clock' || o.eta === 'cycle' || o.view === 'board' }),
+      { k: 'lines', t: 'text', label: t2('Only these lines', 'Bara de här linjerna'), upper: 1, len: 60, adv: 1, hint: t2('Line numbers with commas between, for example 17, 18. Empty shows every line.', 'Linjenummer med komma emellan, till exempel 17, 18. Tomt visar alla linjer.') },
+      { k: 'rows', t: 'stepper', label: t2('Departures per stop', 'Avgångar per hållplats'), min: 1, max: 12, step: 1, unit: '', dflt: 0, auto: t2('As many as fit', 'Så många som ryms'), adv: 1 },
+      { k: 'walk', t: 'stepper', label: t2('Hide departures sooner than', 'Dölj avgångar tidigare än'), min: 0, max: 30, step: 1, unit: 'min', dflt: 0, adv: 1, hint: t2('Set it to your walk to the stop.', 'Ställ in hur lång tid det tar att gå till hållplatsen.') },
+      SEG('cancelled', t2('Cancelled departures', 'Inställda avgångar'), [['show', t2('Show as cancelled', 'Visa som inställda')], ['hide', t2('Hide', 'Dölj')]], { dflt: 'show', adv: 1 }),
+      TOG('merge', t2('Several stops in one list, soonest first', 'Flera hållplatser i en lista, närmast först'), { dflt: false, adv: 1, show: o => Array.isArray(o.stops) && o.stops.length > 1 }),
+      TOG('alert', t2('A line for disruptions, when there are any', 'En rad för störningar, när det finns några'), { dflt: false, adv: 1 }),
+      { t: 'credit', src: ['transit', 'sl'] }] },
+  { id: 'sl', g: 'live', ch: 'sl', hide: 1, name: t2('SL departures', 'SL-avgångar'), desc: t2('Next departures from Storstockholms Lokaltrafik (SL)', 'Nästa avgångar från Storstockholms Lokaltrafik (SL)'), def: { eta: 'min' },
     fields: [{ t: 'slhome' }, { k: 'stations', t: 'stations', label: t2('Stations', 'Stationer'), max: 6, show: o => !o.home },
       { k: 'modes', t: 'chips', label: t2('Show', 'Visa'), all: 1, opts: [['METRO', t2('Metro', 'Tunnelbana')], ['TRAIN', t2('Commuter train', 'Pendeltåg')], ['TRAM', t2('Tram', 'Spårvagn')], ['BUS', t2('Bus', 'Buss')], ['SHIP', t2('Boat', 'Båt')]] },
       SEG('eta', t2('Departure time as', 'Avgångstid som'), [['min', t2('Minutes to go', 'Minuter kvar')], ['clock', t2('Clock time', 'Klockslag')], ['cycle', t2('Both, taking turns', 'Båda, växelvis')]], { dflt: 'min' }),
@@ -60,19 +84,23 @@ export const TILES = [
       { k: 'rows', t: 'stepper', label: t2('Departures per station', 'Avgångar per station'), min: 1, max: 12, step: 1, unit: '', dflt: 0, auto: t2('As many as fit', 'Så många som ryms'), adv: 1 },
       { k: 'walk', t: 'stepper', label: t2('Hide departures sooner than', 'Dölj avgångar tidigare än'), min: 0, max: 30, step: 1, unit: 'min', dflt: 0, adv: 1, hint: t2('Set it to your walk to the stop.', 'Ställ in hur lång tid det tar att gå till hållplatsen.') }] },
   { id: 'weather', g: 'live', ch: 'weather', name: t2('Weather', 'Väder'), desc: t2('Now, the next hours or the next days', 'Nu, kommande timmar eller dagar'), def: { view: 'now' },
-    fields: [{ k: 'city', t: 'search', pool: 'cities', label: t2('City', 'Stad'), hint: t2('Empty follows the location in Display.', 'Tomt följer platsen under Visning.') },
+    fields: [{ k: 'city', t: 'search', pool: 'cities', label: t2('City', 'Stad'), hint: t2('Empty follows the place in Display.', 'Tomt följer platsen under Visning.') },
       SEG('view', t2('Show', 'Visa'), [['now', t2('Now', 'Nu')], ['hours', t2('Next hours', 'Kommande timmar')], ['days', t2('Three days', 'Tre dagar')]], { dflt: 'now' }),
-      SEG('units', t2('Units', 'Enhet'), [['c', t2('°C', '°C')], ['f', t2('°F', '°F')]], { dflt: 'c', adv: 1 }), TOG('wind', t2('Show wind', 'Visa vind'), { dflt: true, adv: 1 })] },
+      SEG('units', t2('Units', 'Enhet'), [['c', t2('°C', '°C')], ['f', t2('°F', '°F')]], { dflt: 'c', adv: 1 }), TOG('wind', t2('Show wind', 'Visa vind'), { dflt: true, adv: 1 }),
+      TOG('soon', t2('Say when rain starts or stops in the next two hours', 'Säg när regn börjar eller slutar inom två timmar'), { dflt: true, adv: 1, show: o => (o.view || 'now') === 'now' }),
+      { t: 'credit', src: ['weather'] }] },
   { id: 'electricity', g: 'live', ch: 'electricity', name: t2('Electricity price', 'Elpris'), desc: t2('Spot price by the hour for your price area', 'Spotpris per timme för ditt elområde'), def: { area: 'SE3', view: 'now' },
     fields: [SEG('area', t2('Price area', 'Elområde'), [['SE1', t2('SE1 Luleå', 'SE1 Luleå')], ['SE2', t2('SE2 Sundsvall', 'SE2 Sundsvall')], ['SE3', t2('SE3 Stockholm', 'SE3 Stockholm')], ['SE4', t2('SE4 Malmö', 'SE4 Malmö')]], { dflt: 'SE3' }),
       SEG('view', t2('Show', 'Visa'), [['now', t2('Price now', 'Pris nu')], ['chart', t2('Today as bars', 'Idag som staplar')]], { dflt: 'now' }),
       TOG('vat', t2('Include VAT (value added tax, moms)', 'Inklusive moms'), { dflt: true, adv: 1 }),
       { t: 'note', label: t2('Prices from elprisetjustnu.se, before network fees and your supplier’s markup.', 'Priser från elprisetjustnu.se, utan nätavgift och elhandlarens påslag.') }] },
-  { id: 'currency', g: 'live', ch: 'currency', name: t2('Currency', 'Valuta'), desc: t2('Exchange rates against the krona', 'Växelkurser mot kronan'), def: { base: 'SEK', pairs: ['EUR', 'USD', 'GBP'], dec: 2 },
-    fields: [SEG('base', t2('Priced in', 'Räknat i'), [['SEK', t2('SEK', 'SEK')], ['EUR', t2('EUR', 'EUR')]], { dflt: 'SEK' }),
-      { k: 'pairs', t: 'chips', label: t2('Currencies', 'Valutor'), max: 6, opts: ['EUR', 'USD', 'GBP', 'NOK', 'DKK', 'CHF', 'JPY', 'PLN', 'SEK'].map(c => [c, t2(c, c)]) },
+  { id: 'currency', g: 'live', ch: 'currency', name: t2('Currency', 'Valuta'), desc: t2('Exchange rates and crypto prices in your currency', 'Växelkurser och kryptopriser i din valuta'), def: { base: 'SEK', pairs: ['EUR', 'USD', 'GBP'], dec: 2 },
+    fields: [{ k: 'base', t: 'select', label: t2('Priced in', 'Räknat i'), opts: FX_CURRENCIES.map(c => [c, t2(c, c)]), dflt: 'SEK', hint: t2('New tiles start in the currency of the place in Display.', 'Nya rutor börjar i valutan för platsen under Visning.') },
+      { k: 'pairs', t: 'chips', label: t2('Currencies and coins', 'Valutor och mynt'), max: 6, opts: ['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CNY', 'BTC', 'ETH'].map(c => [c, t2(c, c)]) },
+      { k: 'pairs', t: 'chips', label: t2('More currencies and coins', 'Fler valutor och mynt'), max: 6, adv: 1, opts: FX_CURRENCIES.filter(c => !['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CNY'].includes(c)).concat(['SOL', 'XRP', 'ADA', 'DOGE']).map(c => [c, t2(c, c)]) },
       { k: 'dec', t: 'stepper', label: t2('Decimals', 'Decimaler'), min: 0, max: 4, step: 1, unit: '', dflt: 2, adv: 1 },
-      { t: 'note', label: t2('European Central Bank reference rates, updated once a working day.', 'Europeiska centralbankens referenskurser, uppdateras en gång per bankdag.') }] },
+      { t: 'note', label: t2('Up to six. Currencies are the European Central Bank reference rates, updated once a working day. Coins update every five minutes, with a green or red flap for the last day.', 'Högst sex. Valutor är Europeiska centralbankens referenskurser, uppdaterade en gång per bankdag. Mynt uppdateras var femte minut, med en grön eller röd flapp för senaste dygnet.') },
+      { t: 'credit', src: ['fx', 'crypto'] }] },
   { id: 'onthisday', g: 'live', ch: 'onthisday', name: t2('On this day', 'Den här dagen'), desc: t2('Something that happened on this date', 'Något som hände på dagens datum'), def: {},
     fields: [{ t: 'note', label: t2('From Wikipedia, in your language. A new event every minute.', 'Från Wikipedia, på ditt språk. En ny händelse varje minut.') }] },
   { id: 'url', g: 'live', ch: 'url', name: t2('Follow a URL', 'Följ en URL'), desc: t2('Lines from any web address (URL) you choose', 'Rader från valfri webbadress (URL)'),
@@ -108,6 +136,7 @@ export function tileFor(zone) {
 // Stand-in live data for picker previews, so a tile shows what the channel looks like
 // before anything has been fetched. Real data, when the board already has it, wins.
 const dep = (line, dest, min, mode) => ({ line, dest, min, mode });
+const SAMPLE_TR = [['S1', 'AIRPORT', 2, 'TRAIN', '4'], ['12', 'OLD TOWN', 4, 'TRAM', ''], ['S3', 'HARBOUR', 7, 'TRAIN', '2'], ['40', 'UNIVERSITY', 9, 'BUS', ''], ['S1', 'AIRPORT', 17, 'TRAIN', '4'], ['12', 'OLD TOWN', 19, 'TRAM', '']];
 const SAMPLE_SL = [dep('17', 'Åkeshov', 2, 'METRO'), dep('4', 'Radiohuset', 3, 'BUS'), dep('18', 'Alvik', 6, 'METRO'), dep('40', 'Uppsala C', 7, 'TRAIN'), dep('19', 'Hässelby strand', 9, 'METRO'), dep('2', 'Sofia', 11, 'BUS')];
 export function previewLive(real, now) {
   const r = real || {}, iso = m => {
@@ -126,7 +155,9 @@ export function previewLive(real, now) {
     el: Object.assign({ SE1: { days: { [key]: prices.map(p => p * 0.6) } }, SE2: { days: { [key]: prices.map(p => p * 0.62) } }, SE3: { days: { [key]: prices } }, SE4: { days: { [key]: prices.map(p => p * 1.3) } } }, r.el),
     fx: has('fx', 'SEK') || has('fx', 'EUR') ? r.fx : { SEK: { rates: { EUR: 0.0886, USD: 0.101, GBP: 0.0762, NOK: 1.06, DKK: 0.661, CHF: 0.0832, JPY: 15.1, PLN: 0.379 } }, EUR: { rates: { SEK: 11.29, USD: 1.14, GBP: 0.86, NOK: 11.9, DKK: 7.46, CHF: 0.94, JPY: 170, PLN: 4.28 } } },
     otd: has('otd', 'en') || has('otd', 'sv') ? r.otd : { en: { md, items: [{ year: 1825, text: 'The Stockton and Darlington Railway opens' }] }, sv: { md, items: [{ year: 1825, text: 'Järnvägen mellan Stockton och Darlington öppnar' }] } },
-    url: Object.assign({ sample: { items: SAMPLE_FEED } }, r.url)
+    url: Object.assign({ sample: { items: SAMPLE_FEED } }, r.url),
+    tr: Object.assign({ sample: { tz: null, deps: SAMPLE_TR.map(([line, dest, min, mode, platform]) => ({ line, dest, mode, platform, cancelled: false, time: new Date(now + min * 60e3).toISOString(), sched: new Date(now + min * 60e3).toISOString() })) } }, r.tr),
+    near: r.near || {}, off: r.off || []
   };
 }
 // What Follow a URL shows before an address is set: a made-up departures feed.

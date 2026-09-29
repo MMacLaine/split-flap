@@ -6,12 +6,50 @@
 //   Exchange rates: Frankfurter (European Central Bank reference rates)
 //   On this day: Wikipedia's featured feed (CC BY-SA 4.0)
 //   Follow a URL: whatever address the board names, if it allows browsers to read it
+//   Departures anywhere (0.8): Transitous, through our Worker's cache (see src/transit.js)
 // Only what the current board uses is fetched. Failed fetches keep the last good data,
 // and the board says how old it is.
 
-import { wxKey, wxPlace, slStations, AREAS, stockholmWall } from './content.js';
+import { wxKey, wxPlace, slStations, AREAS, stockholmWall, depStops, nearKey } from './content.js';
+import { stoptimes, stops as stopList, upstream, roundLL } from './transit.js';
+import { COINS } from './content.js';
+import { placeOf } from './place.js';
 
-const SL_EVERY = 60e3, WX_EVERY = 15 * 60e3, EL_EVERY = 30 * 60e3, FX_EVERY = 3 * 36e5, OTD_EVERY = 6 * 36e5;
+// Our Worker's data routes (0.8). Whether this page has a Worker behind it is decided
+// once per page load (Fable's 0.8.0 review), so a Worker that fails mid-run never sends
+// every screen straight to the source, uncached:
+//   on maclaine.se there always is one, so answers come from the Worker or not at all;
+//   elsewhere (local development, a copy hosted without the Worker) /data/status is
+//   asked once, and a 404 means asking the source directly for the rest of the load.
+// A network failure is not remembered, so a screen that starts before its network is up
+// asks again. Either way the answer is shaped the same way.
+const DATA = '/split-flap/api/data';
+let mode = null;
+export function dataMode(host = typeof location !== 'undefined' ? location.hostname : '') {
+  if (/(^|\.)maclaine\.se$/.test(host)) return Promise.resolve({ worker: true });
+  if (!mode) mode = (async () => {
+    try {
+      const r = await fetch(DATA + '/status', { credentials: 'omit' });
+      return { worker: r.status !== 404 };
+    } catch { mode = null; return { worker: false }; }
+  })();
+  return mode;
+}
+export const resetDataMode = () => { mode = null; };
+// Only our own "switched off" answer counts as off. Cloudflare also answers 503 when a
+// Worker runs out of CPU time, and that is a failure like any other, retried as usual.
+export async function viaWorker(path, direct, shape, host) {
+  if (!(await dataMode(host)).worker) return shape(await get(direct));
+  const r = await fetch(DATA + path, { credentials: 'omit', cache: 'no-store' });
+  if (r.ok && /json/.test(r.headers.get('content-type') || '')) return await r.json();
+  if (r.status === 503) {
+    let j = null; try { j = await r.json(); } catch { j = null; }
+    if (j && j.error === 'source_off') { const e = new Error('off'); e.off = true; throw e; }
+  }
+  throw new Error(String(r.status));
+}
+
+const COIN_EVERY = 5 * 60e3, HOL_EVERY = 24 * 36e5, TR_EVERY = 2 * 60e3, TR_BOARD_EVERY = 60e3, NEAR_EVERY = 24 * 36e5, STATUS_EVERY = 30 * 60e3, SL_EVERY = 60e3, WX_EVERY = 15 * 60e3, EL_EVERY = 30 * 60e3, FX_EVERY = 3 * 36e5, OTD_EVERY = 6 * 36e5;
 // SL's open API throttles intermittently (HTTP 429 in streaks of a few requests, even
 // a minute apart), so failures retry fast and then back off. Weather rarely fails.
 const RETRY = [4e3, 8e3, 15e3, 30e3, 60e3];
@@ -27,8 +65,9 @@ async function get(url) {
 export class Live {
   constructor(onUpdate) {
     this.onUpdate = onUpdate;
-    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, loc: null };
-    this.wanted = { sl: new Map(), wx: new Map(), el: new Set(), fx: new Set(), otd: new Set(), url: new Map() };
+    this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, off: [], loc: null, cc: null };
+    this.wanted = { sl: new Map(), wx: new Map(), el: new Set(), fx: new Set(), otd: new Set(), url: new Map(), tr: new Map(), near: new Map(), coin: new Map(), hol: new Set() };
+    this.status = { tried: 0 };
     this.timer = setInterval(() => this.poll(), 2000);
     addEventListener('online', () => this.poll(true));
   }
@@ -36,18 +75,33 @@ export class Live {
   // board changes; unneeded sources simply stop being refreshed.
   // lang picks the Wikipedia edition for On this day.
   want(board, lang) {
-    const sl = new Map(), wx = new Map(), el = new Set(), fx = new Set(), otd = new Set(), url = new Map();
+    this.board = board; this.lang = lang;
+    const sl = new Map(), wx = new Map(), el = new Set(), fx = new Set(), otd = new Set(), url = new Map(), tr = new Map(), near = new Map(), coin = new Map(), hol = new Set();
     this.data.loc = board && board.loc && board.loc.lat != null ? board.loc : null;
+    this.data.cc = placeOf(board, { langs: typeof navigator !== 'undefined' ? navigator.languages : [] }).cc;
+    const ownHolidays = !this.data.cc || this.data.cc === 'SE';   // Sweden's red and flag days are worked out here
     for (const p of (board && board.pages) || []) for (const z of p.zones) {
       const o = z.o || {};
       if (z.ch === 'sl') for (const st of slStations(o, this.data)) for (const id of st.sites) sl.set(id, true);
       if (z.ch === 'weather') { const pl = wxPlace(o, this.data); if (pl) wx.set(wxKey(pl), { lat: pl.lat, lon: pl.lon }); }
       if (z.ch === 'electricity') el.add(AREAS[o.area] ? o.area : 'SE3');
-      if (z.ch === 'currency') fx.add(o.base === 'EUR' ? 'EUR' : 'SEK');
+      if (z.ch === 'currency') {
+        const base = o.base || 'SEK', pairs = Array.isArray(o.pairs) ? o.pairs : [];
+        if (!pairs.length || pairs.some(p => !COINS[p])) fx.add(base);
+        for (const p of pairs) if (COINS[p]) coin.set(base, (coin.get(base) || new Set()).add(COINS[p]));
+      }
+      if (!ownHolidays && ((z.ch === 'today' && o.days !== false) || (z.ch === 'countdown' && o.to === 'holiday'))) hol.add(this.data.cc);
       if (z.ch === 'onthisday') otd.add(lang === 'sv' ? 'sv' : 'en');
       if (z.ch === 'url' && /^https:\/\//.test(o.url || '')) url.set(o.url, { every: Math.max(1, +o.every || 5) * 60e3, path: o.path || '' });
+      if (z.ch === 'departures') {
+        if (o.near && this.data.loc) near.set(nearKey(this.data.loc), { lat: this.data.loc.lat, lon: this.data.loc.lon });
+        // every two minutes, counted down locally in between; a station board, where
+        // platforms change, every minute (Fable's 0.8.0 review: the Worker's daily allowance)
+        const every = o.view === 'board' ? TR_BOARD_EVERY : TR_EVERY;
+        for (const st of depStops(o, this.data)) { if (st.src === 'sl') sl.set(st.id, true); else tr.set(st.id, Math.min(every, tr.get(st.id) || Infinity)); }
+      }
     }
-    this.wanted = { sl, wx, el, fx, otd, url };
+    this.wanted = { sl, wx, el, fx, otd, url, tr, near, coin, hol };
     this.poll();
   }
   poll(force) {
@@ -58,11 +112,38 @@ export class Live {
     const slDue = [...this.wanted.sl.keys()].filter(site => due(this.data.sl[site], SL_EVERY))
       .sort((a, b) => ((this.data.sl[a] || {}).tried || 0) - ((this.data.sl[b] || {}).tried || 0));
     if (slDue.length) this.fetchSl(slDue[0]);
+    // Transitous the same way: one stop per poll, most overdue first.
+    const trDue = [...this.wanted.tr.keys()].filter(id => due(this.data.tr[id], this.wanted.tr.get(id))).sort((a, b) => ((this.data.tr[a] || {}).tried || 0) - ((this.data.tr[b] || {}).tried || 0));
+    if (trDue.length) this.fetchTr(trDue[0]);
+    for (const [k, p] of this.wanted.near) if (due(this.data.near[k], NEAR_EVERY)) this.fetchNear(k, p);
+    if (now - this.status.tried > STATUS_EVERY) this.fetchStatus();   // so the picker knows before a tile asks
     for (const [k, p] of this.wanted.wx) if (due(this.data.wx[k], WX_EVERY)) this.fetchWx(k, p);
     for (const a of this.wanted.el) { const e = this.data.el[a]; if (due(e, EL_EVERY) || this.elStale(e, now)) this.fetchEl(a); }
     for (const b of this.wanted.fx) if (due(this.data.fx[b], FX_EVERY)) this.fetchFx(b);
+    for (const [b, ids] of this.wanted.coin) { const e = this.data.coin[b]; if (due(e, COIN_EVERY) || (e && !e.busy && e.ids !== [...ids].sort().join())) this.fetchCoin(b, [...ids].sort()); }
+    for (const cc of this.wanted.hol) { const e = this.data.hol[cc]; if (due(e, HOL_EVERY) || (e && !e.busy && e.year !== new Date(now).getFullYear())) this.fetchHol(cc); }
     for (const l of this.wanted.otd) { const e = this.data.otd[l]; if (due(e, OTD_EVERY) || (e && !e.busy && e.md !== monthDay(now))) this.fetchOtd(l); }
     for (const [u, p] of this.wanted.url) if (due(this.data.url[u], p.every)) this.fetchUrl(u, p);
+  }
+  fetchTr(id) {
+    return this.run('tr', id, async e => {
+      try { Object.assign(e, await viaWorker(`/transit/departures?stop=${encodeURIComponent(id)}&n=12`, upstream.departures(id, 12), stoptimes)); e.off = false; }
+      catch (err) { if (err.off) { e.off = true; delete e.deps; } throw err; }
+    });
+  }
+  fetchNear(k, p) {
+    return this.run('near', k, async e => {
+      const lat = roundLL(p.lat), lon = roundLL(p.lon);
+      e.stops = (await viaWorker(`/transit/near?lat=${lat}&lon=${lon}`, upstream.near(lat, lon), j => ({ stops: stopList(j) }))).stops || [];
+      this.want(this.board, this.lang);   // the stop is known now, so its departures can be asked for
+    });
+  }
+  // Which sources the Worker has switched off. No Worker (local), nothing is off.
+  async fetchStatus() {
+    this.status.tried = Date.now();
+    if (!(await dataMode()).worker) return;
+    try { const r = await fetch(DATA + '/status', { credentials: 'omit' }); if (r.ok && /json/.test(r.headers.get('content-type') || '')) { const j = await r.json(); this.data.off = Array.isArray(j.off) ? j.off.slice(0, 20) : []; this.onUpdate(); } }
+    catch { /* keep what we had */ }
   }
   // The prices for today are missing (just past midnight), or tomorrow's are not in yet
   // after they are published around 13:00: fetch again sooner than the usual half hour.
@@ -97,6 +178,29 @@ export class Live {
     return this.run('fx', base, async e => {
       const j = await get(`https://api.frankfurter.dev/v1/latest?base=${base}`);
       e.rates = j.rates || {}; e.date = j.date;
+    });
+  }
+  // CoinGecko's public price call, one per base currency for every coin on the board.
+  fetchCoin(base, ids) {
+    return this.run('coin', base, async e => {
+      const j = await get(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=${base.toLowerCase()}&include_24hr_change=true`);
+      const k = base.toLowerCase(), prices = {};
+      for (const id of ids) if (j[id] && Number.isFinite(j[id][k])) prices[id] = { price: j[id][k], change: Number.isFinite(j[id][k + '_24h_change']) ? j[id][k + '_24h_change'] : null };
+      e.prices = prices; e.ids = ids.join();
+    });
+  }
+  // A country's public holidays this year and next, from Nager.Date: only the ones the
+  // whole country has off (a Bavarian holiday is not Hamburg's).
+  fetchHol(cc) {
+    return this.run('hol', cc, async e => {
+      const y = new Date().getFullYear(), days = {};
+      for (const yr of [y, y + 1]) {
+        try {
+          const j = await get(`https://date.nager.at/api/v3/PublicHolidays/${yr}/${cc}`);
+          for (const x of Array.isArray(j) ? j : []) if (x && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && x.global !== false) days[x.date] = { en: String(x.name || '').slice(0, 60), local: String(x.localName || '').slice(0, 60) };
+        } catch (err) { if (yr === y) throw err; }
+      }
+      e.days = days; e.year = y;
     });
   }
   fetchOtd(lang) {
@@ -143,12 +247,16 @@ export class Live {
         + '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day'
         + '&hourly=temperature_2m,precipitation_probability,weather_code'
         + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,sunrise,sunset'
+        + '&minutely_15=precipitation&forecast_minutely_15=12'
         + '&timezone=auto&forecast_days=4&wind_speed_unit=ms');
       const c = j.current, h = j.hourly, dl = j.daily;
       e.t = c.temperature_2m; e.feels = c.apparent_temperature; e.code = c.weather_code; e.wind = c.wind_speed_10m;
       // hourly from the current hour onwards (times are local to the place, as is current.time)
       const from = Math.max(0, h.time.findIndex(t => t >= c.time.slice(0, 13)));
       e.hourly = h.time.slice(from, from + 24).map((time, i) => ({ time, t: h.temperature_2m[from + i], pp: h.precipitation_probability[from + i], code: h.weather_code[from + i] }));
+      // rain in the next hours, 15 minutes at a time, as minutes from now (0.8)
+      const q = j.minutely_15, t0 = Date.parse(c.time + ':00Z');
+      e.soon = q && Array.isArray(q.time) ? q.time.map((time, i) => ({ min: Math.round((Date.parse(time + ':00Z') - t0) / 60e3), mm: q.precipitation[i] })).filter(x => x.min >= -14 && Number.isFinite(x.mm)) : null;
       e.daily = dl.time.map((date, i) => ({ date, code: dl.weather_code[i], max: dl.temperature_2m_max[i], min: dl.temperature_2m_min[i], sum: dl.precipitation_sum[i], pp: dl.precipitation_probability_max[i], sunrise: dl.sunrise[i], sunset: dl.sunset[i] }));
       e.at = Date.now(); e.err = false; e.fails = 0;
     } catch { e.err = true; e.fails = (e.fails || 0) + 1; }
@@ -166,6 +274,7 @@ export class Live {
       if (z.ch === 'weather') { const pl = wxPlace(o, this.data); if (pl) check(this.data.wx[wxKey(pl)], 45 * 60e3); }
       if (z.ch === 'electricity') check(this.data.el[AREAS[o.area] ? o.area : 'SE3'], 75 * 60e3);
       if (z.ch === 'url' && o.url) check(this.data.url[o.url], Math.max(1, +o.every || 5) * 60e3 * 3);
+      if (z.ch === 'departures') for (const st of depStops(o, this.data)) check((st.src === 'sl' ? this.data.sl : this.data.tr)[st.id], st.src === 'sl' ? 3 * 60e3 : 5 * 60e3);
     }
     return worst;
   }
@@ -227,11 +336,28 @@ export async function searchStations(q) {
   return hits.slice(0, 8);
 }
 
+// Stops by name for the Departures tile: SL's own list first when the screen is in
+// Sweden (or has no place yet), then Transitous, which covers most of Europe and North
+// America. Each result says which source it is from.
+export async function searchStops(q, lang, place) {
+  const text = q.trim(); if (text.length < 2) return [];
+  const sl = !place || !place.cc || place.cc === 'SE' ? (await searchStations(text)).slice(0, 4).map(r => ({ src: 'sl', id: r.id, name: r.name, note: 'SL', modes: r.modes })) : [];
+  let tr = [];
+  try { tr = (await viaWorker(`/transit/search?text=${encodeURIComponent(text)}&lang=${lang === 'sv' ? 'sv' : 'en'}`, upstream.search(text, lang === 'sv' ? 'sv' : 'en'), j => ({ stops: stopList(j) }))).stops || []; }
+  catch { tr = []; }
+  return sl.concat(tr.map(r => ({ src: 'tr', id: r.id, name: r.name, note: r.note || '', modes: r.modes }))).slice(0, 10);
+}
+export async function nearStops(lat, lon) {
+  try { return (await viaWorker(`/transit/near?lat=${roundLL(lat)}&lon=${roundLL(lon)}`, upstream.near(roundLL(lat), roundLL(lon)), j => ({ stops: stopList(j) }))).stops || []; }
+  catch { return []; }
+}
+
 export async function searchCities(q, lang) {
   if (q.trim().length < 2) return [];
   try {
     const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q.trim())}&count=6&language=${lang === 'sv' ? 'sv' : 'en'}&format=json`);
     const j = await r.json();
-    return (j.results || []).map(x => ({ name: x.name, note: [x.admin1, x.country].filter(Boolean).join(', '), lat: +x.latitude.toFixed(3), lon: +x.longitude.toFixed(3) }));
+    return (j.results || []).map(x => ({ name: x.name, note: [x.admin1, x.country].filter(Boolean).join(', '), lat: +x.latitude.toFixed(3), lon: +x.longitude.toFixed(3),
+      ...(x.country_code ? { cc: String(x.country_code).toUpperCase() } : {}), ...(x.timezone ? { tz: x.timezone } : {}) }));
   } catch { return []; }
 }

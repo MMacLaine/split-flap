@@ -69,7 +69,7 @@ export class App {
     this.readHome();
 
     const { boards, active } = loadBoards();
-    this.boards = boards.length ? boards : [fromTemplate('demo', this.S.lang, this.live.data.home)];
+    this.boards = boards.length ? boards : [fromTemplate('demo', this.S.lang, this.live.data.home, this.firstPlace())];
     this.active = active;
     // A first visit opens Explore on the first Edit. Picking a template then replaces the
     // demo made for this visit. The demo is saved at once (0.7.0 review), so its ids, and
@@ -87,7 +87,7 @@ export class App {
     const tpl = params.get('template');
     if (tpl && TEMPLATES.some(x => x.id === tpl)) {
       let i = this.boards.findIndex(x => x.from === tpl);
-      if (i < 0) { this.boards.push(fromTemplate(tpl, this.S.lang, this.live.data.home)); i = this.boards.length - 1; }
+      if (i < 0) { this.boards.push(fromTemplate(tpl, this.S.lang, this.live.data.home, this.newPlace())); i = this.boards.length - 1; }
       this.active = i; this.S.cue = false; this.firstRun = false;
       params.delete('template');
       history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash);
@@ -620,10 +620,25 @@ export class App {
     Object.assign(this.S, { switcher: false, editing: true, cz: -1 });
     this.dismissCue(false); this.editor.go({ sec: 'sb', lv: 'list' }); this.refresh();
   }
+  // The Place a new storyboard starts from (0.8): the one this screen was given on the
+  // first visit, else the open storyboard's, else none (a Stockholm board, as before).
+  firstPlace() { try { const p = JSON.parse(getFlag('sf_place') || 'null'); return p && p.lat != null ? p : null; } catch { return null; } }
+  newPlace() { const l = this.cur() && this.cur().loc; return this.firstPlace() || (l && l.lat != null ? l : null); }
+  // "Where is this screen?" on the first visit: kept for new storyboards, and the untouched
+  // demo is built again for the place, under the same id so its addresses still work.
+  setFirstPlace(r) {
+    const p = Object.assign({ city: r.name, lat: r.lat, lon: r.lon }, r.cc ? { cc: r.cc } : {}, r.tz ? { tz: r.tz } : {});
+    setFlag('sf_place', JSON.stringify(p));
+    if (this.startPending() && this.freshId === this.cur().id) {
+      const nb = fromTemplate('demo', this.S.lang, this.live.data.home, p); nb.id = this.freshId;
+      this.boards[this.active] = nb; this.save();
+    }
+    this.editor.tplCache = null; this.refresh();
+  }
   startPending() { return this.firstRun && getFlag('sf_started') !== '1'; }
   markStarted() { setFlag('sf_started', '1'); this.firstRun = false; }
   useTemplate(id) {
-    const nb = fromTemplate(id, this.S.lang, this.live.data.home);
+    const nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace());
     if (this.startPending() && this.freshId === this.cur().id) this.boards[this.active] = nb;
     else { this.boards.push(nb); this.active = this.boards.length - 1; }
     this.freshId = null; this.markStarted(); this.save();

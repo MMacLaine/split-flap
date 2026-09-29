@@ -13,11 +13,13 @@
 //   GET    /blueprints, PUT and DELETE /blueprints/:id   My boards (0.7.1), the same rules
 //   GET    /export       the account, its boards and its blueprints as one JSON file
 //   DELETE /account      the account, its sessions, its boards and its blueprints
+//   GET    /data/*       live data for tiles, cached, no sign-in (0.8, see data.js)
 
 import { betterAuth } from 'better-auth';
 import { makeSignature } from 'better-auth/crypto';
 import { authOptions } from './auth.js';
 import { sanitizeBoard, sanitizeBlueprint } from '../../src/store.js';
+import { data } from './data.js';
 
 const API = '/split-flap/api';
 const MAX_BOARDS = 50, MAX_BYTES = 262144;
@@ -47,7 +49,7 @@ export default {
     }
     let res;
     try {
-      res = await route(req, env, url);
+      res = url.pathname.startsWith(API + '/data/') ? await data(req, env, ctx, url) : await route(req, env, url);
     } catch (err) {
       console.error(err && err.stack || err);
       res = fail(500, 'server_error');
@@ -72,7 +74,7 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-const KNOWN = ['/', '/me', '/boards', '/blueprints', '/export', '/account', '/dev/session'];
+const KNOWN = ['/', '/me', '/boards', '/blueprints', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near'];
 // Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
 export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
   : /^\/(boards|blueprints)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
