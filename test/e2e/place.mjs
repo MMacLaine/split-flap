@@ -28,7 +28,7 @@ try {
   await go(URL0); await ev(`localStorage.setItem('sf_cue_seen','1'); localStorage.setItem('sf_lang','en')`); await go(URL0);
   const fresh = await ev('splitFlap.cur().id');
   await ev('splitFlap.toggleEdit()'); await sleep(600);
-  check('a first visit opens Explore and asks where the screen is', (await lv()) === 'ex:list' && (await ev(`String(!!document.querySelector('[data-k=first-place]'))`)) === 'true', await lv());
+  check('a first visit opens Showing and asks where the screen is', (await lv()) === 'sb:showing' && (await ev(`String(!!document.querySelector('[data-k=first-place]'))`)) === 'true', await lv());
   await ev(`(() => { const el = document.querySelector('[data-k=first-place]'); el.value = 'London'; el.dispatchEvent(new Event('input')); })()`);
   await waitFor(`document.querySelector('.sf-sugs .sf-sug[role=option]')`);
   await ev(`document.querySelector('.sf-sugs .sf-sug[role=option]').click()`); await sleep(800);
@@ -37,6 +37,7 @@ try {
   check('the demo is built again for London, under the same id', (await ev('splitFlap.cur().id')) === fresh && (await ev('splitFlap.cur().loc && splitFlap.cur().loc.cc')) === 'GB');
   const dz = JSON.parse(await ev(`JSON.stringify(splitFlap.cur().pages.find(p => p.zones.some(z => z.ch === 'departures')) || null)`));
   check('its departures follow the nearest stop, not Odenplan', !!dz && dz.zones[1].o.near === true && !JSON.stringify(dz).includes('Odenplan'));
+  await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'list' })`); await sleep(400);
   check('Explore shows its sections, each with a way to see all', (await ev(`document.querySelectorAll('.sf-level [data-k^="sec-"]').length`)) >= 5, await ev(`[...document.querySelectorAll('.sf-level .sf-group .sf-eyebrow')].map(e => e.textContent).join(', ')`));
   const nearOk = await waitFor(`Object.values(splitFlap.live.data.near).some(n => n.stops && n.stops.length)`);
   check('the nearest stops come back through the Worker', nearOk, await ev(`JSON.stringify(Object.values(splitFlap.live.data.near).map(n => (n.stops || []).slice(0, 2).map(s => s.name)))`));

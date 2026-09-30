@@ -2,6 +2,15 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.10.0 (2026-09-30): Showing
+
+People who had not built Split-Flap found the editor hard to follow. This release changes how it behaves: what you open is on the screen at once, and nothing changes what the screen runs until you press Show on this screen.
+
+- **Showing comes first.** Edit opens on this screen, with what it shows now, the board on now, and the ways to change it.
+- **What you open, you see.** A playlist, a board in My boards or a template goes on the screen as soon as you open it, with a gold bar under it that says it is a preview. Leave without pressing and the screen goes back, and says so.
+- **Storyboards are called playlists.** It is the word most people used for them anyway.
+- Picking a city on a first visit ends the first visit, a template lands on its board instead of the week view, and a board's zones come first on its page.
+
 ## v0.9.4 (2026-09-30): Fixes
 
 I had a few people try Split-Flap and a full test round done. These are the fixes that do not need the new navigation, which comes next.

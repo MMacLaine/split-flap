@@ -560,3 +560,34 @@ html[data-chrome="light"] .sf-block.alone { background: oklch(0.8 0.1 var(--hue)
 .sf-sources li { padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--pale); font-size: 13px; line-height: 1.45; }
 .sf-sources a { color: var(--text); font-weight: 600; }
 .sf-templates.muted .sf-template { opacity: .55; }
+
+/* ---------- looking (0.10): the gold bar under the board, and a gold frame ---------- */
+.sf { --look-bar: 68px; --look-gold: #C8974A; }
+.sf.editing-mobile { --look-bar: 56px; }
+.sf.looking .sf-canvas-wrap { bottom: var(--look-bar); }
+.sf.looking .sf-stage::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 3px var(--look-gold); pointer-events: none; z-index: 5; }
+.sf-look-bar { position: absolute; left: 0; right: 0; bottom: 0; height: var(--look-bar); z-index: 4; display: flex; align-items: center; gap: 14px; padding: 0 12px 0 20px; box-sizing: border-box; background: var(--look-gold); color: #14120E; animation: sf-bar-in 0.18s ease-out; }
+.sf-look-kicker { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+.sf-look-name { flex: 1; min-width: 0; font-size: 22px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-look-go { flex: none; height: 44px; padding: 0 16px; border-radius: 8px; border: 0; background: #14120E; color: #F4EEDF; font-size: 14px; font-weight: 600; cursor: pointer; }
+.sf-look-go:focus-visible { outline: 2px solid #14120E; outline-offset: 2px; }
+.sf.editing-mobile .sf-look-name { font-size: 16px; }
+.sf.editing-mobile .sf-look-kicker { font-size: 10px; }
+@keyframes sf-bar-in { from { transform: translateY(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sf-look-bar { animation: none; } }
+
+/* ---------- Showing (0.10) ---------- */
+.sf-box { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 10px; border: 1px solid var(--border-2); background: var(--surface); }
+.sf-where { border-color: var(--accent-line); }
+.sf-where > strong, .sf-now-name { font-size: 16px; font-weight: 600; }
+.sf-where .sf-link-btn { align-self: flex-start; }
+.sf-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.sf-strip-item { flex: none; width: 88px; display: flex; flex-direction: column; gap: 4px; padding: 0; border: 0; background: none; text-align: left; font-size: 11px; color: var(--muted); }
+.sf-strip-item .sf-thumb { border-radius: 4px; outline: 2px solid transparent; outline-offset: 1px; }
+.sf-strip-item.on .sf-thumb { outline-color: var(--accent); }
+.sf-strip-item.on { color: var(--accent); }
+.sf-strip-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a template's boards: on a narrow drawer the buttons go under the board (0.10) */
+.sf-pl.tpl-row { flex-wrap: wrap; }
+@media (max-width: 1023px) { .sf-pl.tpl-row > .sf-row { flex-basis: 100%; padding-left: 144px; } }
+@media (max-width: 480px) { .sf-pl.tpl-row > .sf-row { padding-left: 0; } }

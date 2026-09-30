@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { parseRoute, routeHash, parentRoute } from '../src/route.js';
 
 test('every level has an address that reads back as the same level', () => {
-  for (const h of ['#/storyboards', '#/storyboards/b-1x/week', '#/storyboards/b-1x/boards', '#/storyboards/b-1x/display', '#/storyboards/b-1x/boards/p9',
+  for (const h of ['#/showing', '#/storyboards', '#/storyboards/b-1x/week', '#/storyboards/b-1x/boards', '#/storyboards/b-1x/display', '#/storyboards/b-1x/boards/p9',
     '#/my-boards', '#/my-boards/m1x', '#/explore', '#/explore/cafe', '#/account', '#/account/help', '#/account/log']) assert.equal(routeHash(parseRoute(h)), h, h);
 });
 
@@ -21,7 +21,11 @@ test('Back goes up one level, and a section top has no Back', () => {
   assert.equal(up('#/explore/cafe'), '#/explore');
   assert.equal(up('#/my-boards/m1'), '#/my-boards');
   assert.equal(up('#/account/log'), '#/account');
-  for (const h of ['#/storyboards', '#/my-boards', '#/explore', '#/account']) assert.equal(parentRoute(parseRoute(h)), null, h);
+  for (const h of ['#/showing', '#/my-boards', '#/explore', '#/account']) assert.equal(parentRoute(parseRoute(h)), null, h);
+  // 0.10: Showing is the first tab's top; the list is under it, and so is the storyboard on the screen
+  assert.equal(up('#/storyboards'), '#/showing');
+  assert.equal(routeHash(parentRoute(parseRoute('#/storyboards/b1/boards'), 'b1')), '#/showing');
+  assert.equal(routeHash(parentRoute(parseRoute('#/storyboards/b2/boards'), 'b1')), '#/storyboards');
   assert.equal(routeHash(parentRoute(Object.assign(parseRoute('#/storyboards/b1/boards/p2'), { from: 'week' }))), '#/storyboards/b1/week');   // back to the week it was opened from
 });
 

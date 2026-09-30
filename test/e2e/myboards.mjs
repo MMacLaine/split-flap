@@ -29,7 +29,8 @@ try {
   // a board with typed cells right to its edges, saved to My boards
   await ev(`(() => { const app = splitFlap; app.S.sel = 0; app.updPage(p => { p.name = 'Edges'; p.layout = 'full'; const c = Array.from({ length: 6 }, () => Array(22).fill(' ')); c[0][0] = 'r'; c[5][21] = 'b'; 'HELLO'.split('').forEach((x, i) => { c[2][8 + i] = x; }); p.zones = [{ ch: 'message', o: { cells: c } }]; }); })()`); await sleep(300);
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: '${demo}', bd: splitFlap.cur().pages[0].id })`); await sleep(400);
-  await ev(`document.querySelector('[data-k=save-my]').click()`); await sleep(400);
+  await ev(`document.querySelector('[data-k=more-pg-open]').click()`); await sleep(200);   // 0.10: Save to my boards is in the more menu
+  await ev(`document.querySelector('.sf-more.open [data-k=more-save]').click()`); await sleep(400);
   const bp = await ev('splitFlap.blueprints[0] && splitFlap.blueprints[0].id');
   check('Save to my boards makes a blueprint', !!bp && (await ev('splitFlap.blueprints[0].page.wins')) === undefined, bp);
   check('it records where it came from: its storyboard and itself, since it was made from scratch', (await ev('JSON.stringify(splitFlap.blueprints[0].from)')) === JSON.stringify({ kind: 'storyboard', id: demo, board: await ev('splitFlap.cur().pages[0].id') }), await ev('JSON.stringify(splitFlap.blueprints[0].from)'));

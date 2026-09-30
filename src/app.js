@@ -6,7 +6,7 @@
 import { Board, THEMES, fillGrid, renderStatic, staticGeom } from './renderer.js';
 import { isChip, isDim } from './charset.js';
 import { compose, FALLBACK_PAGE, newId, blank } from './content.js';
-import { TEMPLATES, fromTemplate } from './templates.js';
+import { TEMPLATES, fromTemplate, storyboardOf } from './templates.js';
 import { RAINBOW } from './pixels.js';
 import { nextPage, inQuiet } from './schedule.js';
 import { STR } from './strings.js';
@@ -21,6 +21,8 @@ import { parseRoute } from './route.js';
 import { nowShowing, playlistPanel } from './week.js';
 import { h, clone } from './dom.js';
 import { VERSION, versionIn, shouldReload } from './changelog.js';
+
+const LOOK_MS = 180000;   // three minutes untouched ends a preview (0.10)
 
 export class App {
   constructor(root) {
@@ -75,7 +77,7 @@ export class App {
 
     const { boards, active } = loadBoards();
     this.boards = boards.length ? boards : [fromTemplate('demo', this.S.lang, this.live.data.home, this.firstPlace())];
-    this.active = active;
+    this.active = active; this.look = null; this.lookTpl = null;
     // A first visit opens Explore on the first Edit. Picking a template then replaces the
     // demo made for this visit. The demo is saved at once (0.7.0 review), so its ids, and
     // the editor's addresses that name them, stay the same across reloads.
@@ -124,7 +126,75 @@ export class App {
 
   // ---------- state helpers ----------
   get t() { return STR[this.S.lang]; }
-  cur() { return this.boards[this.active] || this.boards[0]; }
+  // What the screen runs is boards[active], kept between visits. In the editor you can look
+  // at something else (0.10): another storyboard (look, an index), a template (lookTpl, not
+  // stored), a board in My boards, or a board about to be added. The screen shows it with the
+  // gold bar, and nothing changes what the screen runs until Show on this screen.
+  cur() {
+    if (this.S && this.S.editing) {
+      if (this.lookTpl) return this.lookTpl;
+      if (this.look != null && this.boards[this.look]) return this.boards[this.look];
+    }
+    return this.boards[this.active] || this.boards[0];
+  }
+  curIdx() { return this.S.editing && this.look != null && this.boards[this.look] ? this.look : this.active; }
+  shown() { return this.boards[this.active] || this.boards[0]; }
+  looking() {
+    if (!this.S.editing || this.kioskStrict) return false;
+    const E = this.editor && this.editor.E;
+    return !!(this.lookTpl || (this.look != null && this.look !== this.active) || (this.editor && this.editor.onBlueprint()) || (E && E.preview));
+  }
+  // Look at stored storyboard i in the editor. The one on the screen is not looking.
+  setLook(i) {
+    const was = this.curIdx(), next = i === this.active ? null : i;
+    this.lookTpl = null;
+    if (next === this.look && was === (next == null ? this.active : next)) return;
+    this.look = next; this.lastInput = Date.now();
+    Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
+    this.refresh(true);
+  }
+  lookAtTemplate(nb) { this.look = null; this.lookTpl = nb; this.lastInput = Date.now(); Object.assign(this.S, { pageIdx: 0, pageStart: Date.now(), sel: 0 }); this.refresh(true); }
+  // Leave whatever was being looked at. The screen goes back, and says so.
+  endLook(o = {}) {
+    const was = this.looking(), name = this.shown().name;
+    this.look = null; this.lookTpl = null;
+    if (this.editor) this.editor.E.preview = null;
+    if (!was) return false;
+    Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
+    if (o.say !== false) this.say(o.msg || this.t.sBack(name), o.action ? { action: o.action } : {});
+    this.refresh(true);
+    return true;
+  }
+  // The one button that makes a preview real: Show on this screen.
+  showHere() {
+    const t = this.t, E = this.editor.E, bp = this.editor.bp();
+    if (E.preview && E.sheet && E.sheet.kind === 'add') { this.editor.confirmAdd(); return; }
+    if (this.lookTpl) { this.useTemplate(this.lookTpl.from, { kept: true }); return; }
+    if (bp) {
+      const nb = storyboardOf(bp.page, { rows: bp.rows, cols: bp.cols, theme: bp.theme, name: bp.name, loc: this.newPlace() });
+      if (this.boards.length >= 50) { this.say(t.sbFull, { fail: true }); return; }
+      const prev = this.active;
+      this.boards.push(nb); this.active = this.boards.length - 1; this.look = null; this.save();
+      this.say(t.sNowKept(nb.name), { action: { label: t.undo, fn: () => this.undoShow(prev) } });
+      this.editor.go({ sec: 'sb', lv: 'board', sb: nb.id, bd: nb.pages[0].id, from: 'boards' });
+      this.refresh();
+      return;
+    }
+    if (this.look != null && this.boards[this.look]) {
+      const prev = this.active;
+      this.active = this.look; this.look = null; this.saveActive();
+      Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
+      this.say(t.sNow(this.shown().name), { action: { label: t.undo, fn: () => this.undoShow(prev) } });
+      this.refresh();
+    }
+  }
+  undoShow(prev) {
+    if (!this.boards[prev]) return;
+    const cur = this.active; this.active = prev; this.saveActive();
+    if (this.S.editing && this.editor.E.sec === 'sb' && this.boards[cur] && cur !== prev) this.look = cur;
+    Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
+    this.say(this.t.sBack(this.shown().name)); this.refresh();
+  }
   // Under 1024 px the editor stacks: the board on top, one drawer level below it.
   isMobile() { return innerWidth < 1024; }
   set(patch, render = true) { Object.assign(this.S, patch); if (render) this.render(); }
@@ -173,9 +243,10 @@ export class App {
   // The whole list at once (a sync pull, signing out), keeping the board on screen when it
   // is still there. Not counted as an edit to push. An empty list becomes a blank board.
   replaceBoards(list) {
-    const curId = this.cur() && this.cur().id;
+    const curId = this.shown() && this.shown().id, lookId = this.look != null && this.boards[this.look] ? this.boards[this.look].id : null;
     this.account.replacing = true;
     this.boards = list && list.length ? list : [fromTemplate('blank', this.S.lang, this.live.data.home)];
+    const li = lookId ? this.boards.findIndex(b => b.id === lookId) : -1; this.look = li >= 0 ? li : null;
     const i = this.boards.findIndex(b => b.id === curId);
     if (i < 0) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
     this.active = i >= 0 ? i : 0;
@@ -205,13 +276,25 @@ export class App {
     this.editor.startRename();
   }
   upd(fn, quiet) {
-    const b = clone(this.cur()); fn(b); this.boards[this.active] = b; this.save();
+    if (this.S.editing && this.lookTpl) { const b = clone(this.lookTpl); fn(b); this.lookTpl = b; this.refresh(quiet); return; }   // a template is only looked at
+    const i = this.curIdx(), b = clone(this.boards[i] || this.cur()); fn(b); this.boards[i] = b; this.save();
     if (b.id === this.freshId) this.freshId = null;
+    if (this.S.editing) this.saved();
     this.refresh(quiet);
+  }
+  // "Saved" after a change in the editor (0.10), once typing pauses, with the time from the
+  // second save on, so a run of saves is one line that moves on.
+  saved() {
+    clearTimeout(this.savedT);
+    this.savedT = setTimeout(() => {
+      const t = this.t, d = new Date(), hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const again = this.savedNav === this.editor.E.navKey; this.savedNav = this.editor.E.navKey;
+      this.say(again ? t.sSavedAt(hhmm) : t.sSaved, { key: 'save' });
+    }, 700);
   }
   updPage(fn, quiet) {
     const bp = this.editor.bp();
-    if (bp) { const i = this.blueprints.indexOf(bp), c = clone(bp); fn(c.page, c); c.name = c.page.name || c.name; this.blueprints[i] = c; this.saveMy(); this.refresh(quiet); return; }
+    if (bp) { const i = this.blueprints.indexOf(bp), c = clone(bp); fn(c.page, c); c.name = c.page.name || c.name; this.blueprints[i] = c; this.saveMy(); this.saved(); this.refresh(quiet); return; }
     this.upd(b => { const p = b.pages[this.selIdx(b)]; if (p) fn(p, b); }, quiet);
   }
   selIdx(b = this.cur()) { return Math.max(0, Math.min(this.S.sel, b.pages.length - 1)); }
@@ -222,6 +305,7 @@ export class App {
   // top and the one before stays below, fainter, until its time is up. A line with the same
   // key replaces the older one, so a run of saves never stacks.
   say(msg, o = {}) {
+    if (o.key !== 'save') clearTimeout(this.savedT);   // a line that says what happened stands in for "Saved"
     const now = Date.now(), ms = o.ms || (o.action ? 12000 : 7000);
     const line = { id: ++this.lineN, msg, fail: !!o.fail, action: o.action || null, key: o.key || null, until: now + ms };
     this.lines = [line, ...this.lines.filter(l => l.until > now && !(line.key && l.key === line.key))].slice(0, 2);
@@ -279,7 +363,10 @@ export class App {
   }
 
   tick(force) {
-    const b = this.cur(), now = Date.now();
+    const now = Date.now();
+    // a preview left alone ends by itself, so a screen is never left on one (0.10)
+    if (this.looking() && now - (this.lastInput || now) > LOOK_MS && !this.editor.E.sheet) this.lookTimedOut();
+    const b = this.cur();
     if (!this.holding()) {
       const n = nextPage(b.pages, this.S.pageIdx, this.S.pageStart, now);
       this.S.pageIdx = n.idx; this.S.pageStart = n.start;
@@ -357,6 +444,7 @@ export class App {
     const onMove = () => this.wake();
     addEventListener('mousemove', onMove); addEventListener('touchstart', onMove, { passive: true });
     addEventListener('keydown', e => this.globalKey(e));
+    for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(ev, () => { this.lastInput = Date.now(); }, { passive: true, capture: true });
     addEventListener('resize', () => { if (this.cur().size === 'fill' || this.wasMobile !== this.isMobile()) this.refresh(); this.wasMobile = this.isMobile(); });
     this.wasMobile = this.isMobile();
     document.addEventListener('fullscreenchange', () => { this.set({ isFull: !!document.fullscreenElement }); this.lock(); });
@@ -464,6 +552,7 @@ export class App {
   }
   toggleEdit(fromHistory) {
     const editing = !this.S.editing;
+    if (!editing) this.leaveEditor();
     if (editing) this.dismissCue(false); else { this.editor.composer.leave(); if (!fromHistory) this.editor.close(); }
     const b = this.cur();
     this.S.editing = editing; this.S.share = false; this.S.switcher = false; this.S.cz = -1;
@@ -507,6 +596,7 @@ export class App {
     this.root.classList.toggle('editing', S.editing);
     this.root.classList.toggle('editing-mobile', S.editing && mobile);
     this.root.classList.toggle('kiosk', kiosk);
+    this.paintLook();
     document.documentElement.lang = S.lang;
     // drawer: rebuilt whole, scroll positions and focus carried over
     const old = this.drawer;
@@ -535,6 +625,23 @@ export class App {
     this.renderOverlay();
   }
 
+  // The gold bar (0.10): only while looking at something that is not on the screen. It sits
+  // under the board, which is refitted above it, so no flap is covered, and a thin gold
+  // frame goes round the screen as a second sign. Its one button makes it real.
+  paintLook() {
+    const on = this.looking(), t = this.t;
+    this.root.classList.toggle('looking', on);
+    if (!on) { if (this.lookBar) { this.lookBar.remove(); this.lookBar = null; } return; }
+    const E = this.editor.E, adding = E.preview && E.sheet && E.sheet.kind === 'add';
+    const tpl = this.lookTpl && TEMPLATES.find(x => x.id === this.lookTpl.from);
+    const name = adding ? E.preview.name || t.page : this.editor.bp() ? this.editor.bp().name : tpl ? tpl.name[this.S.lang] : this.cur().name;
+    const label = adding ? t.addTo(this.cur().name) : t.showOn;
+    const bar = h('div', { class: 'sf-look-bar', role: 'region', 'aria-label': t.previewing },
+      h('span', { class: 'sf-look-kicker' }, t.lookKicker), h('strong', { class: 'sf-look-name' }, name),
+      h('button', { class: 'sf-look-go', 'data-k': 'look-show', onclick: () => this.showHere() }, label));
+    if (this.lookBar) this.lookBar.replaceWith(bar); else this.stage.append(bar);
+    this.lookBar = bar;
+  }
   paintBar() {
     if (this.barWrap) this.barWrap.classList.toggle('on', this.S.bar);
     if (this.nowEl) this.nowEl.classList.toggle('on', this.S.bar);
@@ -593,7 +700,8 @@ export class App {
     // Share from a storyboard's more menu, with the editor open: over the board (0.7.3)
     if (S.editing && S.share) kids.push(h('div', { class: 'sf-share-float' }, this.renderShare()));
     // With the editor closed, one line at the top: what is on now, and what comes next.
-    if (!S.editing && !this.kioskStrict && this.cur().pages.length > 1) {
+    // Not on a first visit: jargon before anything is explained (0.9.3 QA, N-L1).
+    if (!S.editing && !this.kioskStrict && !this.startPending() && this.cur().pages.length > 1) {
       const line = nowShowing(this.cur(), Date.now(), t);
       if (line) { this.nowEl = h('div', { class: 'sf-nowline' + (S.bar ? ' on' : ''), 'aria-hidden': 'true' }, h('span', { class: 'sf-eyebrow' }, t.todaysPlaylist), h('span', null, line)); kids.push(this.nowEl); }
     } else this.nowEl = null;
@@ -609,9 +717,10 @@ export class App {
     this.paintBar();
   }
 
-  async openShare(keepOpen) {
+  async openShare(keepOpen, board) {
     if (this.S.share && !keepOpen) { this.set({ share: false, qrBig: false }); return; }
-    const code = await encodeBoard(this.cur());
+    if (!keepOpen) this.shareBoard = board || this.shown();   // the storyboard asked for, else what is on the screen
+    const code = await encodeBoard(this.shareBoard || this.shown());
     const kiosk = this.S.shareKiosk !== false;   // on unless unticked: the link is usually for a wall
     const url = location.origin + location.pathname + (kiosk ? '?kiosk=1' : '') + '#b=' + code;
     let svg = null, n = 0;
@@ -671,7 +780,7 @@ export class App {
     return this.t.changedAt(today ? d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString(loc, { day: 'numeric', month: 'short' }));
   }
   sizeLabel(bd) { return bd.size === 'fill' ? this.t.fill : bd.size === 'custom' ? `${bd.rows} × ${bd.cols}` : bd.size.replace('x', ' × '); }
-  pickBoard(i) { this.active = i; this.sayNext = true; this.save(); Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }); this.refresh(); }
+  pickBoard(i) { this.active = i; this.look = null; this.sayNext = true; this.save(); Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }); this.say(this.t.sNow(this.shown().name)); this.refresh(); }
   // New board, from the board switcher: the Start panel, where a template adds a board.
   newBoard() {
     Object.assign(this.S, { switcher: false, editing: true, cz: -1 });
@@ -690,29 +799,73 @@ export class App {
   setFirstPlace(r) {
     const p = Object.assign({ city: r.name, lat: r.lat, lon: r.lon }, r.cc ? { cc: r.cc } : {}, r.tz ? { tz: r.tz } : {});
     setFlag('sf_place', JSON.stringify(p));
-    if (this.startPending() && this.freshId === this.cur().id) {
+    if (this.startPending() && this.freshId === this.shown().id) {
       const nb = fromTemplate('demo', this.S.lang, this.live.data.home, p); nb.id = this.freshId;
       this.boards[this.active] = nb; this.save();
     }
+    // choosing a place is a choice (0.10): the first visit is over, and the line says what changed
+    this.markStarted();
+    const t = this.t, off = this.live.data.off || [];
+    this.say(t.built(p.city, [t.builtWeather(p.city), off.includes('transit') ? null : t.builtStops, t.builtHolidays].filter(Boolean)));
     this.editor.tplCache = null; this.refresh();
   }
   startPending() { return this.firstRun && getFlag('sf_started') !== '1'; }
   markStarted() { setFlag('sf_started', '1'); this.firstRun = false; }
+  // Done (0.10): a preview ends and the screen goes back, saying so; an edit to what is on
+  // says it is saved and showing. Show it now puts an edited storyboard on the screen.
+  leaveEditor() {
+    const t = this.t, edited = this.savedNav != null && this.savedNav === this.editor.E.navKey;
+    clearTimeout(this.savedT); this.savedNav = null;
+    if (this.looking()) {
+      const idx = this.look, name = this.shown().name;
+      this.endLook({ msg: edited ? t.sSavedBack(name) : t.sBack(name), action: idx != null && edited ? { label: t.showItNow, fn: () => this.showIdx(idx) } : null });
+    } else if (edited) this.say(t.sSavedShowing(this.shown().name));
+    this.look = null; this.lookTpl = null;
+  }
+  lookTimedOut() {
+    const t = this.t, r = this.editor.route(), tpl = this.lookTpl, tt = tpl && TEMPLATES.find(x => x.id === tpl.from), bp = this.editor.bp();
+    const name = tt ? tt.name[this.S.lang] : bp ? bp.name : this.cur().name;
+    const again = { label: t.showItNow, fn: () => { this.lastInput = Date.now(); if (tpl) this.lookAtTemplate(tpl); else this.editor.go(r); this.render(); } };
+    const msg = t.sTimeout(name, this.shown().name);
+    // a template's page stays where it was; a playlist's or a saved board's level is about what
+    // it shows, so the drawer goes back to Showing with the screen
+    if (tpl) this.endLook({ msg, action: again });
+    else { this.look = null; this.editor.go({ sec: 'sb', lv: 'showing' }, { quietBack: true }); this.say(msg, { action: again }); }
+    this.render();
+  }
+  showIdx(i) {
+    if (!this.boards[i]) return;
+    const prev = this.active; this.active = i; this.saveActive();
+    Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
+    this.say(this.t.sNow(this.shown().name), { action: { label: this.t.undo, fn: () => this.undoShow(prev) } }); this.refresh();
+  }
+  // Use a template (0.10): it becomes a storyboard of yours and goes on the screen, and the
+  // editor lands on its board (one board) or its boards (several). Never the week view.
   useTemplate(id) {
-    const nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace());
-    if (this.startPending() && this.freshId === this.cur().id) this.boards[this.active] = nb;
+    if (!TEMPLATES.some(x => x.id === id)) return;
+    const t = this.t, nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace()), prev = this.active;
+    const replace = this.startPending() && this.freshId === this.shown().id;
+    if (replace) this.boards[this.active] = nb;
     else { this.boards.push(nb); this.active = this.boards.length - 1; }
+    this.look = null; this.lookTpl = null;
     this.freshId = null; this.markStarted(); this.save();
     Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), cz: -1, editing: true });
-    this.editor.go({ sec: 'sb', lv: 'sb', sb: nb.id, view: 'week' }); this.refresh();
+    this.say(t.sNowKept(nb.name), replace ? {} : { action: { label: t.undo, fn: () => this.undoShow(prev) } });
+    if (nb.pages.length === 1) this.editor.go({ sec: 'sb', lv: 'board', sb: nb.id, bd: nb.pages[0].id, from: 'boards' });
+    else this.editor.go({ sec: 'sb', lv: 'sb', sb: nb.id, view: 'boards' });
+    this.refresh();
   }
   duplicateBoard(i) {
     const nb = clone(this.boards[i]); nb.id = newId('b'); nb.name = this.boards[i].name + this.t.copySuffix; delete nb.from;
-    this.boards.push(nb); this.active = this.boards.length - 1; this.S.sel = 0; this.save(); this.refresh();
+    this.boards.push(nb);
+    if (this.S.editing) this.look = this.boards.length - 1; else this.active = this.boards.length - 1;   // the editor looks at the copy; the screen keeps running
+    this.S.sel = 0; this.save(); this.refresh();
   }
   deleteBoard(i) {
     if (this.boards.length < 2) return;
+    const lookId = this.look != null && this.boards[this.look] ? this.boards[this.look].id : null;
     const [gone] = this.boards.splice(i, 1); this.account.deleted(gone.id); this.active = Math.max(0, Math.min(this.active - (i < this.active ? 1 : 0), this.boards.length - 1));
+    const li = lookId ? this.boards.findIndex(b => b.id === lookId) : -1; this.look = li >= 0 && li !== this.active ? li : null;
     this.S.sel = 0; this.save(); this.refresh();
   }
   // The page being edited (or showing) as a PNG, with the board frame, at twice the
