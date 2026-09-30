@@ -520,14 +520,17 @@ function currencyLines(o, z, W, lang, w, live) {
   const ready = (!pairs.some(p => !COINS[p]) || (data && data.rates)) && (!coins.length || (cdata && cdata.prices));
   if (!ready) return { lines: [base, '', ((data && data.fails) || (cdata && cdata.fails) || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
   const dec = o.dec == null ? 2 : +o.dec;
+  // a currency worth under a tenth of the base (the yen against the pound) is quoted per 100,
+  // as a bank's board does, so it never prints as 0.00
+  const unit = p => !COINS[p] && data && data.rates && data.rates[p] && 1 / data.rates[p] < 0.1 ? 100 : 1;
   const val = p => {
     if (COINS[p]) { const c = cdata.prices[COINS[p]]; return c && c.price != null ? group(c.price, c.price >= 1000 ? 0 : dec, lang) : '-'; }
-    const r = data.rates[p]; return r ? group(1 / r, dec, lang) : '-';
+    const r = data.rates[p]; return r ? group(unit(p) / r, dec, lang) : '-';
   };
   const chip = p => { const c = COINS[p] && cdata.prices[COINS[p]]; return c && c.change != null ? (c.change >= 0 ? 'g' : 'r') : null; };
-  if (z.h === 1) return { lines: [pairs.map(p => `${p} ${val(p)}`).join('  ')], align: 'center' };
+  if (z.h === 1) return { lines: [pairs.map(p => `${unit(p) > 1 ? unit(p) + ' ' : ''}${p} ${val(p)}`).join('  ')], align: 'center' };
   return { lines: pairs.map(p => {
-    const line = lr(W >= 14 ? `1 ${p}` : p, W >= 14 ? `${val(p)} ${base}` : val(p), W - (chip(p) ? 2 : 0)), c = chip(p);
+    const line = lr(W >= 14 ? `${unit(p)} ${p}` : unit(p) > 1 ? `${unit(p)}${p}` : p, W >= 14 ? `${val(p)} ${base}` : val(p), W - (chip(p) ? 2 : 0)), c = chip(p);
     return c ? [c, ' ', ...textToCells(line)] : line;
   }), align: 'left' };
 }

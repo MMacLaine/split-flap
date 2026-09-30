@@ -84,7 +84,7 @@ export const TEMPLATES = [
       page(sv ? 'Avgångar' : 'Departures', 'header', 14, [c.clock(), c.deps(9117, 'Odenplan', { modes: c.P && !inStockholm(c.P) ? null : ['METRO', 'TRAIN'] })]),
       page(sv ? 'Väder' : 'Weather', 'full', 12, [c.wx('now')]),
       page(sv ? 'Regnbåge' : 'Rainbow', 'full', 9, [z('art', { pattern: 'rainbow', step: 3 })]),
-      page(sv ? 'Dagens ord' : 'Quote of the hour', 'ticker', 14, [z('quote'), z('message', { text: sv ? 'GRATIS, INGET KONTO BEHÖVS.' : 'FREE, NO ACCOUNT NEEDED.' })])
+      page(sv ? 'Dagens ord' : 'Quote of the hour', 'ticker', 14, [z('quote'), z('message', { text: sv ? 'GRATIS. INGET KONTO.' : 'FREE. NO ACCOUNT.' })])
     ] }); }
   },
   {

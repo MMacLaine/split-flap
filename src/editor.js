@@ -85,6 +85,9 @@ export class Editor {
       const st = history.state && history.state.sf ? history.state : null;
       if (opts.replace || location.hash === hash) history.replaceState({ sf: 1, depth: st ? st.depth : 1, prev: st ? st.prev : '' }, '', url);
       else history.pushState({ sf: 1, depth: (st ? st.depth : 0) + 1, prev: location.hash }, '', url);
+    } else if (location.hash && routeHash(r) !== location.hash) {
+      // an address that named something missing: the bar shows where we really are (0.9.4)
+      history.replaceState(history.state, '', location.pathname + location.search + routeHash(r));
     }
     this.app.S.cz = -1;
     this.app.board.setOptions(this.app.boardOpts());   // a blueprint has its own size and theme
@@ -216,7 +219,7 @@ export class Editor {
       'acc:main': () => this.accountLevel(), 'acc:help': () => this.helpLevel(), 'acc:log': () => this.logLevel()
     }[E.sec + ':' + E.lv]();
     return h('aside', { class: 'sf-drawer', 'aria-label': t.editor },
-      h('section', { class: 'sf-panel-col' }, this.head(), this.tabs(), h('div', { class: 'sf-panel-body' + anim, 'data-lv': E.sec + '-' + E.lv }, body)));
+      h('section', { class: 'sf-panel-col' }, this.head(), h('div', { class: 'sf-status-slot', 'data-status-slot': '' }, this.app.statusLines()), this.tabs(), h('div', { class: 'sf-panel-body' + anim, 'data-lv': E.sec + '-' + E.lv }, body)));
   }
   after() {
     this.paintThumbs(true); this.composer.after();
@@ -249,9 +252,7 @@ export class Editor {
     const tab = (id, label) => h('button', { class: 'sf-tab', 'aria-current': sec === id ? 'page' : null, 'data-k': 'tab-' + id, onclick: () => this.tab(id) }, label,
       id === 'acc' ? h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark, 'data-sync-fail': '', hidden: this.app.account.status !== 'failed' }, ' !') : null);
     return h('nav', { class: 'sf-tabs', 'aria-label': t.sections },
-      tab('sb', t.secStoryboards), tab('my', t.secMyBoards), tab('ex', t.secExplore), tab('acc', this.app.account.available ? t.secAccount : t.secSettings),
-      h('span', { class: 'sf-grow' }),
-      h('button', { class: 'sf-icon sf-search', disabled: true, title: t.searchLater, 'aria-label': t.searchLater, 'data-k': 'search' }, h('span', { 'aria-hidden': 'true' }, '⌕')));
+      tab('sb', t.secStoryboards), tab('my', t.secMyBoards), tab('ex', t.secExplore), tab('acc', this.app.account.available ? t.secAccount : t.secSettings));
   }
   dayLabel(d) { return `${this.t.dayShort[d.getDay()]} ${d.getDate()} ${this.t.monthShort[d.getMonth()]}`; }
   zoneName(k) { const p = this.page(); return p ? (this.t.zoneNames[p.layout] || [])[k] || '' : ''; }
@@ -702,7 +703,8 @@ export class Editor {
     const b = this.app.cur(), now = Date.now(), pl = previewLive(this.app.live.data, now);
     const groups = GROUPS.map(([g, label]) => {
       const off = this.app.live.data.off || [];
-      const tiles = TILES.filter(x => x.g === g && !x.hide && !(x.src && off.includes(x.src)) && match(x) && !(ticker && (x.id === 'draw' || x.id === 'photo')));
+      const cc = this.app.live.data.cc;   // a tile for one country only shows there (Electricity price is Sweden's)
+      const tiles = TILES.filter(x => x.g === g && !x.hide && !x.later && (!x.only || !cc || x.only.includes(cc) || cur === x) && !(x.src && off.includes(x.src)) && match(x) && !(ticker && (x.id === 'draw' || x.id === 'photo')));
       if (!tiles.length) return null;
       return h('section', { class: 'sf-group' }, h('h3', { class: 'sf-eyebrow' }, this.L(label)),
         h('div', { class: 'sf-tiles' + (wide ? ' one' : '') }, tiles.map(x => x.later
@@ -1066,8 +1068,7 @@ export class Editor {
       tplGrid,
       h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.importTitle),
         h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'import', onclick: () => file.click() }, t.importB), file),
-        h('p', { class: 'sf-note' }, t.jsonNote)),
-      h('div', { class: 'sf-later' }, h('strong', null, t.fromOthers), h('span', null, t.laterShort)));
+        h('p', { class: 'sf-note' }, t.jsonNote)));
   }
   // A template's card, drawn for the place, opening at its section's address.
   tplCard(tp, section, muted) {
@@ -1219,8 +1220,7 @@ export class Editor {
       h('div', { class: 'sf-secs' },
         row('open-help', t.help, t.helpSub, () => this.go({ sec: 'acc', lv: 'help' })),
         row('version', t.versionLog, `v${VERSION}`, () => this.go({ sec: 'acc', lv: 'log' }))),
-      this.connectionsEl(),
-      h('div', { class: 'sf-later' }, h('strong', null, t.submissions), h('span', null, t.laterShort))];
+      this.connectionsEl()];
   }
 
   // ---------- help ----------

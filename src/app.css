@@ -338,16 +338,18 @@ html, body { margin: 0; background: #13151A; }
 .sf-sep { width: 1px; height: 20px; background: var(--border-2); margin: 0 4px; }
 
 .sf-pop { border-radius: 12px; background: var(--surface); border: 1px solid var(--border-2); animation: sf-pop 180ms ease-out; box-sizing: border-box; }
-.sf-share { width: min(380px, 100%); padding: 16px; display: grid; grid-template-columns: 132px minmax(0,1fr); gap: 14px; }
-.sf-qr { width: 132px; height: 132px; border-radius: 6px; background: #fff; padding: 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.sf-share { width: min(380px, 100%); padding: 16px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
+.sf-share-title { font-size: 14px; font-weight: 600; text-wrap: pretty; }
+.sf-share-note { margin: 0; font-size: 12px; color: var(--muted); text-wrap: pretty; }
+.sf-share-kiosk { font-size: 12px; color: var(--pale); }
+.sf-qr { width: 300px; max-width: 100%; aspect-ratio: 1; align-self: center; border-radius: 6px; background: #fff; box-sizing: border-box; }
 .sf-qr svg { width: 100%; height: 100%; display: block; }
-.sf-qr.none { background: repeating-linear-gradient(135deg, var(--bg-2) 0 6px, var(--surface) 6px 12px); border: 1px solid var(--border-2); }
-.sf-share-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.sf-share-text strong { font-size: 14px; font-weight: 600; text-wrap: pretty; }
-.sf-share-text span { font-size: 12px; color: var(--muted); text-wrap: pretty; }
-.sf-share-row { grid-column: 1 / -1; display: flex; gap: 8px; }
-.sf-share-row input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border-2); background: var(--bg-2); font-family: var(--mono); font-size: 12px; }
-.sf-share-row button { height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); font-size: 12px; white-space: nowrap; }
+.sf-qr-open { align-self: flex-start; }
+.sf-qr-full { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+.sf-qr.big { width: min(90vw, 80vh); max-width: none; }
+.sf-share-row { display: flex; gap: 8px; }
+.sf-share-row input { flex: 1; min-width: 0; height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border-2); background: var(--bg-2); font-family: var(--mono); font-size: 12px; }
+.sf-share-row button { height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); font-size: 12px; white-space: nowrap; }
 .sf-menu { width: 260px; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
 .sf-menu-item { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
 .sf-menu-item[aria-current="true"] { background: var(--bg-2); }
@@ -358,6 +360,17 @@ html, body { margin: 0; background: #13151A; }
 .sf-cue button { border: 0; background: none; padding: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .sf-cue button.accent { color: var(--accent); }
 .sf-toast { font-size: 13px; padding: 10px 14px; }
+/* the status line (0.9.4): under the panel's title, or above the control bar */
+.sf-status-slot:empty { display: none; }
+.sf-status-slot { padding: 6px 12px 0; }
+.sf-status { display: flex; flex-direction: column; gap: 4px; }
+.sf-status-line { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border-2); font-size: 14px; line-height: 1.35; }
+.sf-status-line .sf-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--ok, #7FB08A); }
+.sf-status-line.fail .sf-dot { background: var(--danger, #E0735E); }
+.sf-status-line.old { opacity: 0.72; font-size: 13px; }
+.sf-status-text { flex: 1; min-width: 0; }
+.sf-status-act { flex: none; border: 0; background: none; padding: 6px 4px; color: var(--accent); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.sf-toast.sf-status { padding: 0; }
 
 /* ---------- under 1024 px: preview on top, one drawer level below ---------- */
 .sf.editing-mobile { flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }

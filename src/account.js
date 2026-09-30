@@ -375,6 +375,8 @@ export class Account {
     // every connection the account owns leaves this browser, pushed or not (0.9.2)
     const rc = signOutAll(this.app.connections, this.cn.state);
     this.app.replaceConnections(rc.boards); this.cn.state = Object.assign(rc.state, { declined: [], offer: [], confirming: [] }); this.cn.save();
+    // the last answers kept for a restart (0.9.4) may come from the account's own sources
+    try { localStorage.removeItem('sf_live'); } catch { /* storage blocked */ }
     this.user = null; this.offer = []; this.status = 'idle'; this.app.render();
   }
 

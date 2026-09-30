@@ -254,3 +254,12 @@ test('the weather detail fits 6 x 22 without cutting the wind unit', () => {
     assert.ok(lines.every(l => !/M\/$/.test(l.trim()) && l.length <= 20), lines.join(' | '));
   }
 });
+
+test('a currency worth under a tenth of the base is quoted per 100, never as 0.00 (0.9.4)', () => {
+  const live = { fx: { GBP: { rates: { JPY: 190, EUR: 1.17 } } } };
+  const r = channelLines('currency', { base: 'GBP', pairs: ['JPY', 'EUR'], dec: 2 }, Z(6, 22), 0, 'en', live);
+  assert.match(r.lines[0], /^100 JPY +0\.53 GBP$/);
+  assert.match(r.lines[1], /^1 EUR +0\.85 GBP$/);
+  const one = channelLines('currency', { base: 'GBP', pairs: ['JPY'], dec: 2 }, Z(1, 22), 0, 'en', live);
+  assert.equal(one.lines[0], '100 JPY 0.53');
+});

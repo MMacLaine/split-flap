@@ -2,12 +2,22 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.9.4 (2026-09-30): Fixes
+
+I had a few people try Split-Flap and a full test round done. These are the fixes that do not need the new navigation, which comes next.
+
+- **Every press answers.** Lines like "Saved to My boards" were hidden while the editor was open, so it looked like nothing happened. They now show under the editor's title, with Undo where it applies.
+- **A QR code you can scan.** The code under Share was too small for a phone to read. It now opens full size when the panel cannot draw it big enough, and the wall link comes first, in kiosk mode.
+- **A screen that restarts offline keeps its board.** The last departures, weather and prices are kept in the browser, so a screen that comes back before the network shows them with a note saying how old they are.
+- **A wall link asks nothing.** A screen opened from a board link no longer asks anyone to sign in.
+- Smaller fixes: the yen and other small currencies are quoted per 100 instead of as 0.00, Electricity price is only offered in Sweden, the demo's ticker message fits, a mistyped editor address corrects itself, and the placeholders for features to come later are gone.
+
 ## v0.9.3 (2026-09-30): Headlines
 
 News and other feeds on the board, including on wall screens that never sign in.
 
 - **Headlines.** A new tile shows the latest from a news site or any other RSS, Atom or JSON feed, one headline at a time under the feed's name. It works in a ticker row too.
-- **Any feed, on any screen.** Most news sites do not let other pages read their feeds, so Split-Flap's server fetches them. BBC News, SVT Nyheter, NASA and Hacker News work for everyone. Any other feed works once you have added it signed in, and a wall screen showing it can then read it without signing in.
+- **Any feed, on any screen.** Most news sites do not let other pages read their feeds, so Split-Flap's server fetches them. BBC News, NASA and Hacker News work for everyone. Any other feed works once you have added it signed in, and a wall screen showing it can then read it without signing in.
 - A new template, Headlines, in Home.
 
 ## v0.9.2 (2026-09-30): Your sources

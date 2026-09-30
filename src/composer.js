@@ -87,7 +87,7 @@ export class Composer {
     grid.addEventListener('pointermove', e => this.move(e));
     grid.addEventListener('pointerup', () => this.up()); grid.addEventListener('pointercancel', () => this.up());
 
-    const used = h('span', { class: 'sf-comp-used' }), notice = h('span', { role: 'status', 'data-notice': '' }, this.app.S.notice);
+    const used = h('span', { class: 'sf-comp-used' }), notice = null;
     this.els = { cells: cellEls, input, undo, redo, used, grid };
 
     const parts = [h('div', { class: 'sf-row between' },
@@ -102,7 +102,7 @@ export class Composer {
       h('button', { class: 'sf-small-btn', 'data-k': 'centre', onclick: () => this.centre() }, t.center),
       h('button', { class: 'sf-small-btn', 'data-k': 'clear', onclick: () => { this.edit(c => c.forEach(r => r.fill(' '))); this.app.S.caret = 0; this.paintGrid(); } }, t.clear)));
     if (mode === 'photo') parts.push(this.photoControls());
-    parts.push(h('div', { class: 'sf-comp-foot' }, used, notice));
+    parts.push(h('div', { class: 'sf-comp-foot' }, used));
     parts.push(this.draftsEl(zd));
     return h('div', { class: 'sf-field sf-composer-wrap' }, parts);
   }
