@@ -264,3 +264,10 @@ export function fromTemplate(id, lang, home, place) {
   return Object.assign(t.make({ sv: lang === 'sv', home: !!(home && home.sites && home.sites.length), place: place || null }), { from: t.id });
 }
 export const TEMPLATE_IDS = TEMPLATES.map(t => t.id);
+// A storyboard of one board, from a board in My boards (0.10: Show on this screen). The board
+// is copied, without its times, at its own size.
+export function storyboardOf(page, { rows, cols, theme, name, loc }) {
+  const size = ['6x22', '3x15', '12x40'].includes(`${rows}x${cols}`) ? `${rows}x${cols}` : 'custom';
+  const p = Object.assign(JSON.parse(JSON.stringify(page)), { id: newId('p'), wins: [] }); delete p.alone;
+  return base(name || p.name || 'Board', Object.assign({ size, rows, cols, theme: theme || 'black', pages: [p] }, loc && loc.lat != null ? { loc } : {}));
+}

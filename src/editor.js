@@ -69,11 +69,21 @@ export class Editor {
   route() { const E = this.E; return { sec: E.sec, lv: E.lv, sb: E.sb, bd: E.bd, bp: E.bp, view: E.view, tpl: E.tpl, section: E.section, from: E.from }; }
   // Move to a level. Each move is a history entry, so browser Back goes up the way it came.
   go(r, opts = {}) {
-    const E = this.E, prevSec = E.sec;
+    const E = this.E, prevSec = E.sec, wasLooking = this.app.looking(), prevLv = E.sec + ':' + E.lv;
     this.composer.leave(); E.confirm = null; E.menu = null; E.sheet = null; E.card = null; E.preview = null;
     if (typeof r === 'string') r = { account: { sec: 'acc', lv: 'main' }, help: { sec: 'acc', lv: 'help' }, log: { sec: 'acc', lv: 'log' }, start: { sec: 'ex', lv: 'list' },
       settings: { sec: 'sb', lv: 'sb', sb: this.app.cur().id, view: 'display' } }[r] || { sec: 'sb', lv: 'list' };   // named levels, from Help's links
     r = this.resolve(Object.assign({}, r));
+    // 0.10: a template's level shows the template on the screen; a level that is about no
+    // storyboard, board or template puts the screen back, and says so
+    if (r.sec === 'ex' && r.lv === 'tpl') { if (!this.app.lookTpl || this.app.lookTpl.from !== r.tpl) this.app.lookAtTemplate(this.tplBoard(r.tpl)); }
+    else this.app.lookTpl = null;
+    const keeps = (r.sec === 'sb' && (r.lv === 'sb' || r.lv === 'board')) || (r.sec === 'my' && r.lv === 'bp') || (r.sec === 'ex' && r.lv === 'tpl');
+    if (!keeps) { const was = wasLooking; this.app.look = null; if (was && !opts.quietBack) this.app.say(this.t.sBack(this.app.shown().name)); if (was) this.app.refresh(true); }
+    // editing a board of what is on holds the screen on it, and says so
+    if (r.sec === 'sb' && r.lv === 'board' && prevLv !== 'sb:board' && this.app.look == null && this.app.shown().pages.length > 1 && !opts.silent) {
+      const pg = this.app.shown().pages.find(x => x.id === r.bd); if (pg) this.app.say(this.t.sHold(pg.name || this.t.page), { key: 'hold' });
+    }
     Object.assign(E, { sec: r.sec, lv: r.lv, sb: r.sb || null, bd: r.bd || null, bp: r.bp || null, view: r.view || E.view || 'week', tpl: r.tpl || null, section: r.section || null, from: r.from || E.from,
       fx: opts.back ? 'back' : 'in', navKey: E.navKey + 1, hover: null, search: '' });
     if (!opts.keepZone) Object.assign(E, { zone: 0, zoneOpen: false, picking: false, fresh: false }, opts.zone || {});
@@ -104,7 +114,7 @@ export class Editor {
     if (r.sec === 'sb' && (r.lv === 'sb' || r.lv === 'board')) {
       const i = app.boards.findIndex(b => b.id === r.sb);
       if (i < 0) return { sec: 'sb', lv: 'list' };
-      if (i !== app.active) { app.active = i; app.saveActive(); app.S.pageIdx = 0; app.S.pageStart = Date.now(); app.refresh(true); }
+      app.setLook(i);   // 0.10: opening a storyboard looks at it; only Show on this screen changes what the screen runs
       if (r.lv === 'board') {
         const j = app.boards[i].pages.findIndex(p => p.id === r.bd);
         if (j < 0) return { sec: 'sb', lv: 'sb', sb: r.sb, view: r.from || 'boards' };
@@ -120,7 +130,7 @@ export class Editor {
   apply(r) {
     this.go(r, { silent: true, back: true });
   }
-  backTarget() { return parentRoute(this.route()); }
+  backTarget() { return parentRoute(this.route(), this.app.shown().id); }
   // Back is up one level. When the level above is the one we came from, it is the
   // browser's own back, so the history does not grow.
   back() {
@@ -137,9 +147,10 @@ export class Editor {
     if (E.picking && !E.fresh && this.onBoard()) { E.picking = false; this.app.render(); return; }
     this.app.toggleEdit();
   }
-  top(sec) { return sec === 'ex' ? { sec: 'ex', lv: 'list' } : sec === 'acc' ? { sec: 'acc', lv: 'main' } : sec === 'my' ? { sec: 'my', lv: 'list' } : { sec: 'sb', lv: 'list' }; }
+  top(sec) { return sec === 'ex' ? { sec: 'ex', lv: 'list' } : sec === 'acc' ? { sec: 'acc', lv: 'main' } : sec === 'my' ? { sec: 'my', lv: 'list' } : { sec: 'sb', lv: 'showing' }; }
   // A tab returns to where you last were in that section; the current tab goes to its top.
-  tab(sec) { this.go(sec === this.E.sec ? this.top(sec) : this.E.last[sec] || this.top(sec)); }
+  // Showing always opens on this screen (0.10).
+  tab(sec) { this.go(sec === this.E.sec || sec === 'sb' ? this.top(sec) : this.E.last[sec] || this.top(sec)); }
   // Opening the editor: Explore on the very first edit, else the board on the wall now.
   open(fresh) {
     this.E.drag = -1;
@@ -149,9 +160,8 @@ export class Editor {
       if (!(history.state && history.state.sf)) history.replaceState({ sf: 1, depth: 0, prev: '' }, '', location.href);
       this.go(r, { replace: true }); return;
     }
-    if (this.app.startPending()) { this.go({ sec: 'ex', lv: 'list' }); return; }
-    const b = this.app.cur(), p = b.pages[this.app.selIdx(b)];
-    this.go(p ? { sec: 'sb', lv: 'board', sb: b.id, bd: p.id, from: 'boards' } : { sec: 'sb', lv: 'sb', sb: b.id, view: 'week' });
+    // 0.10: Edit opens Showing, this screen: what it shows, and the ways to change it
+    this.go({ sec: 'sb', lv: 'showing' });
   }
   // Done: back out of every entry the editor made, so the browser's back after Done leaves
   // the site instead of reopening the editor. An editor opened straight from an address
@@ -213,7 +223,7 @@ export class Editor {
     const anim = E.navKey !== this.lastNav ? (E.fx === 'back' ? ' sf-nav-back' : ' sf-nav-in') : '';
     this.lastNav = E.navKey;
     const body = E.sheet ? this.sheet() : {
-      'sb:list': () => this.storyboardsLevel(), 'sb:sb': () => this.storyboardLevel(), 'sb:board': () => this.pageLevel(),
+      'sb:showing': () => this.showingLevel(), 'sb:list': () => this.storyboardsLevel(), 'sb:sb': () => this.storyboardLevel(), 'sb:board': () => this.pageLevel(),
       'my:list': () => this.myBoardsLevel(), 'my:bp': () => this.pageLevel(),
       'ex:list': () => this.exploreLevel(), 'ex:section': () => this.sectionLevel(), 'ex:tpl': () => this.templateLevel(),
       'acc:main': () => this.accountLevel(), 'acc:help': () => this.helpLevel(), 'acc:log': () => this.logLevel()
@@ -230,15 +240,15 @@ export class Editor {
 
   head() {
     const t = this.t, E = this.E, b = this.app.cur(), p = this.page(), up = this.backTarget();
-    const upLabel = !up ? '' : up.lv === 'sb' ? b.name : up.sec === 'sb' ? t.secStoryboards : up.sec === 'my' ? t.secMyBoards : up.sec === 'ex' ? (up.lv === 'section' && sectionOf(up.section) ? sectionOf(up.section).name[this.lang] : t.secExplore) : this.app.account.available ? t.secAccount : t.secSettings;
+    const upLabel = !up ? '' : up.lv === 'sb' ? b.name : up.lv === 'showing' ? t.secShowing : up.sec === 'sb' ? t.secStoryboards : up.sec === 'my' ? t.secMyBoards : up.sec === 'ex' ? (up.lv === 'section' && sectionOf(up.section) ? sectionOf(up.section).name[this.lang] : t.secExplore) : t.secAccount;
     const bp = this.bp();
     const tpl = E.tpl && TEMPLATES.find(x => x.id === E.tpl);
     const [kicker, title] = {
-      'sb:list': ['Split-Flap', t.secStoryboards], 'sb:sb': [t.secStoryboards, b.name], 'sb:board': [b.name, p ? p.name || t.page : ''],
-      'my:list': ['Split-Flap', t.secMyBoards], 'my:bp': [t.secMyBoards, bp ? bp.name : ''],
+      'sb:showing': ['Split-Flap', t.secShowing], 'sb:list': [t.kindPlaylist, t.secStoryboards], 'sb:sb': [t.kindPlaylist, b.name], 'sb:board': [t.kindBoard, p ? p.name || t.page : ''],
+      'my:list': ['Split-Flap', t.secMyBoards], 'my:bp': [t.kindBoard, bp ? bp.name : ''],
       'ex:list': ['Split-Flap', t.secExplore], 'ex:section': [t.secExplore, sectionOf(E.section) ? sectionOf(E.section).name[this.lang] : ''],
-      'ex:tpl': [sectionOf(E.section) ? sectionOf(E.section).name[this.lang] : t.secExplore, tpl ? tpl.name[this.lang] : ''],
-      'acc:main': ['Split-Flap', this.app.account.available ? t.account : t.secSettings], 'acc:help': [t.secAccount, t.help], 'acc:log': [`v${VERSION}`, t.versionLog]
+      'ex:tpl': [t.kindTemplate, tpl ? tpl.name[this.lang] : ''],
+      'acc:main': ['Split-Flap', t.account], 'acc:help': ['Split-Flap', t.help], 'acc:log': [`v${VERSION}`, t.versionLog]
     }[E.sec + ':' + E.lv];
     return h('header', { class: 'sf-panel-head' },
       up ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, upLabel)) : null,
@@ -252,7 +262,7 @@ export class Editor {
     const tab = (id, label) => h('button', { class: 'sf-tab', 'aria-current': sec === id ? 'page' : null, 'data-k': 'tab-' + id, onclick: () => this.tab(id) }, label,
       id === 'acc' ? h('span', { class: 'sf-sync-fail', title: t.syncFailedMark, role: 'img', 'aria-label': t.syncFailedMark, 'data-sync-fail': '', hidden: this.app.account.status !== 'failed' }, ' !') : null);
     return h('nav', { class: 'sf-tabs', 'aria-label': t.sections },
-      tab('sb', t.secStoryboards), tab('my', t.secMyBoards), tab('ex', t.secExplore), tab('acc', this.app.account.available ? t.secAccount : t.secSettings));
+      tab('sb', t.secShowing), tab('my', t.secMyBoards), tab('ex', t.secExplore), tab('acc', t.secAccount));
   }
   dayLabel(d) { return `${this.t.dayShort[d.getDay()]} ${d.getDate()} ${this.t.monthShort[d.getMonth()]}`; }
   zoneName(k) { const p = this.page(); return p ? (this.t.zoneNames[p.layout] || [])[k] || '' : ''; }
@@ -277,6 +287,47 @@ export class Editor {
       h('button', { class: 'sf-icon sf-more-btn', 'aria-haspopup': 'menu', 'aria-expanded': String(open), 'aria-label': t.more, title: t.more, 'data-k': 'more-' + key,
         onclick: e => { e.stopPropagation(); this.E.menu = open ? null : key; this.E.confirm = null; this.app.render(); if (!open) { const el = this.app.drawer.querySelector('.sf-more.open .sf-more-item'); if (el) el.focus(); } } }, '⋯'),
       open ? h('div', { class: 'sf-more-pop sf-pop', role: 'menu' }, items) : null);
+  }
+
+  // ---------- Showing (0.10): this screen ----------
+  // What the screen runs, how to change it, and how to show more. On a first visit it asks
+  // where the screen is, once, here where the answer changes what you see.
+  showingLevel() {
+    const t = this.t, app = this.app, b = app.shown(), d = app.dimsOf(b), now = Date.now(), first = app.startPending();
+    const on = app.holding() ? app.selIdx(b) : Math.max(0, app.S.pageIdx);
+    const many = b.pages.length > 1, isDemo = b.from === 'demo';
+    const where = first && !app.firstPlace() ? h('section', { class: 'sf-box sf-where', 'data-k': 'where' },
+      h('strong', null, t.whereTitle), h('span', { class: 'sf-hint' }, t.whereBody),
+      this.searchBox('first-place', t.searchCity, q => searchCities(q, this.lang), r => app.setFirstPlace(r)),
+      h('button', { class: 'sf-link-btn', 'data-k': 'where-not-now', onclick: () => { app.markStarted(); app.render(); } }, t.notNow)) : null;
+    const strip = h('div', { class: 'sf-strip' }, b.pages.slice(0, 12).map((p, i) => h('button', { class: 'sf-strip-item' + (i === on ? ' on' : ''), 'data-k': 'strip-' + i, onclick: () => this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: p.id, from: 'boards' }) },
+      this.thumb('st-' + p.id, d.rows, d.cols, this.pageGrid(p, b), b.theme), h('span', null, p.name || `${t.page} ${i + 1}`))));
+    const onPage = b.pages[on] || b.pages[0];
+    const card = h('section', { class: 'sf-box sf-now-card' },
+      h('div', { class: 'sf-row between' }, h('strong', { class: 'sf-now-name' }, b.name), h('span', { class: 'sf-meta' }, (many ? t.boardsInTurn(b.pages.length) : t.kindBoard) + ' · ' + app.sizeLabel(b))),
+      strip,
+      h('div', { class: 'sf-row wrap' },
+        h('button', { class: 'sf-btn', 'data-k': 'edit-on-now', onclick: () => this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: onPage.id, from: 'boards' }) }, many ? t.editOnNow : t.editIt),
+        many ? h('button', { class: 'sf-btn', 'data-k': 'open-playlist', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'boards' }) }, t.openPl) : null,
+        h('button', { class: 'sf-btn', 'data-k': 'change-shown', onclick: () => this.go({ sec: 'sb', lv: 'list' }) }, t.change)),
+      many ? h('span', { class: 'sf-hint' }, t.holdNote) : null);
+    const row = (k, title, sub, fn) => h('button', { class: 'sf-sec', 'data-k': k, onclick: fn }, h('span', null, h('strong', null, title), sub ? h('span', null, sub) : null), h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›'));
+    const welcome = b.pages.findIndex(p => p.zones.some(z => z.ch === 'message'));
+    const pl = placeOf(b, { langs: navigator.languages });
+    const summary = [THEMES[b.theme].label, app.sizeLabel(b), pl && pl.city, b.sound ? t.soundOn : t.soundOff].filter(Boolean).join(' · ');
+    return h('div', { class: 'sf-level' },
+      where, card,
+      isDemo && welcome >= 0 ? row('type-own', t.typeOwn, t.typeOwnSub, () => this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: b.pages[welcome].id, from: 'boards' }, { zone: { zone: b.pages[welcome].zones.findIndex(z => z.ch === 'message'), zoneOpen: true } })) : null,
+      isDemo ? row('browse', t.browse, t.browseSub, () => this.go({ sec: 'ex', lv: 'list' })) : null,
+      row('add-in-turn', t.another, t.anotherSub, () => { this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'boards' }); this.E.sheet = { kind: 'add', tab: app.blueprints.length ? 'my' : 'tpl' }; app.render(); }),
+      h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.thisScreen),
+        h('span', { class: 'sf-hint' }, summary),
+        h('div', { class: 'sf-row wrap' },
+          h('button', { class: 'sf-btn', 'data-k': 'put-on', onclick: () => { if (this.phone()) app.toggleEdit(); app.openShare(false, b); } }, t.putOn),
+          h('button', { class: 'sf-btn', 'data-k': 'screen-settings', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'display' }) }, t.settings))),
+      h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.secStoryboards),
+        row('all-playlists', t.allPlaylists(app.boards.length), null, () => this.go({ sec: 'sb', lv: 'list' }))),
+      h('button', { class: 'sf-version', 'data-k': 'version-line', onclick: () => this.go({ sec: 'acc', lv: 'log' }) }, `v${VERSION}`, h('span', { 'aria-hidden': 'true' }, ' · '), t.versionLog));
   }
 
   // ---------- storyboards ----------
@@ -308,7 +359,7 @@ export class Editor {
     const app = this.app;
     return { open: () => this.openStoryboard(i), rename: () => { this.openStoryboard(i); this.startRename(); }, duplicate: () => app.duplicateBoard(i),
       // on a phone the board area is too small to hold the share panel, so the editor closes first
-      share: () => { if (i !== app.active) app.pickBoard(i); if (this.phone()) app.toggleEdit(); app.openShare(); },
+      share: () => { const bd = app.boards[i]; if (this.phone()) app.toggleEdit(); app.openShare(false, bd); },
       export: () => app.exportJson(i), delete: app.boards.length > 1 ? () => app.deleteBoard(i) : 'off' };
   }
   storyboardLevel() {
@@ -316,7 +367,7 @@ export class Editor {
     const views = h('div', { class: 'sf-subtabs', role: 'group' }, [['week', t.viewWeek], ['boards', t.viewBoards], ['display', t.viewDisplay]].map(([v, label]) =>
       h('button', { class: 'sf-seg', 'aria-pressed': String(E.view === v), 'data-k': 'view-' + v, onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: v }, { replace: true }) }, label)));
     const body = E.view === 'boards' ? this.boardsView() : E.view === 'display' ? this.settingsLevel() : weekView(this);
-    return h('div', { class: 'sf-level' }, h('div', { class: 'sf-row between' }, views, this.more('sb-open', this.sbVerbs(this.app.active))), body);
+    return h('div', { class: 'sf-level' }, h('div', { class: 'sf-row between' }, views, this.more('sb-open', this.sbVerbs(this.app.curIdx()))), body);
   }
 
   // ---------- a storyboard's boards ----------
@@ -361,14 +412,14 @@ export class Editor {
     if (S.kind === 'pickSb') return h('div', { class: 'sf-level sf-sheet' },
       h('div', { class: 'sf-row between' }, h('strong', null, t.addToSb), h('button', { class: 'sf-btn', 'data-k': 'sheet-close', onclick: () => { this.E.sheet = null; app.render(); } }, t.cancel)),
       h('div', { class: 'sf-sb-list' }, app.boards.map((bd, i) => h('button', { class: 'sf-sb-open row', 'data-k': 'pick-sb-' + i, disabled: bd.pages.length >= 50,
-        onclick: () => { app.active = i; app.saveActive(); this.go({ sec: 'sb', lv: 'sb', sb: bd.id, view: 'boards' }); this.E.sheet = { kind: 'add', tab: 'my', src: { kind: 'blueprint', id: S.bp } }; this.previewAdd(); app.render(); } },
+        onclick: () => { this.go({ sec: 'sb', lv: 'sb', sb: bd.id, view: 'boards' }); this.E.sheet = { kind: 'add', tab: 'my', src: { kind: 'blueprint', id: S.bp } }; this.previewAdd(); app.render(); } },
         h('span', { class: 'sf-board-text' }, h('strong', null, bd.name), h('span', { class: 'sf-meta' }, t.sbMeta(app.sizeLabel(bd), THEMES[bd.theme].label, bd.pages.length)))))));
     if (S.kind === 'copy') {
       const src = S.tplPage ? S.tplPage : app.cur().pages[S.page];
       return h('div', { class: 'sf-level sf-sheet' },
         h('div', { class: 'sf-row between' }, h('strong', null, t.copyToTitle), h('button', { class: 'sf-btn', 'data-k': 'sheet-close', onclick: () => { this.E.sheet = null; app.render(); } }, t.cancel)),
         h('p', { class: 'sf-note big' }, t.copyToNote),
-        h('div', { class: 'sf-sb-list' }, app.boards.map((bd, i) => (S.tplPage || i !== app.active) ? h('button', { class: 'sf-sb-open row', 'data-k': 'copy-to-' + i, onclick: () => this.copyTo(src, i) },
+        h('div', { class: 'sf-sb-list' }, app.boards.map((bd, i) => (S.tplPage || i !== app.curIdx()) ? h('button', { class: 'sf-sb-open row', 'data-k': 'copy-to-' + i, onclick: () => this.copyTo(src, i) },
           h('span', { class: 'sf-board-text' }, h('strong', null, bd.name), h('span', { class: 'sf-meta' }, t.sbMeta(app.sizeLabel(bd), THEMES[bd.theme].label, bd.pages.length)))) : null)));
     }
     return h('div', { class: 'sf-level' });
@@ -559,21 +610,19 @@ export class Editor {
     }
     const di = DURS.findIndex(x => x >= p.dur), durStep = dir => this.app.updPage(pp => { const i = DURS.findIndex(x => x >= pp.dur); pp.dur = DURS[Math.max(0, Math.min(DURS.length - 1, (i < 0 ? DURS.length - 1 : i) + dir))]; });
     const bp = this.bp(), full = this.app.blueprints.length >= MAX_MY;
+    // 0.10: zones first, since they are what you came to change; then name, layout and size.
+    // Save to my boards is in the more menu; a board in My boards shows on this screen.
     return h('div', { class: 'sf-level' },
       bp ? h('div', { class: 'sf-row between' },
-        h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'bp-add', onclick: () => { this.E.sheet = { kind: 'pickSb', bp: bp.id }; this.app.render(); } }, t.addToSb)),
+        h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'bp-add', onclick: () => { this.E.sheet = { kind: 'pickSb', bp: bp.id }; this.app.render(); } }, t.addToSb)),
         this.more('bp-open', this.bpVerbs(bp)))
-      : h('div', { class: 'sf-row between' },
-        h('div', { class: 'sf-row' },
-          h('button', { class: 'sf-btn primary', 'data-k': 'save-my', disabled: full, title: full ? t.myFull : null, onclick: () => this.saveToMy(p, this.originOf(p, b)) }, t.mSave),
-          h('button', { class: 'sf-btn', 'data-k': 'see-week', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'week' }) }, t.seeInWeek)),
-        this.more('pg-open', this.pageVerbs(this.app.selIdx()))),
+      : h('div', { class: 'sf-row between' }, h('span', { class: 'sf-sub' }, zs.length > 1 ? t.tapZone : t.tapZoneOne), this.more('pg-open', this.pageVerbs(this.app.selIdx()))),
+      h('div', { class: 'sf-field' }, bp ? h('span', { class: 'sf-sub' }, zs.length > 1 ? t.tapZone : t.tapZoneOne) : null, diagram, zoneRows),
       h('label', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.pageName),
         h('input', { class: 'sf-input big', value: p.name, 'data-k': 'page-name', oninput: e => { this.app.updPage(pp => { pp.name = e.target.value.slice(0, 80); }, true); }, onchange: () => this.app.render() })),
       h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.layout), layouts,
         bp ? h('span', { class: 'sf-hint' }, t.bpSize(d.rows, d.cols))
           : h('span', { class: 'sf-hint' }, t.gridIs(d.rows, d.cols), ' ', h('button', { class: 'sf-link-btn inline', 'data-k': 'grid-size', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'display' }) }, t.changeSize))),
-      h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.zones), h('span', { class: 'sf-sub' }, zs.length > 1 ? t.tapZone : t.tapZoneOne), diagram, zoneRows),
       h('div', { class: 'sf-field gap ruled' }, h('span', { class: 'sf-eyebrow' }, bp ? t.onScreen : t.whenShows),
         bp ? h('span', { class: 'sf-hint' }, t.bpNoTimes) : this.windowsEl(p),
         h('div', { class: 'sf-row between' }, h('span', { class: 'sf-label' }, t.showFor),
@@ -1042,7 +1091,7 @@ export class Editor {
   // ---------- explore ----------
   // Templates to start from. A first visit lands here, with a way to keep the demo board.
   exploreLevel() {
-    const t = this.t, app = this.app, first = app.startPending(), now = Date.now();
+    const t = this.t, app = this.app;
     // 0.9: a page per section. This first page shows each with its first few templates,
     // built for the place; the section's page has them all, and the ones that cannot work here.
     const tplGrid = h('div', null, TPL_SECTIONS.map(sec => {
@@ -1053,18 +1102,9 @@ export class Editor {
           h('button', { class: 'sf-link-btn', 'data-k': 'sec-' + sec.id, onclick: () => this.go({ sec: 'ex', lv: 'section', section: sec.id }) }, t.seeAll(list.length))),
         h('div', { class: 'sf-templates' }, shown.map(tp => this.tplCard(tp, sec.id))));
     }));
-    // the first visit asks where the screen is, so the demo and every template fit it
-    const fp = app.firstPlace();
-    const where = first ? h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.whereTitle),
-      fp ? h('div', { class: 'sf-chosen' }, h('span', null, fp.city)) : null,
-      this.searchBox('first-place', fp ? t.changeCity : t.searchCity, q => searchCities(q, this.lang), r => app.setFirstPlace(r)),
-      h('span', { class: 'sf-hint' }, t.whereHint)) : null;
     const file = h('input', { type: 'file', accept: 'application/json,.json', style: 'display:none', onchange: e => app.importFile(e) });
     return h('div', { class: 'sf-level' },
       h('div', { class: 'sf-start-head' }, h('h2', null, t.startTitle), h('p', null, t.exIntro)),
-      app.account.available && !app.account.signedIn() ? h('div', { class: 'sf-guest' }, h('span', null, t.startGuest), h('button', { class: 'sf-btn', 'data-k': 'start-signin', onclick: () => app.account.signIn() }, t.signInGoogle)) : null,
-      where,
-      first ? h('button', { class: 'sf-btn big', 'data-k': 'skip', onclick: () => { app.markStarted(); this.open(true); } }, t.skip) : null,
       tplGrid,
       h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.importTitle),
         h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn', 'data-k': 'import', onclick: () => file.click() }, t.importB), file),
@@ -1075,7 +1115,7 @@ export class Editor {
     const t = this.t, app = this.app, now = Date.now(), nb = this.tplBoard(tp.id), d = app.dimsOf(nb);
     return h('button', { class: 'sf-template', 'data-k': 'tpl-' + tp.id, onclick: () => this.go({ sec: 'ex', lv: 'tpl', tpl: tp.id, section: section || tp.section }) },
       this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(Object.assign({}, app.live.data, { loc: nb.loc || app.live.data.loc }), now)), nb.theme),
-      h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang]), h('span', null, `${tp.desc[this.lang]} · ${t.boardsCount(nb.pages.length)}`)));
+      h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang], app.shown().from === tp.id ? h('span', { class: 'sf-tag on-now' }, t.onNowTag) : null), h('span', null, `${tp.desc[this.lang]} · ${t.boardsCount(nb.pages.length)}`)));
   }
   // The templates of a section that can work for this place, and the ones that cannot yet.
   tplIn(id, notHere) {
@@ -1096,8 +1136,9 @@ export class Editor {
     const t = this.t, app = this.app, tp = TEMPLATES.find(x => x.id === this.E.tpl), nb = this.tplBoard(tp.id), d = app.dimsOf(nb), now = Date.now();
     return h('div', { class: 'sf-level' },
       h('p', { class: 'sf-note big' }, tp.desc[this.lang]),
-      h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'use-tpl', disabled: app.boards.length >= 50, onclick: () => app.useTemplate(tp.id) }, t.useAsNew)),
-      h('ol', { class: 'sf-pls' }, nb.pages.map((p, i) => h('li', { class: 'sf-pl', style: `--hue:${hueOf(nb, i)}` },
+      h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'use-tpl', disabled: app.boards.length >= 50, onclick: () => app.useTemplate(tp.id) }, t.showOn)),
+      h('p', { class: 'sf-hint' }, t.tplCopyNote),
+      h('ol', { class: 'sf-pls' }, nb.pages.map((p, i) => h('li', { class: 'sf-pl tpl-row', style: `--hue:${hueOf(nb, i)}` },
         h('div', { class: 'sf-pl-open static' },
           this.thumb(`tp-${tp.id}-${i}`, d.rows, d.cols, () => compose(p, d.rows, d.cols, now, this.lang, previewLive(app.live.data, now)), nb.theme),
           h('span', { class: 'sf-pl-text' }, h('span', { class: 'sf-pl-name' }, p.name || `${t.page} ${i + 1}`), h('span', { class: 'sf-pl-meta' }, `${p.dur} s`))),

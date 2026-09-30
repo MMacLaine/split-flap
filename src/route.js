@@ -2,6 +2,7 @@
 // back button, the phone's back gesture and a reload all land where they should. Board
 // links (#b=) and #log sit outside these paths and are left alone.
 //
+//   #/showing                              this screen: what it shows (0.10, the first tab)
 //   #/storyboards                          the list
 //   #/storyboards/<id>/<week|boards|display>
 //   #/storyboards/<id>/boards/<boardId>    one board of a storyboard
@@ -19,6 +20,7 @@ const clean = s => /^[\w-]{1,64}$/.test(s || '') ? s : null;
 export function parseRoute(hash) {
   const m = /^#\/(.*)$/.exec(hash || ''); if (!m) return null;
   const [sec, a, b, c] = m[1].split('/').map(decodeURIComponent);
+  if (sec === 'showing') return { sec: 'sb', lv: 'showing' };
   if (sec === 'storyboards') {
     if (!a) return { sec: 'sb', lv: 'list' };
     const sb = clean(a); if (!sb) return { sec: 'sb', lv: 'list' };
@@ -40,6 +42,7 @@ export function routeHash(r) {
   if (r.sec === 'sb') {
     if (r.lv === 'board') return `#/storyboards/${e(r.sb)}/boards/${e(r.bd)}`;
     if (r.lv === 'sb') return `#/storyboards/${e(r.sb)}/${VIEWS.includes(r.view) ? r.view : 'week'}`;
+    if (r.lv === 'showing') return '#/showing';
     return '#/storyboards';
   }
   if (r.sec === 'my') return r.lv === 'bp' ? `#/my-boards/${e(r.bp)}` : '#/my-boards';
@@ -49,9 +52,10 @@ export function routeHash(r) {
 }
 
 // One level up. A section's top has none, so Back is hidden there.
-export function parentRoute(r) {
+// shownId: the storyboard on the screen, whose own level sits under Showing (0.10).
+export function parentRoute(r, shownId) {
   if (!r) return null;
-  if (r.sec === 'sb') return r.lv === 'board' ? { sec: 'sb', lv: 'sb', sb: r.sb, view: r.from || 'boards' } : r.lv === 'sb' ? { sec: 'sb', lv: 'list' } : null;
+  if (r.sec === 'sb') return r.lv === 'board' ? { sec: 'sb', lv: 'sb', sb: r.sb, view: r.from || 'boards' } : r.lv === 'sb' ? (r.sb === shownId ? { sec: 'sb', lv: 'showing' } : { sec: 'sb', lv: 'list' }) : r.lv === 'list' ? { sec: 'sb', lv: 'showing' } : null;
   if (r.sec === 'my') return r.lv === 'bp' ? { sec: 'my', lv: 'list' } : null;
   if (r.sec === 'ex') return r.lv === 'tpl' ? (SECTIONS.includes(r.section) ? { sec: 'ex', lv: 'section', section: r.section } : { sec: 'ex', lv: 'list' }) : r.lv === 'section' ? { sec: 'ex', lv: 'list' } : null;
   if (r.sec === 'acc') return r.lv === 'help' || r.lv === 'log' ? { sec: 'acc', lv: 'main' } : null;

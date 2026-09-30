@@ -3,6 +3,28 @@
 
 export const CHANGELOG = [
   {
+    v: '0.10.0', date: '2026-09-30',
+    tag: { en: 'Showing', sv: 'Visas' },
+    desc: {
+      en: 'People who had not built Split-Flap found the editor hard to follow. This release changes how it behaves: what you open is on the screen at once, and nothing changes what the screen runs until you press Show on this screen.',
+      sv: 'Personer som inte byggt Split-Flap tyckte att redigeraren var svår att följa. Den här versionen ändrar hur den beter sig: det du öppnar syns på skärmen direkt, och inget ändrar vad skärmen visar förrän du trycker Visa på den här skärmen.'
+    },
+    items: {
+      en: [
+        '**Showing comes first.** Edit opens on this screen, with what it shows now, the board on now, and the ways to change it.',
+        '**What you open, you see.** A playlist, a board in My boards or a template goes on the screen as soon as you open it, with a gold bar under it that says it is a preview. Leave without pressing and the screen goes back, and says so.',
+        '**Storyboards are called playlists.** It is the word most people used for them anyway.',
+        'Picking a city on a first visit ends the first visit, a template lands on its board instead of the week view, and a board\'s zones come first on its page.'
+      ],
+      sv: [
+        '**Visas kommer först.** Redigera öppnar den här skärmen, med det den visar nu, tavlan som visas och sätten att ändra det.',
+        '**Det du öppnar ser du.** En spellista, en tavla i Mina tavlor eller en mall syns på skärmen så fort du öppnar den, med en gyllene rad under som säger att det är en förhandsvisning. Går du därifrån utan att trycka går skärmen tillbaka, och säger det.',
+        '**Storyboards heter spellistor.** Det var ordet de flesta använde ändå.',
+        'Att välja en stad vid första besöket avslutar första besöket, en mall landar på sin tavla i stället för veckovyn, och en tavlas zoner kommer först på dess sida.'
+      ]
+    }
+  },
+  {
     v: '0.9.4', date: '2026-09-30',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

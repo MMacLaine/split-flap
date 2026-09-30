@@ -24,22 +24,32 @@ try {
 
   // an untouched demo keeps its ids, so a reload inside it stays put (0.7.0 review, 3)
   await ev('splitFlap.toggleEdit()'); await sleep(500);
+  await ev(`document.querySelector('[data-k=edit-on-now]').click()`); await sleep(400);
   const demoAt = await at();
   await send('Page.reload'); await sleep(2500);
   check('a reload inside the untouched demo keeps the level', (await at()) === demoAt && (await lv()) === 'sb:board', `${demoAt} then ${await at()}`);
   await ev(`document.querySelector('[data-k=done]').click()`); await sleep(600);
 
-  // Edit opens the board on the wall, at its address
+  // 0.10: Edit opens Showing, this screen, at its address
   await ev('splitFlap.toggleEdit()'); await sleep(500);
-  check('Edit opens the board that is showing, with an address', (await at()) === `#/storyboards/${sb}/boards/${p0}`, await at());
+  check('Edit opens Showing, with an address', (await at()) === '#/showing' && (await lv()) === 'sb:showing', await at());
+  check('Showing is a section top, with no Back', (await ev(`String(!!document.querySelector('[data-k=back]'))`)) === 'false');
+  await ev(`document.querySelector('[data-k=edit-on-now]').click()`); await sleep(400);
+  const pOn = await ev('splitFlap.editor.page().id');
+  check('Edit the board on now opens it', (await at()) === `#/storyboards/${sb}/boards/${pOn}`, await at());
+  check('and says the playlist holds on it', /holding on/i.test(await ev(`(document.querySelector('[data-k=status-line]') || {}).textContent || ''`)));
   // down through the levels by clicking
   await ev(`document.querySelector('[data-k=back]').click()`); await sleep(400);
-  check('Back from a board goes to its storyboard', (await lv()) === 'sb:sb:boards', await lv());
+  check('Back from a board goes to its playlist', (await lv()) === 'sb:sb:boards', await lv());
   await ev(`document.querySelector('[data-k=view-week]').click()`); await sleep(400);
-  check('the storyboard has Week, Boards and Display', (await at()) === `#/storyboards/${sb}/week`, await at());
+  check('the playlist has Week, Boards and Display', (await at()) === `#/storyboards/${sb}/week`, await at());
   await ev(`document.querySelector('[data-k=back]').click()`); await sleep(400);
-  check('Back from a storyboard goes to the list', (await at()) === '#/storyboards', await at());
-  check('the list has no Back', (await ev(`String(!!document.querySelector('[data-k=back]'))`)) === 'false');
+  check('Back from the playlist on the screen goes to Showing', (await at()) === '#/showing', await at());
+  await ev(`document.querySelector('[data-k=change-shown]').click()`); await sleep(400);
+  check('Change opens the list of playlists', (await at()) === '#/storyboards', await at());
+  await ev(`document.querySelector('[data-k=back]').click()`); await sleep(400);
+  check('and Back from the list goes to Showing', (await at()) === '#/showing', await at());
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'list' })`); await sleep(300);
   await ev(`document.querySelector('[data-k=sb-0]').click()`); await sleep(400);
   await ev(`document.querySelector('[data-k=view-boards]').click()`); await sleep(300);
   await ev(`document.querySelector('[data-k=page-1]').click()`); await sleep(400);
@@ -72,10 +82,13 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${sb}', view: 'display' })`); await sleep(300);
   await ev(`document.querySelector('[data-k=tab-ex]').click()`); await sleep(300);
   check('a tab opens its section', (await lv()) === 'ex:list', await lv());
+  await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'section', section: 'travel' })`); await sleep(300);
   await ev(`document.querySelector('[data-k=tab-sb]').click()`); await sleep(300);
-  check('and a tab returns to where you last were in it', (await lv()) === 'sb:sb:display', await lv());
-  await ev(`document.querySelector('[data-k=tab-sb]').click()`); await sleep(300);
-  check('the current tab goes to the top of its section', (await lv()) === 'sb:list', await lv());
+  check('Showing always opens on this screen', (await lv()) === 'sb:showing', await lv());
+  await ev(`document.querySelector('[data-k=tab-ex]').click()`); await sleep(300);
+  check('and a tab returns to where you last were in it', (await lv()) === 'ex:section', await lv());
+  await ev(`document.querySelector('[data-k=tab-ex]').click()`); await sleep(300);
+  check('the current tab goes to the top of its section', (await lv()) === 'ex:list', await lv());
 
   // Escape closes a menu first, then the editor
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${sb}', view: 'boards' })`); await sleep(300);
