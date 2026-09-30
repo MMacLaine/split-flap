@@ -38,6 +38,10 @@ export class App {
     this.overlay = h('div', { class: 'sf-overlay' });
     this.comps = new Map();
     this.stage.append(this.overlay);
+    // The status line's voice (0.9.4): one live region that is never rebuilt, so a screen
+    // reader hears every line even though the drawer that shows it is drawn again.
+    this.statusLive = h('div', { class: 'sf-vh', role: 'status', 'aria-live': 'polite' }); root.append(this.statusLive);
+    this.lines = []; this.lineN = 0;
 
     const params = new URLSearchParams(location.search);
     const docLang = (document.documentElement.lang || 'en').slice(0, 2) === 'sv' ? 'sv' : 'en';
@@ -135,7 +139,7 @@ export class App {
   // something in, a second board or three minutes in the editor. Dismissed for good.
   promptDue() {
     const a = this.account;
-    if (!a || !a.available || a.user || a.state.user || this.S.cue || getFlag('sf_signin_prompt') === 'done') return false;
+    if (this.linkVisit || !a || !a.available || a.user || a.state.user || this.S.cue || getFlag('sf_signin_prompt') === 'done') return false;
     return this.boards.length >= 2 || (+getFlag('sf_edit_ms') || 0) >= 180000;
   }
   dismissPrompt() { setFlag('sf_signin_prompt', 'done'); this.renderOverlay(); }
@@ -211,7 +215,27 @@ export class App {
     this.upd(b => { const p = b.pages[this.selIdx(b)]; if (p) fn(p, b); }, quiet);
   }
   selIdx(b = this.cur()) { return Math.max(0, Math.min(this.S.sel, b.pages.length - 1)); }
-  flash(msg, ms = 3200) { clearTimeout(this.noticeT); this.S.notice = msg; this.paintNotice(); this.noticeT = setTimeout(() => { this.S.notice = ''; this.paintNotice(); }, ms); }
+  flash(msg, ms) { this.say(msg, ms ? { ms } : {}); }
+  // The status line (0.9.4): every press answers in words, in one place. In the editor it
+  // sits under the panel's title; with the editor closed it floats above the control bar.
+  // A line lasts 7 s, or 12 s with an action (Undo, Show it now, Try again). The newest is on
+  // top and the one before stays below, fainter, until its time is up. A line with the same
+  // key replaces the older one, so a run of saves never stacks.
+  say(msg, o = {}) {
+    const now = Date.now(), ms = o.ms || (o.action ? 12000 : 7000);
+    const line = { id: ++this.lineN, msg, fail: !!o.fail, action: o.action || null, key: o.key || null, until: now + ms };
+    this.lines = [line, ...this.lines.filter(l => l.until > now && !(line.key && l.key === line.key))].slice(0, 2);
+    this.S.notice = msg;
+    this.statusLive.textContent = ''; setTimeout(() => { this.statusLive.textContent = msg; }, 40);
+    this.paintNotice();
+  }
+  liveLines() { const now = Date.now(); return this.lines.filter(l => l.until > now); }
+  statusLines(cls = '') {
+    const lines = this.liveLines(); if (!lines.length) return null;
+    return h('div', { class: 'sf-status ' + cls, 'data-status': '' }, lines.map((l, i) => h('div', { class: 'sf-status-line' + (l.fail ? ' fail' : '') + (i ? ' old' : ''), 'data-k': i ? null : 'status-line' },
+      h('span', { class: 'sf-dot', 'aria-hidden': 'true' }), h('span', { class: 'sf-status-text' }, l.msg),
+      l.action ? h('button', { class: 'sf-status-act', 'data-k': i ? null : 'status-act', onclick: () => { l.until = 0; l.action.fn(); this.paintNotice(); } }, l.action.label) : null)));
+  }
 
   dims() { const bp = this.editor && this.editor.bp(); return bp ? { rows: bp.rows, cols: bp.cols } : this.dimsOf(this.cur()); }
   dimsOf(b) {
@@ -381,6 +405,9 @@ export class App {
     const b = await decodeBoard(m[1]);
     history.replaceState(null, '', location.pathname + location.search);
     if (!b) { this.flash(this.t.linkFail); return; }
+    // A visit that came by a board link is a screen (0.9.4): no sign-in prompt and no cue,
+    // since there may be nobody there to press Not now.
+    this.linkVisit = true; this.S.cue = false;
     // Same board id: replace it. A kiosk that opens the same link at every boot keeps
     // one copy that follows the link, instead of piling up duplicates.
     const i = this.boards.findIndex(x => x.id === b.id);
@@ -514,8 +541,14 @@ export class App {
     this.stage.classList.toggle('sf-hide-cursor', !this.S.bar && !this.S.editing);
   }
   paintNotice() {
-    const el = this.root.querySelector('[data-notice]'); if (el) el.textContent = this.S.notice;
-    if (!this.S.editing) this.renderOverlay();
+    clearTimeout(this.noticeT);
+    const lines = this.liveLines();
+    if (lines.length) this.noticeT = setTimeout(() => this.paintNotice(), Math.min(...lines.map(l => l.until)) - Date.now() + 30);
+    else this.S.notice = '';
+    if (this.S.editing) {
+      const slot = this.drawer && this.drawer.querySelector('[data-status-slot]');
+      if (slot) slot.replaceChildren(...[this.statusLines()].filter(Boolean));
+    } else this.renderOverlay();
   }
 
   renderOverlay() {
@@ -530,7 +563,7 @@ export class App {
       });
       if (S.share) wrap.append(this.renderShare());
       if (S.switcher) wrap.append(this.renderSwitcher());
-      if (S.notice) wrap.append(h('div', { class: 'sf-pop sf-toast', role: 'status' }, S.notice));
+      const st = this.statusLines('sf-pop sf-toast'); if (st) wrap.append(st);
       if (S.cue) wrap.append(h('div', { class: 'sf-cue' }, h('span', null, t.cue), h('button', { onclick: () => this.dismissCue() }, t.gotIt)));
       else if (this.promptDue()) {
         const safari = /^((?!chrome|chromium|android|crios|fxios).)*safari/i.test(navigator.userAgent);
@@ -577,30 +610,45 @@ export class App {
   }
 
   async openShare(keepOpen) {
-    if (this.S.share && !keepOpen) { this.set({ share: false }); return; }
+    if (this.S.share && !keepOpen) { this.set({ share: false, qrBig: false }); return; }
     const code = await encodeBoard(this.cur());
-    const url = location.origin + location.pathname + (this.S.shareKiosk ? '?kiosk=1' : '') + '#b=' + code;
-    let svg = null;
+    const kiosk = this.S.shareKiosk !== false;   // on unless unticked: the link is usually for a wall
+    const url = location.origin + location.pathname + (kiosk ? '?kiosk=1' : '') + '#b=' + code;
+    let svg = null, n = 0;
     try {
       const q = qrcode(0, 'L'); q.addData(url); q.make();
-      const n = q.getModuleCount(); let d = '';
+      n = q.getModuleCount(); let d = '';
       for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
-      svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" role="img" aria-label="QR"><path d="${d}" fill="#000"/></svg>`;
+      // four modules of quiet zone round the code, as scanners expect
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${n + 8} ${n + 8}" shape-rendering="crispEdges" role="img" aria-label="QR"><rect x="-4" y="-4" width="${n + 8}" height="${n + 8}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
     } catch { svg = null; }   // too long for the largest QR code
-    this.set({ share: true, switcher: false, shareUrl: url, shareSvg: svg, copied: false });
+    this.set({ share: true, switcher: false, shareUrl: url, shareSvg: svg, shareModules: n, copied: false });
   }
+  // A QR code needs at least 4 device pixels a module to scan from a phone. The share panel
+  // draws it as large as it can; when that is still too small, it offers the code full screen.
+  qrFits(px) { const n = (this.S.shareModules || 0) + 8, dpr = window.devicePixelRatio || 1; return n && px * dpr / n >= 4; }
   renderShare() {
-    const S = this.S, t = this.t;
-    const qr = h('div', { class: 'sf-qr' + (S.shareSvg ? '' : ' none') });
-    if (S.shareSvg) qr.innerHTML = S.shareSvg;   // built above from module coordinates only
+    const S = this.S, t = this.t, kiosk = S.shareKiosk !== false, qrPx = 300;
+    const qr = S.shareSvg ? h('div', { class: 'sf-qr' }) : null;
+    if (qr) qr.innerHTML = S.shareSvg;   // built above from module coordinates only
+    const fits = S.shareSvg && this.qrFits(qrPx);
     return h('div', { class: 'sf-pop sf-share', role: 'dialog', 'aria-label': t.share },
-      qr,
-      h('div', { class: 'sf-share-text' }, h('strong', null, t.shareTitle), h('span', null, S.shareSvg ? t.shareBody : t.shareLong)),
-      h('label', { class: 'sf-check', style: 'grid-column:1 / -1;font-size:12px;color:var(--pale)' },
-        h('input', { type: 'checkbox', checked: !!S.shareKiosk, 'data-k': 'share-kiosk', onchange: e => { this.S.shareKiosk = e.target.checked; this.openShare(true); } }), h('span', null, t.kioskLink)),
+      h('strong', { class: 'sf-share-title' }, t.shareTitle),
       h('div', { class: 'sf-share-row' },
         h('input', { readOnly: true, value: S.shareUrl, 'aria-label': t.boardLink, onfocus: e => e.target.select() }),
-        h('button', { 'data-k': 'share-copy', onclick: () => { navigator.clipboard && navigator.clipboard.writeText(S.shareUrl).catch(() => {}); this.set({ copied: true }); setTimeout(() => this.set({ copied: false }), 1600); } }, S.copied ? t.copied : t.copy)));
+        h('button', { 'data-k': 'share-copy', onclick: () => { navigator.clipboard && navigator.clipboard.writeText(S.shareUrl).catch(() => {}); this.set({ copied: true }); this.say(t.linkCopied); setTimeout(() => this.set({ copied: false }), 1600); } }, S.copied ? t.copied : t.copy)),
+      h('p', { class: 'sf-share-note' }, t.shareBody),
+      h('label', { class: 'sf-check sf-share-kiosk' },
+        h('input', { type: 'checkbox', checked: kiosk, 'data-k': 'share-kiosk', onchange: e => { this.S.shareKiosk = e.target.checked; this.openShare(true); } }), h('span', null, t.kioskLink)),
+      S.shareSvg ? (fits ? qr : h('button', { class: 'sf-btn sf-qr-open', 'data-k': 'share-qr-big', onclick: () => this.set({ qrBig: true }) }, t.qrLarge))
+        : h('p', { class: 'sf-share-note' }, t.shareLong),
+      S.qrBig && S.shareSvg ? this.renderQrBig() : null);
+  }
+  renderQrBig() {
+    const box = h('div', { class: 'sf-qr big' }); box.innerHTML = this.S.shareSvg;
+    const close = () => this.set({ qrBig: false });
+    return h('div', { class: 'sf-qr-full', role: 'dialog', 'aria-label': this.t.qrLarge, onclick: close, onkeydown: e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } } },
+      box, h('button', { class: 'sf-btn', 'data-k': 'share-qr-close', onclick: close }, this.t.close));
   }
   renderSwitcher() {
     const t = this.t;

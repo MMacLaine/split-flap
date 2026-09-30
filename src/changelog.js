@@ -3,6 +3,30 @@
 
 export const CHANGELOG = [
   {
+    v: '0.9.4', date: '2026-09-30',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'I had a few people try Split-Flap and a full test round done. These are the fixes that do not need the new navigation, which comes next.',
+      sv: 'Jag lät några personer testa Split-Flap och gjorde en hel testrunda. Det här är rättningarna som inte behöver den nya navigeringen, som kommer härnäst.'
+    },
+    items: {
+      en: [
+        '**Every press answers.** Lines like "Saved to My boards" were hidden while the editor was open, so it looked like nothing happened. They now show under the editor\'s title, with Undo where it applies.',
+        '**A QR code you can scan.** The code under Share was too small for a phone to read. It now opens full size when the panel cannot draw it big enough, and the wall link comes first, in kiosk mode.',
+        '**A screen that restarts offline keeps its board.** The last departures, weather and prices are kept in the browser, so a screen that comes back before the network shows them with a note saying how old they are.',
+        '**A wall link asks nothing.** A screen opened from a board link no longer asks anyone to sign in.',
+        'Smaller fixes: the yen and other small currencies are quoted per 100 instead of as 0.00, Electricity price is only offered in Sweden, the demo\'s ticker message fits, a mistyped editor address corrects itself, and the placeholders for features to come later are gone.'
+      ],
+      sv: [
+        '**Allt du trycker på svarar.** Rader som "Sparad i Mina tavlor" doldes medan redigeraren var öppen, så det såg ut som att inget hände. Nu visas de under redigerarens rubrik, med Ångra där det går.',
+        '**En QR-kod som går att skanna.** Koden under Dela var för liten för en mobil. Nu öppnas den i full storlek när panelen inte kan rita den stor nog, och länken för väggen kommer först, i kioskläge.',
+        '**En skärm som startar om utan nät behåller sin tavla.** De senaste avgångarna, vädret och priserna sparas i webbläsaren, så en skärm som kommer tillbaka före nätet visar dem med en rad om hur gamla de är.',
+        '**En länk till väggen frågar inget.** En skärm som öppnats från en tavellänk ber ingen att logga in längre.',
+        'Mindre rättningar: yenen och andra små valutor visas per 100 i stället för som 0,00, Elpris erbjuds bara i Sverige, demons löptext får plats, en felskriven adress i redigeraren rättar sig själv, och platshållarna för sådant som kommer senare är borta.'
+      ]
+    }
+  },
+  {
     v: '0.9.3', date: '2026-09-30',
     tag: { en: 'Headlines', sv: 'Rubriker' },
     desc: {

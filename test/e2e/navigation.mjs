@@ -122,6 +122,26 @@ try {
   const nav = await send('Page.getNavigationHistory'), here = nav.entries[nav.currentIndex].url;
   check("and the browser's back after Done leaves the site, never reopening the editor", here === 'about:blank', here);
 
+  // 0.9.4: every press answers while the editor is open, a bad address is corrected, the
+  // share panel leads with the wall link and draws a QR code that scans, and a visit that
+  // came by a board link is a screen
+  await go(URL0); await ev('splitFlap.toggleEdit()'); await sleep(500);
+  await ev(`(() => { const b = splitFlap.cur(); splitFlap.editor.saveToMy(b.pages[0], null, splitFlap.dims(), b.theme); })()`); await sleep(400);
+  const line = await ev(`(document.querySelector('.sf-drawer [data-k=status-line]') || {}).textContent || ''`);
+  check('the status line shows in the editor after Save to my boards', /saved|sparad/i.test(line), line);
+  check('and a screen reader hears it', /saved|sparad/i.test(await ev(`document.querySelector('.sf > [role=status][aria-live=polite]').textContent`)));
+  await go(URL0 + '#/my-boards/nope'); await sleep(300);
+  check('a bad address is replaced by the level it landed on', (await at()) === '#/my-boards', await at());
+  await ev(`document.querySelector('[data-k=done]').click()`); await sleep(600);
+  await ev('splitFlap.openShare()'); await sleep(600);
+  const qr = await ev(`(() => { const q = document.querySelector('.sf-share .sf-qr svg'), big = document.querySelector('[data-k=share-qr-big]'); if (!q) return big ? 'big' : 'none'; const n = +q.getAttribute('viewBox').split(' ')[2]; return (q.getBoundingClientRect().width * devicePixelRatio / n).toFixed(1); })()`);
+  check('the QR code is 4 px a module or more, or offered full size', qr === 'big' || +qr >= 4, qr);
+  check('the wall link is kiosk by default', /\?kiosk=1#b=/.test(await ev(`splitFlap.S.shareUrl`)));
+  const link = (await ev(`splitFlap.S.shareUrl`)).replace('?kiosk=1', '');
+  await go('about:blank'); await ev(`localStorage.clear()`).catch(() => {}); await go(link); await sleep(500);
+  await ev(`localStorage.setItem('sf_edit_ms', '999999')`); await ev('splitFlap.renderOverlay()');
+  check('a visit that came by a board link shows no sign-in prompt', (await ev(`String(!!document.querySelector('[data-k=signin-prompt]'))`)) === 'false' && (await ev('String(splitFlap.linkVisit === true && splitFlap.promptDue() === false)')) === 'true');
+
   // the phone: the same levels, one day of the week at a time
   await go(URL0);
   await send('Emulation.setDeviceMetricsOverride', { width: 400, height: 860, deviceScaleFactor: 1, mobile: true });

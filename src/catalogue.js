@@ -89,7 +89,7 @@ export const TILES = [
       SEG('units', t2('Units', 'Enhet'), [['c', t2('°C', '°C')], ['f', t2('°F', '°F')]], { dflt: 'c', adv: 1 }), TOG('wind', t2('Show wind', 'Visa vind'), { dflt: true, adv: 1 }),
       TOG('soon', t2('Say when rain starts or stops in the next two hours', 'Säg när regn börjar eller slutar inom två timmar'), { dflt: true, adv: 1, show: o => (o.view || 'now') === 'now' }),
       { t: 'credit', src: ['weather'] }] },
-  { id: 'electricity', g: 'live', ch: 'electricity', name: t2('Electricity price', 'Elpris'), desc: t2('Spot price by the hour for your price area', 'Spotpris per timme för ditt elområde'), def: { area: 'SE3', view: 'now' },
+  { id: 'electricity', g: 'live', ch: 'electricity', only: ['SE'], name: t2('Electricity price', 'Elpris'), desc: t2('Spot price by the hour for your price area', 'Spotpris per timme för ditt elområde'), def: { area: 'SE3', view: 'now' },
     fields: [SEG('area', t2('Price area', 'Elområde'), [['SE1', t2('SE1 Luleå', 'SE1 Luleå')], ['SE2', t2('SE2 Sundsvall', 'SE2 Sundsvall')], ['SE3', t2('SE3 Stockholm', 'SE3 Stockholm')], ['SE4', t2('SE4 Malmö', 'SE4 Malmö')]], { dflt: 'SE3' }),
       SEG('view', t2('Show', 'Visa'), [['now', t2('Price now', 'Pris nu')], ['chart', t2('Today as bars', 'Idag som staplar')]], { dflt: 'now' }),
       TOG('vat', t2('Include VAT (value added tax, moms)', 'Inklusive moms'), { dflt: true, adv: 1 }),

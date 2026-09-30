@@ -73,10 +73,14 @@ async function get(url) {
   finally { clearTimeout(timer); }
 }
 
+// the buckets kept through a reload: everything that is an answer, not a search
+const KEPT = ['sl', 'wx', 'el', 'fx', 'otd', 'url', 'tr', 'coin', 'hol', 'mk', 'mkq', 'rates', 'feeds'];
+
 export class Live {
   constructor(onUpdate) {
-    this.onUpdate = onUpdate;
+    this.onUpdate = () => { onUpdate(); this.keepSoon(); };
     this.data = { sl: {}, wx: {}, el: {}, fx: {}, otd: {}, url: {}, tr: {}, near: {}, coin: {}, hol: {}, mk: {}, mkq: {}, rates: {}, feeds: {}, off: [], loc: null, cc: null };
+    this.restore();
     this.ratesWant = new Set(); this.feedsWant = new Set();
     this.mkWant = { built: [], crypto: new Map(), key: new Set(), sheet: new Set() };
     this.wanted = { sl: new Map(), wx: new Map(), el: new Set(), fx: new Set(), otd: new Set(), url: new Map(), tr: new Map(), near: new Map(), coin: new Map(), hol: new Set() };
@@ -417,6 +421,31 @@ export class Live {
       e.at = Date.now(); e.err = false; e.fails = 0;
     } catch { e.err = true; e.fails = (e.fails || 0) + 1; }
     e.busy = false; this.onUpdate();
+  }
+  // The last answers, kept in this browser (0.9.4), so a screen that restarts before the
+  // network is back shows what it had, with the note saying how old it is, instead of
+  // LOADING everywhere. Only what arrived is kept, never the fetch state, and nothing older
+  // than two days. A restored entry counts as never tried, so it is fetched again at once.
+  keepSoon() {
+    if (this.keepT) return;
+    this.keepT = setTimeout(() => { this.keepT = 0; this.keep(); }, 20000);
+  }
+  keep() {
+    const out = { v: 1, at: Date.now(), d: {} };
+    for (const b of KEPT) {
+      const src = this.data[b] || {}, dst = {};
+      for (const [k, e] of Object.entries(src)) {
+        if (!e || (b !== 'mk' && !e.at)) continue;
+        const { busy, tried, err, fails, ...rest } = e; dst[k] = rest;   // eslint-disable-line no-unused-vars
+      }
+      if (Object.keys(dst).length) out.d[b] = dst;
+    }
+    try { const s = JSON.stringify(out); if (s.length < 600000) localStorage.setItem('sf_live', s); else localStorage.removeItem('sf_live'); } catch { /* full or private */ }
+  }
+  restore() {
+    let j = null; try { j = JSON.parse(localStorage.getItem('sf_live') || 'null'); } catch { j = null; }
+    if (!j || j.v !== 1 || !j.d || Date.now() - (+j.at || 0) > 2 * 864e5) return;
+    for (const b of KEPT) if (j.d[b] && typeof j.d[b] === 'object') for (const [k, e] of Object.entries(j.d[b])) if (e && typeof e === 'object') this.data[b][k] = e;
   }
   // Minutes since the oldest source this page depends on last updated, or 0 if fresh.
   // SL counts as stale after 3 minutes (departures move); weather and prices after 45.

@@ -279,12 +279,13 @@ export class Board {
     const dpr = Math.min(window.devicePixelRatio || 1, this.o.maxDpr);
     const r = this.cv.getBoundingClientRect(); if (!r.width || !r.height) return;
     const W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+    if (W < 1 || H < 1) return;   // a canvas a fraction of a pixel tall mid-layout: wait for the real size
     const key = W + 'x' + H + '|' + this.o.theme + '|' + this.o.rows + 'x' + this.o.cols;
     if (key === this._sizeKey) return;
-    this._sizeKey = key;
     this.cv.width = W; this.cv.height = H; this.W = W; this.H = H;
     this.A.clear();
     this._layout(); this._paintBg(); this._full();
+    this._sizeKey = key;   // only once painted, so a failed paint is tried again at the same size
   }
   _layout() {
     const T = THEMES[this.o.theme], G = GEOM, rows = this.o.rows, cols = this.o.cols, pad = T.framePad;
@@ -327,7 +328,7 @@ export class Board {
     }
   }
   _full() {
-    if (!this.W) return;
+    if (!this.W || !this.H || !this.bg.width || !this.bg.height) return;
     if (this.clear) this.ctx.clearRect(0, 0, this.W, this.H);
     this.ctx.drawImage(this.bg, 0, 0);
     const now = performance.now();
