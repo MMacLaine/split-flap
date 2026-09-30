@@ -56,6 +56,12 @@ try {
   await ev(`document.querySelector('[data-k=status-act]').click()`); await sleep(500);
   check('and Undo puts back what was on', (await ev('splitFlap.shown().id')) === shown0 && /back to/i.test(await status()), await status());
 
+  // another tab's save while previewing never switches the screen or moves the preview (0.10 review)
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${other}', view: 'boards' })`); await sleep(400);
+  await ev(`(() => { const list = JSON.parse(localStorage.getItem('sf_boards')); const extra = JSON.parse(JSON.stringify(list[0])); extra.id = 'b-other-tab'; extra.name = 'From another tab'; list.unshift(extra); localStorage.setItem('sf_boards', JSON.stringify(list)); splitFlap.fromOtherTab(); })()`); await sleep(500);
+  check("another tab's save keeps what the screen runs", (await ev('splitFlap.shown().id')) === shown0, await ev('splitFlap.shown().id'));
+  check('and keeps the preview on the same playlist', (await ev('splitFlap.cur().id')) === other && (await ev('String(splitFlap.looking())')) === 'true', await ev('splitFlap.cur().id'));
+
   // Done on a preview: back to what was on
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${other}', view: 'boards' })`); await sleep(400);
   await ev(`document.querySelector('[data-k=done]').click()`); await sleep(600);
@@ -66,10 +72,11 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'tpl', tpl: 'weather', section: 'start' })`); await sleep(600);
   const tplName = await ev(`document.querySelector('.sf-panel-title strong').textContent`);
   check('a template is on the screen as soon as it opens, named in the bar', (await ev('String(splitFlap.looking())')) === 'true' && (await bar()).includes(tplName), `${tplName} / ${await bar()}`);
-  check('the storyboards are untouched while it is looked at', (await ev('splitFlap.boards.length')) === 2);
+  const nBefore = await ev('splitFlap.boards.length');
+  check('the playlists are untouched while it is looked at', (await ev('splitFlap.boards.length')) === nBefore && (await ev('splitFlap.shown().id')) === shown0);
   const tplPages = await ev('splitFlap.cur().pages.length');
   await ev(`document.querySelector('[data-k=use-tpl]').click()`); await sleep(600);
-  check('Show on this screen keeps it and shows it', (await ev('splitFlap.boards.length')) === 3 && (await ev('splitFlap.shown().from')) === 'weather' && /now showing/i.test(await status()), await status());
+  check('Show on this screen keeps it and shows it', (await ev('splitFlap.boards.length')) === nBefore + 1 && (await ev('splitFlap.shown().from')) === 'weather' && /now showing/i.test(await status()), await status());
   check('and lands on its board, never the week view', (await lv()) === (tplPages === 1 ? 'sb:board' : 'sb:sb:boards'), await lv());
 
   // every change says Saved
