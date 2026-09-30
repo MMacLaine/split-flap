@@ -231,11 +231,14 @@ export class App {
   // they are taken as they are, before this tab's next save could write an older list
   // over them. Nothing is saved here, so the tabs never echo each other.
   fromOtherTab() {
-    const { boards } = loadBoards(), curId = this.cur() && this.cur().id;
+    // what the screen runs and what the editor looks at are kept by id, so another tab's save
+    // never switches the screen or moves a preview to another playlist (0.10 review)
+    const { boards } = loadBoards(), curId = this.shown() && this.shown().id, lookId = this.look != null && this.boards[this.look] ? this.boards[this.look].id : null;
     if (boards.length) {
       this.boards = boards;
       const i = boards.findIndex(b => b.id === curId); this.active = i >= 0 ? i : Math.min(this.active, boards.length - 1);
       if (i < 0) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
+      const li = lookId ? boards.findIndex(b => b.id === lookId) : -1; this.look = li >= 0 && li !== this.active ? li : null;
     }
     if (this.account) { this.account.state = loadState(); this.account.remember(); }
     this.refresh();
@@ -246,10 +249,10 @@ export class App {
     const curId = this.shown() && this.shown().id, lookId = this.look != null && this.boards[this.look] ? this.boards[this.look].id : null;
     this.account.replacing = true;
     this.boards = list && list.length ? list : [fromTemplate('blank', this.S.lang, this.live.data.home)];
-    const li = lookId ? this.boards.findIndex(b => b.id === lookId) : -1; this.look = li >= 0 ? li : null;
+    const li = lookId ? this.boards.findIndex(b => b.id === lookId) : -1;
     const i = this.boards.findIndex(b => b.id === curId);
     if (i < 0) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
-    this.active = i >= 0 ? i : 0;
+    this.active = i >= 0 ? i : 0; this.look = li >= 0 && li !== this.active ? li : null;
     this.save(); this.account.replacing = false;
     this.refresh();
   }
