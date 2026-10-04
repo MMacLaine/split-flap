@@ -28,7 +28,12 @@ export const HELP = {
     { h: 'Boards', p: [
       'Boards has your playlists, then every board you have, each drawn at its own size. A board you make, or take from a template, is kept there once.',
       'A playlist points at boards in Boards, so a board in two playlists is the same board in both, and a change shows in each. The board says which playlists it is in. Duplicate it for one of its own.',
-      'Each board has its own size and theme, so one playlist can mix them. Deleting a board takes it out of every playlist, and the line under the title says which, with Undo. Boards can also import a board file or a pasted Vestaboard message.'
+      'Each board has its own size and look, so one playlist can mix them. Deleting a board takes it out of every playlist, and the line under the title says which, with Undo. Boards can also import a board file or a pasted Vestaboard message.'
+    ] },
+    { h: 'Looks', p: [
+      'A look is how a board is made: what its flaps are, the type, the letters and the wall behind it. Classic is the board as it has always been. Calm is clear glass over slow colour, with letters that glow.',
+      'Change it on a board\'s page, under Look. Each card shows that board in the look, and opening one shows it on the screen with the gold bar. Use this look keeps it, with Undo. Make your own lets you pick the parts.',
+      ['A board on Default follows the default look in ', { k: 'account', t: 'Account' }, '. Showing can pin one look to this screen, over every board, and Same look for all gives one look to every board in a playlist.']
     ] },
     { h: 'Messages', fig: 'message', p: [
       'Messages are made straight on the grid, so you see where every letter lands. Type puts letters where you click, Paint drags colour flaps across the grid, and Photo turns a picture into colour flaps.',
@@ -41,7 +46,7 @@ export const HELP = {
       ['Quiet hours in ', { k: 'settings', t: 'Display' }, ' dim or blank the screen overnight.']
     ] },
     { h: 'The display', p: [
-      ['A board\'s size and theme are on the board. A playlist\'s transition, sound and place are in ', { k: 'settings', t: 'Display' }, ', next to Week and Boards, where its theme can also be set for every board at once. Language and Home are under ', { k: 'account', t: 'Account' }, '.'],
+      ['A board\'s size and look are on the board. A playlist\'s transition, sound and place are in ', { k: 'settings', t: 'Display' }, ', next to Week and Boards, with Same look for all. Language, Home and the default look are under ', { k: 'account', t: 'Account' }, '.'],
       'The place is where the screen is. New boards start from it: the weather, the nearest stop, the holidays, the currency, and 12 or 24 hours. Sunrise and sunset use it too.',
       'Fill screen means the board takes the size of the wall that shows it. The editor shows it at the size a wall in this browser last filled, or 8 × 22 until one has, so a phone never edits a shape the wall cannot show.',
       'At 12 × 40 the clock, Today, the world clock, the weather, currency and a menu each have a layout of their own for the big board.'
@@ -92,7 +97,12 @@ export const HELP = {
     { h: 'Tavlor', p: [
       'Tavlor har dina spellistor, och sedan varje tavla du har, var och en ritad i sin egen storlek. En tavla du gör, eller tar från en mall, sparas där en gång.',
       'En spellista pekar på tavlor i Tavlor, så en tavla i två spellistor är samma tavla i båda, och en ändring syns i varje. Tavlan säger vilka spellistor den finns i. Duplicera den för en egen.',
-      'Varje tavla har sin egen storlek och sitt eget tema, så en spellista kan blanda dem. Tar du bort en tavla tas den ur varje spellista, och raden under rubriken säger vilka, med Ångra. Tavlor kan också importera en tavelfil eller ett inklistrat Vestaboard-meddelande.'
+      'Varje tavla har sin egen storlek och sitt eget utseende, så en spellista kan blanda dem. Tar du bort en tavla tas den ur varje spellista, och raden under rubriken säger vilka, med Ångra. Tavlor kan också importera en tavelfil eller ett inklistrat Vestaboard-meddelande.'
+    ] },
+    { h: 'Utseenden', p: [
+      'Ett utseende är hur en tavla är gjord: vad flapparna är av, typsnittet, bokstäverna och väggen bakom. Klassisk är tavlan som den alltid varit. Lugn är klart glas över långsam färg, med bokstäver som lyser.',
+      'Ändra det på tavlans sida, under Utseende. Varje kort visar tavlan i utseendet, och öppnar du ett visas det på skärmen med den gyllene raden. Använd det här utseendet behåller det, med Ångra. Gör ditt eget låter dig välja delarna.',
+      ['En tavla på Standard följer standardutseendet under ', { k: 'account', t: 'Konto' }, '. Visas kan fästa ett utseende vid den här skärmen, över varje tavla, och Samma utseende för alla ger alla tavlor i en spellista samma utseende.']
     ] },
     { h: 'Meddelanden', fig: 'message', p: [
       'Meddelanden görs direkt på rutnätet, så du ser var varje bokstav hamnar. Skriv sätter bokstäver där du klickar, Måla drar färgblad över rutnätet, och Foto gör om en bild till färgblad.',
@@ -105,7 +115,7 @@ export const HELP = {
       ['Tysta timmar under ', { k: 'settings', t: 'Visning' }, ' dämpar eller släcker skärmen över natten.']
     ] },
     { h: 'Skärmen', p: [
-      ['En tavlas storlek och tema finns på tavlan. En spellistas övergång, ljud och plats finns under ', { k: 'settings', t: 'Visning' }, ', bredvid Vecka och Tavlor, där temat också kan sättas för alla tavlor på en gång. Språk och Hem finns under ', { k: 'account', t: 'Konto' }, '.'],
+      ['En tavlas storlek och utseende finns på tavlan. En spellistas övergång, ljud och plats finns under ', { k: 'settings', t: 'Visning' }, ', bredvid Vecka och Tavlor, med Samma utseende för alla. Språk, Hem och standardutseendet finns under ', { k: 'account', t: 'Konto' }, '.'],
       'Platsen är där skärmen finns. Nya tavlor utgår från den: vädret, närmaste hållplats, helgdagar, valutan och 12 eller 24 timmar. Soluppgång och solnedgång använder den också.',
       'Fyll skärmen betyder att tavlan tar storleken på väggen som visar den. Redigeraren visar den i storleken en vägg i den här webbläsaren senast fyllde, eller 8 × 22 tills en har gjort det, så att en telefon aldrig redigerar en form väggen inte kan visa.',
       'I 12 × 40 har klockan, Idag, världsklockan, vädret, valuta och en meny var sin layout för den stora tavlan.'

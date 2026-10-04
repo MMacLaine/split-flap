@@ -2,6 +2,16 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.11.0 (2026-10-04): Looks
+
+Every board can now have a look of its own: what its flaps are made of, the type, the letters and the wall behind it. This release has Classic, which is the board as it was, and Calm, with Make your own for the rest.
+
+- **Calm.** Clear glass flaps over three fields of colour that drift too slowly to notice, with serif letters that glow. The glass is solid while it turns, so the next letter never shows through it.
+- **Change it on the board.** A board's page has Look, with Change. Each card shows that board in the look, and opening one puts it on the screen under the gold bar until you press Use this look.
+- **Make your own.** Pick the material, the type, the letter colour, the motion and the wall. It only offers what works together, so lit letters need a dark material and glass always has colour behind it.
+- **The default, a pin and Same look for all.** Account sets the look new boards start as, and every board on Default follows it. Showing can pin one look to a screen, and a playlist can give every board one look, with Undo.
+- Classic is the board you had, pixel for pixel, and boards from before keep their look: a white board is now Paper and a Solari board is Solari. Times in Calm's serif now sit at full height.
+
 ## v0.10.3 (2026-10-04): Fixes
 
 A fix for signing out and back in, and templates that start at the size they are made for.

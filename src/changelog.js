@@ -3,6 +3,30 @@
 
 export const CHANGELOG = [
   {
+    v: '0.11.0', date: '2026-10-04',
+    tag: { en: 'Looks', sv: 'Utseenden' },
+    desc: {
+      en: 'Every board can now have a look of its own: what its flaps are made of, the type, the letters and the wall behind it. This release has Classic, which is the board as it was, and Calm, with Make your own for the rest.',
+      sv: 'Varje tavla kan nu ha ett eget utseende: vad flapparna är gjorda av, typsnittet, bokstäverna och väggen bakom. Den här versionen har Klassisk, som är tavlan som den var, och Lugn, med Gör ditt eget för resten.'
+    },
+    items: {
+      en: [
+        '**Calm.** Clear glass flaps over three fields of colour that drift too slowly to notice, with serif letters that glow. The glass is solid while it turns, so the next letter never shows through it.',
+        '**Change it on the board.** A board\'s page has Look, with Change. Each card shows that board in the look, and opening one puts it on the screen under the gold bar until you press Use this look.',
+        '**Make your own.** Pick the material, the type, the letter colour, the motion and the wall. It only offers what works together, so lit letters need a dark material and glass always has colour behind it.',
+        '**The default, a pin and Same look for all.** Account sets the look new boards start as, and every board on Default follows it. Showing can pin one look to a screen, and a playlist can give every board one look, with Undo.',
+        'Classic is the board you had, pixel for pixel, and boards from before keep their look: a white board is now Paper and a Solari board is Solari. Times in Calm\'s serif now sit at full height.'
+      ],
+      sv: [
+        '**Lugn.** Klara glasflappar över tre färgfält som rör sig för långsamt för att märkas, med bokstäver i antikva som lyser. Glaset är helt medan det vänder, så nästa bokstav syns aldrig igenom.',
+        '**Ändra det på tavlan.** En tavlas sida har Utseende, med Byt. Varje kort visar tavlan i utseendet, och öppnar du ett visas det på skärmen under den gyllene raden tills du trycker Använd det här utseendet.',
+        '**Gör ditt eget.** Välj material, typsnitt, bokstävernas färg, rörelse och vägg. Bara det som går ihop erbjuds, så lysande bokstäver behöver ett mörkt material och glas har alltid färg bakom sig.',
+        '**Standard, fäst och Samma utseende för alla.** Under Konto väljer du utseendet nya tavlor börjar som, och varje tavla på Standard följer det. Visas kan fästa ett utseende vid en skärm, och en spellista kan ge alla sina tavlor samma utseende, med Ångra.',
+        'Klassisk är tavlan du hade, pixel för pixel, och tavlor från förut behåller sitt utseende: en vit tavla heter nu Papper och en Solari-tavla Solari. Klockslag i Lugns antikva står nu i full höjd.'
+      ]
+    }
+  },
+  {
     v: '0.10.3', date: '2026-10-04',
     tag: { en: 'Fixes', sv: 'Rättningar' },
     desc: {

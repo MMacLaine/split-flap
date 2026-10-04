@@ -5,6 +5,10 @@ export const STR = {
   en: {
     // 0.11.0: looks. From the design handover's strings (_local/plans/0.11/handoff/strings-0.11.en.json).
     lk: {
+      names: { classic: ['Classic', 'Today’s board'], calm: ['Calm', 'Glass over slow light'], paper: ['Paper', 'Light, matte, as 0.10 drew it'], solari: ['Solari', 'Amber on a station board, as 0.10 drew it'] },
+      mats: { flap: 'Flap', solari: 'Solari', paper: 'Paper', glass: 'Glass', smoke: 'Smoke' }, types: { mono: 'Mono', grotesk: 'Grotesk', round: 'Round', serif: 'Serif' },
+      motions: { classic: 'Classic', gentle: 'Gentle', wave: 'Wave', curtain: 'Curtain', ripple: 'Ripple', shimmer: 'Shimmer' },
+      inks: { warm: 'Warm white', white: 'White', amber: 'Amber', ice: 'Ice', ink: 'Ink', navy: 'Navy', oxblood: 'Oxblood', rose: 'Rose', lime: 'Lime' },
       look: 'Look', looks: 'Looks', useLook: 'Use this look', makeOwn: 'Make your own', yourOwn: 'Your own',
       deflt: 'Default', defaultIs: l => `Default (${l})`, followBoards: 'Follow the boards', followsEach: 'Follows each board', eachOwn: 'Each board’s own look',
       pinned: 'Pinned', pinnedTo: l => `Pinned · ${l}`, pinnedRow: l => `${l}, pinned`, sameForAll: 'Same look for all', previewing: 'Previewing', previewLook: (l, b) => `${l} for ${b}`,
@@ -192,6 +196,10 @@ export const STR = {
   sv: {
     // 0.11.0: utseenden.
     lk: {
+      names: { classic: ['Klassisk', 'Tavlan som den är'], calm: ['Lugn', 'Glas över långsamt ljus'], paper: ['Papper', 'Ljus och matt, som 0.10 ritade den'], solari: ['Solari', 'Bärnsten på en stationstavla, som 0.10 ritade den'] },
+      mats: { flap: 'Flapp', solari: 'Solari', paper: 'Papper', glass: 'Glas', smoke: 'Rök' }, types: { mono: 'Mono', grotesk: 'Grotesk', round: 'Rund', serif: 'Antikva' },
+      motions: { classic: 'Klassisk', gentle: 'Mjuk', wave: 'Våg', curtain: 'Ridå', ripple: 'Krusning', shimmer: 'Skimmer' },
+      inks: { warm: 'Varmvit', white: 'Vit', amber: 'Bärnsten', ice: 'Is', ink: 'Bläck', navy: 'Marinblå', oxblood: 'Oxblod', rose: 'Rosa', lime: 'Lime' },
       look: 'Utseende', looks: 'Utseenden', useLook: 'Använd det här utseendet', makeOwn: 'Gör ditt eget', yourOwn: 'Ditt eget',
       deflt: 'Standard', defaultIs: l => `Standard (${l})`, followBoards: 'Följ tavlorna', followsEach: 'Följer varje tavla', eachOwn: 'Varje tavlas eget utseende',
       pinned: 'Fäst', pinnedTo: l => `Fäst · ${l}`, pinnedRow: l => `${l}, fäst`, sameForAll: 'Samma utseende för alla', previewing: 'Förhandsvisar', previewLook: (l, b) => `${l} för ${b}`,

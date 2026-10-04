@@ -990,7 +990,7 @@ export class Editor {
     }
   }
   swatches(cur, pick, rainbow, key, many) {
-    const t = this.t, T = THEMES[this.app.cur().theme], names = CHIP_NAMES[this.lang];
+    const t = this.t, T = THEMES[this.app.themeNow()], names = CHIP_NAMES[this.lang];
     const sw = (id, bg, label) => { const on = many ? many.includes(id) : cur === id;
       return h('button', { class: 'sf-swatch', role: many ? null : 'radio', 'aria-checked': many ? null : String(on), 'aria-pressed': many ? String(on) : null, 'aria-label': label, title: label, 'data-k': `${key}-${id}`, style: `background:${bg}`, onclick: () => pick(id) }); };
     return h('div', { class: 'sf-swatches', role: many ? 'group' : 'radiogroup' },

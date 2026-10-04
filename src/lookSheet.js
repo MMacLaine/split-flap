@@ -24,8 +24,11 @@ export function lookLabel(app, l) {
   if (l.id === 'custom') return t.yourOwn;
   if (l.id === 'follow') return t.followBoards;
   if (l.id === 'default') { const d = defaultOf(app.lookSetting()); return t.defaultIs(lookLabel(app, d)); }
-  return LOOKS[l.id] ? LOOKS[l.id].label : '';
+  return lookName(app, l.id);
 }
+// A look's name and hint in the page's language (looks.js has them in English).
+export const lookName = (app, id) => (app.t.lk.names[id] || [])[0] || (LOOKS[id] ? LOOKS[id].label : '');
+const lookHint = (app, id) => (app.t.lk.names[id] || [])[1] || (LOOKS[id] ? LOOKS[id].hint : '');
 // A board's own look as the sheet and the rows show it: { id, parts? }, id may be 'default'.
 export function ownLook(x) { const o = lookOf(x); return { id: o.look, parts: o.lookParts }; }
 // The look a value shows, resolved for drawing: never 'default' or 'follow'.
@@ -137,10 +140,10 @@ export function lookSheet(ed) {
   if (own && ctx.kind !== 'screen') ids.push('custom');
   const cards = ids.map(id => {
     const l = id === 'custom' ? { id, parts: own } : { id }, r = resolved(app, l, cb.look), th = app.drawOf(r).id, on = same(l, sel) || (id === sel.id && id !== 'custom');
-    const hint = id === 'default' ? lookLabel(app, defaultOf(app.lookSetting())) : id === 'follow' ? t.eachOwn : id === 'custom' ? t.inkOf(MATERIALS[r.parts.material].label, TYPES[r.parts.type].label.toLowerCase()) : same(l, cur) ? t.onNow : LOOKS[id].hint;
+    const hint = id === 'default' ? lookLabel(app, defaultOf(app.lookSetting())) : id === 'follow' ? t.eachOwn : id === 'custom' ? t.inkOf(t.mats[r.parts.material], t.types[r.parts.type].toLowerCase()) : same(l, cur) ? t.onNow : lookHint(app, id);
     return h('button', { class: 'sf-lk-card' + (on ? ' on' : ''), 'aria-pressed': String(on), 'data-k': 'lk-card-' + id, onclick: () => pick(ed, l) },
       h('span', { class: 'sf-lk-well' }, ed.thumb(`lk-${id}-${th}`, cb.rows, cb.cols, () => compose(cb.page, cb.rows, cb.cols, now, ed.lang, app.live.data), th)),
-      h('strong', null, id === 'default' ? t.deflt : id === 'follow' ? t.followBoards : id === 'custom' ? t.yourOwn : LOOKS[id].label), h('span', { class: 'sf-meta' }, hint));
+      h('strong', null, id === 'default' ? t.deflt : id === 'follow' ? t.followBoards : id === 'custom' ? t.yourOwn : lookName(app, id)), h('span', { class: 'sf-meta' }, hint));
   });
   return h('div', { class: 'sf-level sf-sheet sf-lk' },
     h('div', { class: 'sf-row between' }, h('strong', null, ctx.kind === 'default' ? t.defaultLook : t.look),
@@ -176,13 +179,13 @@ function ownRows(ed) {
   const seg = (label, items) => h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, label),
     h('div', { class: 'sf-row wrap', role: 'group', 'aria-label': label }, items.map(it => h('button', { class: 'sf-seg' + (it.sw ? ' sw' : ''), 'aria-pressed': String(!!it.on), 'aria-label': it.aria || null, 'data-k': it.k, onclick: it.fn },
       it.sw ? h('span', { class: 'sf-ink-dot', style: `background:${it.sw}` }) : null, it.sw ? null : it.label))));
-  const inks = m.inks.map(([k, label, hex]) => ({ k: 'lk-ink-' + k, label, aria: t.lettersIn(label.toLowerCase()), sw: hex, on: p.ink === k, fn: () => setPart(ed, 'ink', k) }));
+  const inks = m.inks.map(([k, label, hex]) => ({ k: 'lk-ink-' + k, label: t.inks[k] || label, aria: t.lettersIn((t.inks[k] || label).toLowerCase()), sw: hex, on: p.ink === k, fn: () => setPart(ed, 'ink', k) }));
   if (m.lit && !m.alwaysLit) inks.push({ k: 'lk-lit', label: t.litLetters, on: p.lit, fn: () => setPart(ed, 'lit', !p.lit) });
   return h('div', { class: 'sf-lk-own' },
-    seg(t.material, RELEASED.map(k => ({ k: 'lk-mat-' + k, label: MATERIALS[k].label, on: p.material === k, fn: () => setPart(ed, 'material', k) }))),
-    seg(t.type, MATRIX.types[p.material].map(k => ({ k: 'lk-type-' + k, label: TYPES[k].label, on: p.type === k, fn: () => setPart(ed, 'type', k) }))),
+    seg(t.material, RELEASED.map(k => ({ k: 'lk-mat-' + k, label: t.mats[k], on: p.material === k, fn: () => setPart(ed, 'material', k) }))),
+    seg(t.type, MATRIX.types[p.material].map(k => ({ k: 'lk-type-' + k, label: t.types[k], on: p.type === k, fn: () => setPart(ed, 'type', k) }))),
     seg(t.letters, inks),
-    seg(t.motion, [['playlist', t.motionPlaylist], ...Object.entries(MOTION).map(([k, v]) => [k, v.label])].map(([k, label]) => ({ k: 'lk-mo-' + k, label, on: p.motion === k, fn: () => setPart(ed, 'motion', k) }))),
+    seg(t.motion, [['playlist', t.motionPlaylist], ...Object.keys(MOTION).map(k => [k, t.motions[k]])].map(([k, label]) => ({ k: 'lk-mo-' + k, label, on: p.motion === k, fn: () => setPart(ed, 'motion', k) }))),
     seg(t.wall, MATRIX.walls[p.material].map(k => ({ k: 'lk-wall-' + k, label: t.walls[k], on: p.wall.kind === k, fn: () => setPart(ed, 'wall', k) }))));
 }
 

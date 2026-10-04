@@ -98,6 +98,8 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `privacy.html` | The privacy notice (the Swedish one is in `site/`). |
 | `src/app.js` | Control bar, share, kiosk mode, and the board state the editor works on. |
 | `src/editor.js` | The editor drawer: the sections, Showing, Boards, a playlist, a board with its content, Explore, Account, and the more menu. |
+| `src/looks.js` | Looks (0.11): materials, type, letter colours and walls from the design handover, the Make your own matrix, and what a screen shows (`lookFor`). Shared with the Worker. |
+| `src/lookSheet.js` | The look sheet, opened from every Change: the cards, the preview under the gold bar, Make your own, and the Look row. |
 | `src/library.js` | Boards and playlists (0.10.1): a playlist resolved with its boards, taken apart again after an edit, and the migration from storyboards, shared with the Worker. |
 | `src/catalogue.js` | The picker's tiles, their defaults and their option fields. |
 | `src/composer.js` | Type, Paint and Photo on the grid, undo and redo, earlier messages. |

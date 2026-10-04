@@ -5,9 +5,9 @@
 // digits. Needs Chrome, `node _dev/serve.mjs` on 8801, and 0.10.2 on 8802 for the link step
 // (see pixels.mjs). npm run e2e:looks
 import { spawn } from 'node:child_process';
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', PORT = 9300 + Math.floor(Math.random() * 90);
+import { launchChrome } from './chrome.mjs';
 const URL0 = process.env.APP || 'http://localhost:8801/';
-const proc = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=/tmp/nav-${Date.now()}`, 'about:blank'], { stdio: 'ignore' });
+const { proc, PORT } = await launchChrome('looks', []);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let tabs; for (let i = 0; i < 50 && !tabs; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json(); } catch { await sleep(200); } }
 const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
