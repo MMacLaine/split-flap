@@ -38,8 +38,8 @@ export const HELP = {
       'A slow screen drops the moving wall first and the light last. Smoothness on Showing sets it for this screen.'
     ] },
     { h: 'The Music meter', p: [
-      'The Music meter is a board of level bars, and Party is a look whose light moves to the music. Both use the microphone while Listen is on. Listen is in the control bar and on Showing, and on a kiosk the L key starts and stops it. Stop turns the microphone off.',
-      'Listen never stays on through a reload, so a kiosk that reloads at night needs L pressed again in the morning. The browser remembers that you allowed the microphone, so it doesn\'t ask again.'
+      'The Music meter is a board of level bars, and Party is a look whose light moves to the music. Both use the microphone while Listen is on. Listen is in the control bar and on Showing whenever the playlist has a Music meter or a Music light, and on a kiosk the L key starts and stops it. Stop turns the microphone off.',
+      'Listen keeps going while the playlist turns through its other boards, and the bar shows Listening with Stop the whole time. It stops when you pick another playlist or change a look, and it never stays on through a reload, so a kiosk that reloads at night needs L pressed again in the morning. Chrome remembers that you allowed the microphone; Safari may ask again unless the site is set to Allow.'
     ] },
     { h: 'Messages', fig: 'message', p: [
       'Messages are made straight on the grid, so you see where every letter lands. Type puts letters where you click, Paint drags colour flaps across the grid, and Photo turns a picture into colour flaps.',
@@ -113,8 +113,8 @@ export const HELP = {
       'En långsam skärm tar bort den rörliga väggen först och ljuset sist. Jämnhet under Visas ställer in det för den här skärmen.'
     ] },
     { h: 'Musikmätaren', p: [
-      'Musikmätaren är en tavla med nivåstaplar, och Fest är ett utseende vars ljus rör sig efter musiken. Båda använder mikrofonen medan Lyssna är på. Lyssna finns i kontrollraden och under Visas, och på en kiosk startar och stoppar tangenten L den. Stoppa stänger av mikrofonen.',
-      'Lyssna är aldrig kvar efter en omladdning, så en kiosk som laddar om på natten behöver L igen på morgonen. Webbläsaren minns att du tillät mikrofonen, så den frågar inte igen.'
+      'Musikmätaren är en tavla med nivåstaplar, och Fest är ett utseende vars ljus rör sig efter musiken. Båda använder mikrofonen medan Lyssna är på. Lyssna finns i kontrollraden och under Visas när spellistan har en musikmätare eller ljuset Musik, och på en kiosk startar och stoppar tangenten L den. Stoppa stänger av mikrofonen.',
+      'Lyssna fortsätter medan spellistan går vidare till sina andra tavlor, och raden visar Lyssnar med Stoppa hela tiden. Det slutar när du väljer en annan spellista eller ändrar ett utseende, och det är aldrig kvar efter en omladdning, så en kiosk som laddar om på natten behöver L igen på morgonen. Chrome minns att du tillät mikrofonen; Safari kan fråga igen om inte sidan är inställd på Tillåt.'
     ] },
     { h: 'Meddelanden', fig: 'message', p: [
       'Meddelanden görs direkt på rutnätet, så du ser var varje bokstav hamnar. Skriv sätter bokstäver där du klickar, Måla drar färgblad över rutnätet, och Foto gör om en bild till färgblad.',
