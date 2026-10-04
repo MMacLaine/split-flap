@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import { migrate } from '../src/index.js';
+import { migrate, purge } from '../src/index.js';
 import { migrateData, seedStates } from '../../src/library.js';
 import { sanitizeBoard } from '../../src/store.js';
 
@@ -111,4 +111,27 @@ test('the order rows arrive in never changes an id: a duplicated storyboard, shu
   assert.deepEqual(server, browser);
   const lib = Object.fromEntries(env.DB.db.prepare('SELECT id, json FROM blueprint').all().map(r => [r.id, JSON.parse(r.json)]));
   for (const b of runs[0].library) assert.deepEqual(lib[b.id], b);   // the same content under each id
+});
+
+// 0.11.3: the old board rows go two weeks after 0.11.3 first sees the account, once, on the
+// clock passed in.
+test('the purge: stamped on the first request, nothing before 14 days, the board rows after, once', async () => {
+  const env = { DB: d1() }, db = env.DB.db, day = 864e5, t0 = Date.UTC(2026, 9, 10);
+  seed(env.DB);
+  assert.equal(await purge(env, 'u1', t0), false);   // not moved yet: nothing, not even the stamp
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM migration').get().n, 0);
+  await migrate(env, 'u1');
+  assert.equal(await purge(env, 'u1', t0), false);   // the first 0.11.3 request stamps
+  assert.equal(db.prepare("SELECT at FROM migration WHERE name = '0.11.3-seen'").get().at, t0);
+  assert.equal(await purge(env, 'u1', t0 + 13 * day), false);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM board').get().n, 3);
+  const before = dump(env.DB);
+  assert.equal(await purge(env, 'u1', t0 + 15 * day), true);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM board').get().n, 0);
+  assert.deepEqual([dump(env.DB).pl, dump(env.DB).bp], [before.pl, before.bp]);   // playlists and boards untouched
+  assert.deepEqual(db.prepare("SELECT name FROM migration WHERE user_id = 'u1' ORDER BY name").all().map(r => r.name), ['0.10.1', '0.11.3-purge', '0.11.3-seen']);
+  // it has run for this account: a row written later stays
+  db.prepare("INSERT INTO board (user_id, id, rev, updated, deleted, json) VALUES ('u1', 'late', 1, 0, 0, '{}')").run();
+  assert.equal(await purge(env, 'u1', t0 + 30 * day), false);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM board').get().n, 1);
 });

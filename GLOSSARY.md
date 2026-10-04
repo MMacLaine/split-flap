@@ -13,6 +13,8 @@ They came into the app with 0.7.0. In 0.10.0 "storyboard" became "playlist", and
 | Default look | Standardutseende | The look new boards start as, and every board on Default shows, chosen in Account. | settings row `look` |
 | Light | Ljus | The light round a board's frame, in a look: Off, Glow, Breathe, Chase or Flash on change. | `parts.ring`, `RING` in `src/looks.js`, `.sf-ring` |
 | Sky | Himmel | A look following the time of day and the weather at the board's place. | `parts.sky`, `SKY`, `skyAt`, `src/ambient.js` |
+| Listen | Lyssna | The control that turns the microphone on for the Music meter and the Music light, until Stop. Never stored. | `app.listen`, `Listen` in `src/meter.js` |
+| Music meter | Musikmätare | A board of level bars that move to the room's sound while Listen is on. | the `meter` channel, `Meter` in `src/meter.js` |
 | Smoothness | Jämnhet | What a slow screen drops to keep the flaps smooth, Automatic or set per screen. | `QUALITY`, `sf_quality`, `sf_quality_auto` |
 | Pinned | Fäst | A look held on one screen, over every board it shows. | `sf_look_pin`, never synced |
 | Home | Hem | The city, stops and currency new tiles start from, under Account. | `settings` row `home`, `sf_settings` |

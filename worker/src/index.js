@@ -88,7 +88,7 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-const KNOWN = ['/', '/me', '/boards', '/blueprints', '/playlists', '/settings', '/connections', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates', '/data/feed'];
+const KNOWN = ['/', '/me', '/boards', '/blueprints', '/playlists', '/settings', '/connections', '/export', '/account', '/dev/session', '/dev/row', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates', '/data/feed'];
 // Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
 export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
   : /^\/(boards|blueprints|playlists|settings|connections)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints|playlists|settings|connections)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
@@ -97,6 +97,7 @@ async function route(req, env, url) {
   const path = url.pathname.slice(API.length) || '/', auth = authFor(env);
   if (path.startsWith('/auth/')) return withNoStore(await auth.handler(req));
   if (path === '/dev/session' && req.method === 'POST' && devTest(env)) return devSession(req, env, auth);
+  if (path === '/dev/row' && req.method === 'POST' && devTest(env)) return devRow(req, env);
 
   // Writes must come from the app's own page, on top of the SameSite cookie.
   if (req.method !== 'GET' && req.headers.get('origin') !== new URL(env.BASE_URL).origin) return fail(403, 'bad_origin');
@@ -108,7 +109,7 @@ async function route(req, env, url) {
   if (path === '/me' && req.method === 'GET') return json({ id: user.id, name: String(user.name || '').split(/\s+/)[0], email: user.email });
   if (path === '/boards' && req.method === 'GET') return json({ boards: await listBoards(env, user.id) });
   if (path === '/blueprints' && req.method === 'GET') return json({ blueprints: await listBoards(env, user.id, KINDS.blueprints) });
-  if (path === '/playlists' && req.method === 'GET') { await migrate(env, user.id); return json({ playlists: await listBoards(env, user.id, KINDS.playlists) }); }
+  if (path === '/playlists' && req.method === 'GET') { await migrate(env, user.id); await purge(env, user.id); return json({ playlists: await listBoards(env, user.id, KINDS.playlists) }); }
   if (path === '/settings' && req.method === 'GET') return json({ settings: await listBoards(env, user.id, KINDS.settings) });
   if (path.startsWith('/connections') && !(await sealKey(env))) return fail(503, 'not_configured');   // never stored in plain text
   if (path === '/connections' && req.method === 'GET') return json({ connections: await listBoards(env, user.id, KINDS.connections) });
@@ -173,6 +174,20 @@ function withNoStore(res) {
 // Every insert is OR IGNORE and every id comes from the input, so two requests at once
 // write the same rows and the second changes nothing. The board rows are not touched: an
 // old tab can keep writing them until it reloads, and they are the way back.
+// The test suite reads a connection row as stored through this, instead of shelling out to
+// `wrangler d1 execute` while the dev server holds the same local database, which is what made
+// the connections and rates tests fail now and then (0.11.3). DEV_TEST only, a fixed query each.
+const DEV_ROWS = {
+  json: 'SELECT json FROM connection WHERE id = ?',
+  count: 'SELECT COUNT(*) AS n FROM connection WHERE id = ?',
+  lookup: 'SELECT lookup, json FROM connection WHERE id = ?'
+};
+async function devRow(req, env) {
+  let b; try { b = await req.json(); } catch { return fail(400, 'bad_json'); }
+  const sql = DEV_ROWS[b && b.q]; if (!sql || typeof b.id !== 'string') return fail(400, 'bad_query');
+  return json({ row: await env.DB.prepare(sql).bind(b.id).first() });
+}
+
 const MIGRATION = '0.10.1';   // not exported: a Worker's module exports must all be handlers
 export async function migrate(env, userId) {
   const done = await env.DB.prepare('SELECT 1 AS done FROM migration WHERE user_id = ? AND name = ?').bind(userId, MIGRATION).first();
@@ -187,6 +202,24 @@ export async function migrate(env, userId) {
   for (const id of m.added) stmts.push(env.DB.prepare('INSERT OR IGNORE INTO blueprint (user_id, id, rev, updated, deleted, json) VALUES (?, ?, 1, ?, 0, ?)').bind(userId, id, now, JSON.stringify(lib.get(id))));
   for (const pl of m.playlists) if (!have.has(pl.id)) stmts.push(env.DB.prepare('INSERT OR IGNORE INTO playlist (user_id, id, rev, updated, deleted, json) VALUES (?, ?, 1, ?, 0, ?)').bind(userId, pl.id, now, JSON.stringify(pl)));
   await env.DB.batch(stmts);
+  return true;
+}
+
+// 0.11.3: the old storyboard rows, kept as the way back since the 0.10.1 move, go two weeks
+// after this version first reaches the account, as the privacy page says. The first request
+// for the playlists records '0.11.3-seen'; the first one 14 days or more after it deletes the
+// rows and records '0.11.3-purge', so it runs once. now is passed in for the tests.
+const SEEN = '0.11.3-seen', PURGE = '0.11.3-purge', KEEP_MS = 14 * 864e5;
+export async function purge(env, userId, now = Date.now()) {
+  const rows = (await env.DB.prepare('SELECT name, at FROM migration WHERE user_id = ? AND name IN (?, ?, ?)').bind(userId, MIGRATION, SEEN, PURGE).all()).results;
+  const has = n => rows.find(r => r.name === n);
+  if (!has(MIGRATION) || has(PURGE)) return false;
+  if (!has(SEEN)) { await env.DB.prepare('INSERT OR IGNORE INTO migration (user_id, name, at) VALUES (?, ?, ?)').bind(userId, SEEN, now).run(); return false; }
+  if (now - has(SEEN).at < KEEP_MS) return false;
+  await env.DB.batch([
+    env.DB.prepare('INSERT OR IGNORE INTO migration (user_id, name, at) VALUES (?, ?, ?)').bind(userId, PURGE, now),
+    env.DB.prepare('DELETE FROM board WHERE user_id = ?').bind(userId)
+  ]);
   return true;
 }
 

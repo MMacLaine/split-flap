@@ -32,6 +32,26 @@ export const PROFILES = {
   }
 };
 export const PROFILE_IDS = Object.keys(PROFILES);
+// A look's material has a sound of its own (0.11.3), not offered in the picker. Not designed
+// yet, so small and parametric: glass a short high tick, smoke the same lower, paper a soft
+// muted tap. Flap and Solari keep the clack. Used only while the playlist's sound is the
+// default Clack, so a sound someone chose always wins.
+const MATERIAL_SOUNDS = {
+  glass: {
+    step:  [{ click: [5200, 3.2, 0.007, 0.10] }],
+    final: [{ click: [4600, 3, 0.011, 0.17] }, { click: [6400, 4, 0.005, 0.05], at: 0.012 }]
+  },
+  smoke: {
+    step:  [{ click: [3400, 2.6, 0.008, 0.10] }],
+    final: [{ click: [3000, 2.4, 0.012, 0.17] }, { thump: [240, 160, 0.030, 0.10] }]
+  },
+  paper: {
+    step:  [{ click: [900, 0.7, 0.014, 0.08] }],
+    final: [{ click: [760, 0.7, 0.020, 0.11] }, { thump: [120, 80, 0.045, 0.12] }]
+  }
+};
+Object.assign(PROFILES, MATERIAL_SOUNDS);
+export function soundFor(style, material) { return (!style || style === 'clack') && MATERIAL_SOUNDS[material] ? material : style || 'clack'; }
 
 let ac = null, bus = null, noise = null, lastStep = 0, lastFinal = 0, volume = 70;
 
