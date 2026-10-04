@@ -8,7 +8,7 @@ New playlists have been 12 × 40 since 0.9, but most tiles were still drawn for 
 
 - **Tiles for 12 × 40.** The clock has digits twice the size with the date under them, Today has the day in big letters, the world clock has a column a city, the weather has now, the next hours and three days together, and currency and menus are in two columns.
 - **Fill screen is the wall's.** A board set to Fill screen takes the size of the wall that shows it. The editor shows it at the size a wall in this browser last filled, or 8 × 22, so a phone no longer edits a tall board the wall never shows.
-- **The editor on a phone.** Typing on a wide board keeps cells big enough for a finger and scrolls sideways, a landscape phone puts the editor beside the board, and on a short screen Today's playlist folds to one line above the week.
+- **The editor on a phone.** Typing on a 12 × 40 board keeps cells big enough for a finger and scrolls sideways, a landscape phone puts the editor beside the board, and on a short screen Today's playlist folds to one line above the week.
 
 ## v0.10.1 (2026-10-04): Boards
 

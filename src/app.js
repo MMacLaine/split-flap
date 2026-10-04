@@ -461,7 +461,8 @@ export class App {
       // editor and thumbnails use that, else 8 x 22, never a phone's own portrait shape.
       if ((b === this.cur() || (this.editor && b === this.currentPage())) && !this.S.editing) {
         const r = this.stage.getBoundingClientRect(), d = fillGrid(r.width || innerWidth, r.height || innerHeight);
-        if ((this.kioskStrict || this.S.isFull) && r.width > 0) { const k = `${d.rows}x${d.cols}`; if (getFlag('sf_fill') !== k) setFlag('sf_fill', k); }
+        // a wall is a kiosk, or a big screen gone fullscreen; a phone counts only as ?kiosk=1 (0.10.2 review)
+        if ((this.kioskStrict || (this.S.isFull && !this.isMobile())) && r.width > 0) { const k = `${d.rows}x${d.cols}`; if (getFlag('sf_fill') !== k) setFlag('sf_fill', k); }
         return d;
       }
       return this.fillSeen() || { rows: 8, cols: 22 };
@@ -588,7 +589,12 @@ export class App {
     addEventListener('mousemove', onMove); addEventListener('touchstart', onMove, { passive: true });
     addEventListener('keydown', e => this.globalKey(e));
     for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(ev, () => { this.lastInput = Date.now(); }, { passive: true, capture: true });
-    addEventListener('resize', () => { if (this.cur().size === 'fill' || this.wasMobile !== this.isMobile()) this.refresh(); this.wasMobile = this.isMobile(); });
+    // a phone turning round changes what is worked out at render time: the composer's cells and
+    // the folded playlist (0.10.2 review), so the editor is drawn again when those would change
+    const shape = () => `${this.isMobile()}|${innerHeight < 500}|${Math.round(innerWidth / 100)}`;
+    this.shapeWas = shape();
+    addEventListener('resize', () => { const now = shape(), moved = now !== this.shapeWas; this.shapeWas = now;
+      if (sizeOf(this.cur()) === 'fill' || this.wasMobile !== this.isMobile() || (moved && this.S.editing)) this.refresh(); this.wasMobile = this.isMobile(); });
     this.wasMobile = this.isMobile();
     document.addEventListener('fullscreenchange', () => { this.set({ isFull: !!document.fullscreenElement }); this.lock(); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.lock(); if (this.readHome()) this.refresh(); else this.tick(true); } });
