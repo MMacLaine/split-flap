@@ -137,7 +137,9 @@ async function route(req, env, url) {
   if (m && (req.method === 'PUT' || req.method === 'DELETE')) {
     if (env.WRITES) { const { success } = await env.WRITES.limit({ key: user.id }); if (!success) return fail(429, 'too_many_writes'); }
     const kind = KINDS[m[1]];
-    if (m[1] === 'playlists' || m[1] === 'blueprints') await migrate(env, user.id);   // never a write before the move
+    // never a playlist write before the move. Not on /blueprints: a 0.10.0 tab writes there, and
+    // must not start the move before any 0.10.1 app asks (0.10.1 review)
+    if (m[1] === 'playlists') await migrate(env, user.id);
     return req.method === 'PUT' ? putBoard(req, env, user.id, m[2], kind) : deleteBoard(req, env, user.id, m[2], kind);
   }
   return fail(404, 'not_found');
@@ -175,7 +177,7 @@ const MIGRATION = '0.10.1';   // not exported: a Worker's module exports must al
 export async function migrate(env, userId) {
   const done = await env.DB.prepare('SELECT 1 AS done FROM migration WHERE user_id = ? AND name = ?').bind(userId, MIGRATION).first();
   if (done) return false;
-  const rows = async table => (await env.DB.prepare(`SELECT id, deleted, json FROM ${table} WHERE user_id = ?`).bind(userId).all()).results;
+  const rows = async table => (await env.DB.prepare(`SELECT id, deleted, json FROM ${table} WHERE user_id = ? ORDER BY id`).bind(userId).all()).results;
   const sbRows = await rows('board'), bpRows = await rows('blueprint'), plRows = await rows('playlist');
   const live = (list, ok) => list.filter(r => !r.deleted && r.json).map(r => { try { return ok(JSON.parse(r.json)); } catch { return null; } }).filter(Boolean);
   const m = migrateData(live(sbRows, sanitizeBoard), live(bpRows, sanitizeBlueprint), bpRows.filter(r => r.deleted).map(r => r.id));
