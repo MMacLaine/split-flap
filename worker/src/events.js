@@ -48,9 +48,10 @@ export async function events(req, env) {
   if (req.method !== 'POST') return new Response(null, { status: 405 });
   const len = +(req.headers.get('content-length') || 0);
   if (len > MAX_BODY) return new Response(null, { status: 413 });
-  // the same per-minute limit as the live data routes, by the connecting address; the
-  // address is used for the limit only and never stored
-  if (env.DATA) { const { success } = await env.DATA.limit({ key: 'e:' + (req.headers.get('cf-connecting-ip') || '') }); if (!success) return new Response(null, { status: 429 }); }
+  // a per-minute limit by the connecting address, which is used for the limit only and
+  // never stored
+  const rl = env.EVENTS_RL || env.DATA;   // its own limit, a few batches a minute an address
+  if (rl) { const { success } = await rl.limit({ key: 'e:' + (req.headers.get('cf-connecting-ip') || '') }); if (!success) return new Response(null, { status: 429 }); }
   let body = null;
   try { const text = await req.text(); if (text.length <= MAX_BODY) body = JSON.parse(text); } catch { body = null; }
   const b = parseBatch(body);

@@ -154,7 +154,7 @@ export class App {
       else if (parseRoute(location.hash) && !this.kioskStrict) { this.S.editing = true; this.dismissCue(false); this.editor.open(); }   // a reload lands where it was
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
-      if (this.signInError) { this.ev('signin_error', this.signInError); setTimeout(() => this.flash(this.t.signInNotFinished, 10000), 400); }
+      if (this.signInError) { this.ev('signin_error', /^[a-z_]{1,40}$/.test(this.signInError) ? this.signInError : 'other'); setTimeout(() => this.flash(this.t.signInNotFinished, 10000), 400); }
       // one count a visit: what is on, how much there is, and how it is shown
       { const l = this.lookNow(); this.ev('open', this.firstRun ? 'first' : 'again', l.id, this.transparent ? 'obs' : this.kioskStrict ? 'kiosk' : 'page');
         this.ev('library', band(this.playlists.filter(p => !p.solo).length), band(this.blueprints.length), (this.shown().rows || 6) + 'x' + (this.shown().cols || 22)); }
@@ -498,13 +498,25 @@ export class App {
   selIdx(b = this.cur()) { return Math.max(0, Math.min(this.S.sel, b.pages.length - 1)); }
   flash(msg, ms) { this.say(msg, ms ? { ms } : {}); }
   ev(...a) { if (this.track) this.track.ev(...a); }
+  // What the status line said, by its string's key, never its words: every press answers
+  // there, so this counts what people do and, with fail, where they get stuck. A line made
+  // from a name (a function in strings.js) has no fixed text and is not counted.
+  evSaid(msg, o) {
+    if (!this.track || this.track.off) return;
+    if (!this.saidKeys || this.saidKeys.lang !== this.S.lang) {
+      const m = new Map(), add = (obj, pre) => { for (const [k, v] of Object.entries(obj || {})) if (typeof v === 'string' && !m.has(v)) m.set(v, pre + k); };
+      add(this.t, ''); add(this.t.lk, 'lk.'); m.lang = this.S.lang; this.saidKeys = m;
+    }
+    const key = o.key && o.key !== 'save' ? o.key : this.saidKeys.get(msg);
+    if (o.fail) this.ev('fail', key || 'line'); else if (key) this.ev('said', key);
+  }
   // The status line (0.9.4): every press answers in words, in one place. In the editor it
   // sits under the panel's title; with the editor closed it floats above the control bar.
   // A line lasts 7 s, or 12 s with an action (Undo, Show it now, Try again). The newest is on
   // top and the one before stays below, fainter, until its time is up. A line with the same
   // key replaces the older one, so a run of saves never stacks.
   say(msg, o = {}) {
-    if (o.fail) this.ev('fail', o.key || 'line');   // a press that didn't work: where people get stuck
+    this.evSaid(msg, o);
     if (o.key !== 'save') clearTimeout(this.savedT);   // a line that says what happened stands in for "Saved"
     const now = Date.now(), ms = o.ms || (o.action ? 12000 : 7000);
     const line = { id: ++this.lineN, msg, fail: !!o.fail, action: o.action || null, key: o.key || null, until: now + ms };

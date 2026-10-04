@@ -44,31 +44,34 @@ const top = (blob, where, limit = 15) =>
 console.log(`Split-Flap, the last ${DAYS} day${DAYS > 1 ? 's' : ''}`);
 
 const days = await sql(`SELECT toStartOfDay(timestamp) AS day,
-  SUM(IF(blob1 = 'open', _sample_interval, 0)) AS visits,
-  SUM(IF(blob1 = 'open' AND blob8 = 'no', _sample_interval, 0)) AS new,
+  SUM(IF(blob1 = 'open' AND blob4 != 'kiosk', _sample_interval, 0)) AS visits,
+  SUM(IF(blob1 = 'open' AND blob4 = 'kiosk', _sample_interval, 0)) AS walls,
+  SUM(IF(blob1 = 'open' AND blob8 = 'no', _sample_interval, 0)) AS fresh,
   SUM(IF(blob1 = 'template_used', _sample_interval, 0)) AS templates,
   SUM(IF(blob1 = 'fail', _sample_interval, 0)) AS fails,
   SUM(IF(blob1 = 'error', _sample_interval, 0)) AS errors
   FROM ${DS} WHERE ${SINCE} GROUP BY day ORDER BY day`);
-table('By day: visits, of them new browsers, templates used, failed presses, errors', days.map(d => ({ ...d, day: String(d.day).slice(0, 10) })),
-  [['day', 10], ['visits', 7], ['new', 5], ['templates', 10], ['fails', 6], ['errors', 6]]);
+table('By day: visits (not walls), wall screens loading, new browsers, templates used, failed presses, errors', days.map(d => ({ ...d, day: String(d.day).slice(0, 10) })),
+  [['day', 10], ['visits', 7], ['walls', 6], ['fresh', 6], ['templates', 10], ['fails', 6], ['errors', 6]]);
 
 // from first visit to an account: where guests drop off
 const f = (await sql(`SELECT
-  SUM(IF(blob1 = 'open' AND blob2 = 'first', _sample_interval, 0)) AS first,
+  SUM(IF(blob1 = 'open' AND blob2 = 'first', _sample_interval, 0)) AS firsts,
   SUM(IF(blob1 = 'view' AND blob8 = 'no', _sample_interval, 0)) AS explored,
   SUM(IF(blob1 = 'template_used' AND blob8 = 'no', _sample_interval, 0)) AS tpl,
   SUM(IF(blob1 = 'signin_offer' AND blob2 = 'kept', _sample_interval, 0)) AS kept
   FROM ${DS} WHERE ${SINCE}`))[0] || {};
-console.log(`\nFirst visits ${f.first || 0}, screens opened by new browsers ${f.explored || 0}, used a template ${f.tpl || 0}, kept their boards at sign-in ${f.kept || 0}`);
+console.log(`\nFirst visits ${f.firsts || 0}, screens opened by new browsers ${f.explored || 0}, used a template ${f.tpl || 0}, kept their boards at sign-in ${f.kept || 0}`);
 
 table('Where people go (screens opened)', await top('blob2', "blob1 = 'view'", 20), [['k', 24], ['n', 8]]);
 table('Templates used', await top('blob2', "blob1 = 'template_used'"), [['k', 24], ['n', 8]]);
 table('Templates looked at', await top('blob3', "blob1 = 'view' AND blob2 = 'ex:tpl'"), [['k', 24], ['n', 8]]);
+table('Look sheet opened (from where)', await top('blob2', "blob1 = 'look_sheet'"), [['k', 24], ['n', 8]]);
 table('Looks picked', await top('blob2', "blob1 = 'look_used'"), [['k', 24], ['n', 8]]);
 table('What is on when the board opens (look)', await top('blob3', "blob1 = 'open'"), [['k', 24], ['n', 8]]);
 table('How it is shown', await top('blob4', "blob1 = 'open'"), [['k', 24], ['n', 8]]);
 table('Failed presses (blockers)', await top('blob2', "blob1 = 'fail'"), [['k', 24], ['n', 8]]);
+table('What the status line said most (what people did)', await top('blob2', "blob1 = 'said'", 25), [['k', 24], ['n', 8]]);
 table('Listen', await top('blob2', "blob1 = 'listen'"), [['k', 24], ['n', 8]]);
 table('Errors', await sql(`SELECT blob2 AS msg, blob3 AS at, ${N} AS n FROM ${DS} WHERE ${SINCE} AND blob1 = 'error' GROUP BY msg, at ORDER BY n DESC LIMIT 15`),
   [['msg', 44], ['at', 22], ['n', 6]]);

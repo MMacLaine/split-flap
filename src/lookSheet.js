@@ -78,6 +78,7 @@ function ctxName(ed, ctx) {
 
 export function openLook(ed, ctx) {
   ed.E.sheet = { kind: 'look', ctx, sel: null, prev: null, ownOpen: false, own: null };
+  ed.app.ev('look_sheet', ctx && ctx.kind || 'board');   // opened, against look_used: who looks and doesn't pick
   ed.app.lastInput = Date.now(); ed.app.render(); ed.app.tick(true);
 }
 // The gold bar's line while a look is previewed (handover 6.2: one bar, saying the look).

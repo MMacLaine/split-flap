@@ -37,9 +37,9 @@ export class Track {
     const k = [n, a, b, c].join('|');
     if (n === 'view' && k === this.last) return;
     this.last = k;
-    if (this.q.length >= MAX_QUEUE) this.q.shift();
     const e = { n }; if (a != null) e.a = String(a); if (b != null) e.b = String(b); if (c != null) e.c = String(c); if (v != null) e.v = v;
     this.q.push(e);
+    if (this.q.length >= MAX_QUEUE) this.flush();   // a busy minute sends early rather than dropping the first events
   }
   batch() {
     if (!this.q.length) return null;
@@ -49,9 +49,9 @@ export class Track {
   flush(leaving) {
     const body = this.batch(); if (!body) return;
     if (this.send) { this.send(body); return; }
+    // fetch with keepalive, not sendBeacon: it is sent on a hidden page too, carries no
+    // cookie and always carries the Origin header the Worker checks
     try {
-      const blob = new Blob([body], { type: 'text/plain' });
-      if (leaving && navigator.sendBeacon && navigator.sendBeacon(URL_E, blob)) return;
       fetch(URL_E, { method: 'POST', body, keepalive: true, credentials: 'omit', headers: { 'content-type': 'text/plain' } }).catch(() => {});
     } catch { /* counting must never break the board */ }
   }

@@ -54,6 +54,11 @@ simple = { limit = 60, period = 60 }
 # Live data (0.8): 120 uncached requests a minute per address, so one screen or a
 # misbehaving script cannot run the upstream sources' allowance down
 [[ratelimits]]
+name = "EVENTS_RL"   # usage counts: the app sends one batch a minute, plus one when hidden
+namespace_id = "5053"
+simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
 name = "DATA"
 namespace_id = "5052"
 simple = { limit = 120, period = 60 }
@@ -66,5 +71,5 @@ durable_objects = { bindings = [{ name = "MARKETS", class_name = "Markets" }] }
 # DEV_TEST=1 comes from .dev.vars when running the tests, never from here
 d1_databases = [{ binding = "DB", database_name = "split-flap", database_id = "00000000-0000-0000-0000-000000000000", migrations_dir = "migrations" }]
 analytics_engine_datasets = [{ binding = "EVENTS", dataset = "split_flap_events_dev" }]
-ratelimits = [{ name = "WRITES", namespace_id = "5051", simple = { limit = 60, period = 60 } }, { name = "DATA", namespace_id = "5052", simple = { limit = 120, period = 60 } }]
+ratelimits = [{ name = "WRITES", namespace_id = "5051", simple = { limit = 60, period = 60 } }, { name = "DATA", namespace_id = "5052", simple = { limit = 120, period = 60 } }, { name = "EVENTS_RL", namespace_id = "5053", simple = { limit = 10, period = 60 } }]
 routes = []
