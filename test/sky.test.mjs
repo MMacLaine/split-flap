@@ -64,21 +64,27 @@ test('the sky in epoch ms: a place nine hours east is in its own night, before a
   assert.equal(L.skyAt(at(12)).phase, 'night');    // 21:00 in Tokyo, noon in London
   assert.equal(L.skyAt(at(17)).phase, 'night');    // 02:00 the next day
   assert.equal(L.skyAt(at(3)).phase, 'day');       // noon in Tokyo
-  for (let h = 0; h < 24; h++) { const i = at(h); assert.ok(i.minute >= 0 && i.minute < 1440, `${h}: ${i.minute}`); }
+  for (let h = 0; h < 24; h++) { const i = at(h); assert.ok(i.minute >= 390 && i.minute < 390 + 1440, `${h}: ${i.minute}`); }   // from the last sunrise to the next
 });
 
 test('the sky at the edges: polar day and night at 68° N, midsummer in Stockholm', () => {
   const north = { lat: 68, lon: 20, tz: 'Europe/Stockholm' };
   const june = skyInputs(north, Date.UTC(2026, 5, 21, 23), null), dec = skyInputs(north, Date.UTC(2026, 11, 21, 11), null);
   assert.equal(L.skyAt(june).phase, 'day'); assert.equal(L.skyAt(dec).phase, 'night');
+  // midsummer in Stockholm, a day of 18.6 hours (0.11.1 build review 1.1): local times, CEST
   const sto = { lat: 59.33, lon: 18.07, tz: 'Europe/Stockholm' };
-  for (let h = 0; h < 24; h++) {
-    const i = skyInputs(sto, Date.UTC(2026, 5, 21, h), null), sk = L.skyAt(i);
-    assert.ok(i.set <= 1440 && sk.phase && /^#[0-9A-F]{6}$/i.test(sk.a), `${h}: ${i.set} ${sk.phase}`);
-  }
-  // keys pushed past the day stay inside it and in order: a sunset at 23:59 still blends
-  for (const m of [0, 300, 1300, 1439]) assert.ok(L.skyAt({ minute: m, rise: 30, set: 1439, wx: 'clear' }).phase, `${m}`);
-  assert.equal(L.phaseAt(720, 0, 1440).near, 'day');
+  const at = (d, hh, mm) => L.skyAt(skyInputs(sto, Date.UTC(2026, 5, d, hh - 2, mm), null)).phase;
+  assert.deepEqual([at(21, 3, 30), at(21, 12, 0), at(21, 21, 50), at(21, 22, 30), at(21, 23, 30), at(22, 1, 0)],
+    ['dawn', 'day', 'golden', 'dusk', 'night', 'night']);
+  // Kiruna in early May: a 19-hour day that is not yet polar
+  const kir = { lat: 67.86, lon: 20.23, tz: 'Europe/Stockholm' }, k = (hh, mm) => skyInputs(kir, Date.UTC(2026, 4, 5, hh - 2, mm), null);
+  assert.ok(k(12, 0).set - k(12, 0).rise > 1100, `${k(12, 0).set - k(12, 0).rise}`);
+  assert.deepEqual([k(12, 0), k(16, 0)].map(i => L.skyAt(i).phase), ['day', 'day']);
+  assert.ok(['dusk', 'night'].includes(L.skyAt(k(23, 30)).phase) && ['dawn', 'night'].includes(L.skyAt(k(3, 0)).phase), `${L.skyAt(k(23, 30)).phase} ${L.skyAt(k(3, 0)).phase}`);
+  for (let h = 0; h < 24; h++) { const sk = L.skyAt(skyInputs(sto, Date.UTC(2026, 5, 21, h), null)); assert.ok(/^#[0-9A-F]{6}$/i.test(sk.a), `${h}`); }
+  // a wall-clock day with no place: before dawn is night, and the next dawn blends in
+  assert.equal(L.skyAt({ minute: 100, rise: 390, set: 1110, wx: 'clear' }).phase, 'night');
+  assert.equal(L.phaseAt(1440 + 385, 390, 1110).near, 'dawn');
 });
 
 test('a day of Outside makes only a few letter faces: the ink tint in steps', () => {
@@ -87,6 +93,12 @@ test('a day of Outside makes only a few letter faces: the ink tint in steps', ()
     for (let m = 0; m < 1440; m++) ids.add(L.drawFor({ id: 'outside' }, L.skyAt({ minute: m, rise: 390, set: 1110, wx })).id);
     assert.ok(ids.size <= 18, `${wx}: ${ids.size}`);
   }
+});
+
+test('the smoke step in a theme id: clear to half is a step, as half to full is', () => {
+  const a = 'L11-glass-serif-#FFF-lit-sm0-css', b = 'L11-glass-serif-#FFF-lit-sm0.5-css', c = 'L11-glass-serif-#FFF-lit-sm1-css';
+  assert.deepEqual([a, b, c].map(L.smokeStep), ['-sm0-', '-sm0.5-', '-sm1-']);
+  assert.equal(L.smokeStep('black'), '');
 });
 
 test('From the board on a markets chart: red half flaps count by majority, not as a warning', () => {
