@@ -9,11 +9,12 @@ const store = init => { const m = new Map(Object.entries(init)); return { getIte
 const day = 864e5, t0 = Date.UTC(2026, 9, 10);
 
 test('the old keys: stamped on the first load, kept for 14 days, then removed, the new ones untouched', () => {
-  const s = store({ sf_boards: '[]', sf_active: '0', sf_myboards: '[]', sf_playlists: '[]', sf_library: '[]' });
+  const s = store({ sf_boards: '[]', sf_active: '0', sf_myboards: '[]', sf_sync: '{}', sf_sync_my: '{}', sf_playlists: '[]', sf_library: '[]' });
   assert.equal(purgeOld(t0, s), false); assert.equal(s.getItem('sf_moved_at'), String(t0));
   assert.equal(purgeOld(t0 + 13 * day, s), false); assert.ok(OLD_KEYS.every(k => s.getItem(k) != null));
   assert.equal(purgeOld(t0 + 14 * day, s), true);
-  assert.ok(OLD_KEYS.every(k => s.getItem(k) == null));
+  assert.ok(OLD_KEYS.every(k => s.getItem(k) == null)); assert.equal(s.getItem('sf_moved_at'), null);
+  assert.ok(OLD_KEYS.includes('sf_sync') && OLD_KEYS.includes('sf_sync_my'));
   assert.equal(s.getItem('sf_playlists'), '[]'); assert.equal(s.getItem('sf_library'), '[]');
   assert.equal(purgeOld(t0 + 20 * day, s), false);
 });
@@ -32,11 +33,14 @@ test('the sound: a playlist\'s own choice wins, and on Clack glass, smoke and pa
   assert.deepEqual(PROFILE_IDS, ['clack', 'heavy', 'soft', 'tick']);   // the picker offers the same four
 });
 
-test('the privacy page, in both languages, has the microphone and the new "how long", and nothing in src/ repeats them', async () => {
+test('the privacy page, in both languages, has the microphone and the new "how long", and nothing in src/, GLOSSARY.md or README.md repeats them', async () => {
   const { readFileSync, readdirSync } = await import('node:fs');
   const en = readFileSync(new URL('../privacy.html', import.meta.url), 'utf8'), sv = readFileSync(new URL('../site/privacy.sv.html', import.meta.url), 'utf8');
-  assert.ok(en.includes('<dt>The microphone</dt>') && en.includes('never sent anywhere or stored') && en.includes('two weeks after version 0.11.3 first reaches your account'));
+  assert.ok(en.includes('<dt>The microphone</dt>') && en.includes('never sent anywhere or stored') && en.includes('two weeks after version 0.11.3 first reaches your account or, without an account, this browser'));
   assert.ok(sv.includes('<dt>Mikrofonen</dt>') && sv.includes('skickas aldrig någonstans') && sv.includes('två veckor efter att version 0.11.3 först når ditt konto'));
-  const src = readdirSync(new URL('../src/', import.meta.url)).filter(f => f.endsWith('.js')).map(f => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8')).join('\n');
+  const src = readdirSync(new URL('../src/', import.meta.url)).filter(f => f.endsWith('.js')).map(f => readFileSync(new URL('../src/' + f, import.meta.url), 'utf8')).concat(['GLOSSARY.md', 'README.md'].map(f => readFileSync(new URL('../' + f, import.meta.url), 'utf8'))).join('\n');
   for (const s of ['never sent anywhere or stored', 'skickas aldrig någonstans', 'first reaches your account', 'först når ditt konto']) assert.ok(!src.includes(s), s);
+  // the docs carry no privacy-shaped promises either (0.11.3 review)
+  const docs = ['GLOSSARY.md', 'README.md'].map(f => readFileSync(new URL('../' + f, import.meta.url), 'utf8')).join('\n');
+  for (const s of ['Never stored', 'never sent', 'never stored', 'not sent anywhere']) assert.ok(!docs.includes(s), s);
 });

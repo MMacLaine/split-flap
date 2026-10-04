@@ -1203,9 +1203,9 @@ export class Editor {
       h('section', { class: 'sf-field' },
         h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!b.sound, 'data-k': 'sound', onchange: () => app.toggleSound() }), h('span', { class: 'sf-eyebrow' }, t.sound)),
         h('div', { class: 'sf-row' }, h('span', { class: 'sf-label muted w' }, t.soundStyle),
-          seg(sound.PROFILE_IDS.map(id => [id, t.sounds[id]]), b.soundStyle || 'clack', v => { app.upd(bb => { bb.soundStyle = v; }); sound.preview(v); }, 'ss')),
+          seg(sound.PROFILE_IDS.map(id => [id, t.sounds[id]]), b.soundStyle || 'clack', v => { app.upd(bb => { bb.soundStyle = v; }); sound.preview(app.soundNow(b, null, v)); }, 'ss')),
         app.volumeSlider(b),
-        h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'ss-preview', onclick: () => sound.preview(b.soundStyle || 'clack') }, t.previewSound))));
+        h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'ss-preview', onclick: () => sound.preview(app.soundNow(b)) }, t.previewSound))));
   }
 
   // ---------- explore ----------

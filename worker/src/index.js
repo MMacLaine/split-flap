@@ -109,7 +109,7 @@ async function route(req, env, url) {
   if (path === '/me' && req.method === 'GET') return json({ id: user.id, name: String(user.name || '').split(/\s+/)[0], email: user.email });
   if (path === '/boards' && req.method === 'GET') return json({ boards: await listBoards(env, user.id) });
   if (path === '/blueprints' && req.method === 'GET') return json({ blueprints: await listBoards(env, user.id, KINDS.blueprints) });
-  if (path === '/playlists' && req.method === 'GET') { await migrate(env, user.id); await purge(env, user.id); return json({ playlists: await listBoards(env, user.id, KINDS.playlists) }); }
+  if (path === '/playlists' && req.method === 'GET') { await migrate(env, user.id); try { await purge(env, user.id); } catch (e) { console.warn(JSON.stringify({ failed: 'purge', error: String(e && e.message || e).slice(0, 80) })); } return json({ playlists: await listBoards(env, user.id, KINDS.playlists) }); }
   if (path === '/settings' && req.method === 'GET') return json({ settings: await listBoards(env, user.id, KINDS.settings) });
   if (path.startsWith('/connections') && !(await sealKey(env))) return fail(503, 'not_configured');   // never stored in plain text
   if (path === '/connections' && req.method === 'GET') return json({ connections: await listBoards(env, user.id, KINDS.connections) });

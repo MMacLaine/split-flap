@@ -8,7 +8,7 @@ The last of 0.11: glass, smoke and paper sound like what they are, and old copie
 
 - **A sound for each material.** Glass ticks high and short, smoke the same but lower, and paper taps softly. Flap and Solari clack as before. If you chose a sound for the playlist yourself, that one wins.
 - **The old copies go.** Boards from before 0.10.1 were also kept in their old form, so the move could be undone. They are cleared out now, after a wait that the privacy page describes.
-- Help and the glossary cover the light, the sky, Listen and the Music meter.
+- Help covers the light, the sky, Listen and the Music meter.
 
 ## v0.11.2 (2026-10-04): Music
 
