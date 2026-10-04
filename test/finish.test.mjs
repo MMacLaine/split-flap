@@ -44,3 +44,13 @@ test('the privacy page, in both languages, has the microphone and the new "how l
   const docs = ['GLOSSARY.md', 'README.md'].map(f => readFileSync(new URL('../' + f, import.meta.url), 'utf8')).join('\n');
   for (const s of ['Never stored', 'never sent', 'never stored', 'not sent anywhere']) assert.ok(!docs.includes(s), s);
 });
+
+test('the look sheet\'s specimen: centred, in the board\'s language, with chips, only for an all-blank board', async () => {
+  const { specimen, sheetGrid, blank } = await import('../src/content.js');
+  const g = specimen(6, 22, 'en').map(r => r.join(''));
+  assert.deepEqual(g.map(r => r.trim()), ['', 'HELLO', 'ÅÄÖ ABC 123', '12:34 18°', 'roygbv', '']);
+  assert.equal(specimen(6, 22, 'sv')[1].join('').trim(), 'HEJ');
+  assert.equal(specimen(3, 15, 'en').length, 3); assert.doesNotThrow(() => specimen(1, 5, 'en'));
+  const own = blank(6, 22); own[0][0] = 'A';
+  assert.equal(sheetGrid(own, 6, 22, 'en'), own);   // a board with anything on it is drawn as it is
+});

@@ -13,7 +13,7 @@
 
 import { h, clone } from './dom.js';
 import { ringFor, RING, SKY, RING_FX, LOOKS, SHIPPED, MATERIALS, TYPES, MOTION, MATRIX, RELEASED, partsOf, swatch, lookOf, defaultOf, wallPreset, sanitizeParts, legacyLook, templateLook, lookFor } from './looks.js';
-import { compose } from './content.js';
+import { compose, sheetGrid } from './content.js';
 
 const same = (a, b) => !!a && !!b && a.id === b.id && (a.id !== 'custom' || JSON.stringify(a.parts) === JSON.stringify(b.parts));
 
@@ -145,7 +145,7 @@ export function lookSheet(ed) {
     const l = id === 'custom' ? { id, parts: own } : { id }, r = resolved(app, l, cb.look), th = app.drawOf(r).id, on = same(l, sel) || (id === sel.id && id !== 'custom');
     const hint = id === 'default' ? lookLabel(app, defaultOf(app.lookSetting())) : id === 'follow' ? t.eachOwn : id === 'custom' ? t.inkOf(t.mats[r.parts.material], t.types[r.parts.type].toLowerCase()) : same(l, cur) ? t.onNow : lookHint(app, id);
     return h('button', { class: 'sf-lk-card' + (on ? ' on' : ''), 'aria-pressed': String(on), 'data-k': 'lk-card-' + id, onclick: () => pick(ed, l) },
-      h('span', { class: 'sf-lk-well' }, ed.thumb(`lk-${id}-${th}`, cb.rows, cb.cols, () => compose(cb.page, cb.rows, cb.cols, now, ed.lang, app.live.data), th)),
+      h('span', { class: 'sf-lk-well' }, ed.thumb(`lk-${id}-${th}`, cb.rows, cb.cols, () => sheetGrid(compose(cb.page, cb.rows, cb.cols, now, ed.lang, app.live.data), cb.rows, cb.cols, ed.lang), th)),
       h('strong', null, id === 'default' ? t.deflt : id === 'follow' ? t.followBoards : id === 'custom' ? t.yourOwn : lookName(app, id)), h('span', { class: 'sf-meta' }, hint));
   });
   return h('div', { class: 'sf-level sf-sheet sf-lk' },
