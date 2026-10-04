@@ -95,7 +95,9 @@ export class App {
     const fresh = getFlag('sf_fresh'), started = getFlag('sf_started') === '1';
     this.hadBoards = boards.length > 0 && !(boards.length === 1 && boards[0].id === fresh);
     this.firstRun = !started && (!boards.length || (boards.length === 1 && boards[0].id === fresh));
-    this.freshId = this.firstRun ? this.boards[0].id : null;
+    // the untouched filler, the first visit's demo or the blank left at sign-out (0.10.3), kept by
+    // sf_fresh across reloads (a sign-in is one), so a sign-in drops it rather than offering it
+    this.freshId = this.firstRun || (fresh && boards.length === 1 && boards[0].id === fresh) ? this.boards[0].id : null;
     if (!boards.length) { this.save(); setFlag('sf_fresh', this.boards[0].id); setFlag('sf_words_070', '1'); }
     this.connections = loadConns();       // your own sources (0.9.2), kept in this browser and synced
     this.editor = new Editor(this);
@@ -375,9 +377,13 @@ export class App {
     this.account.replacing = true;
     this.playlists = list || [];
     this.resolveAll();
-    if (!this.boards.length) this.boards = [fromTemplate('blank', this.S.lang, this.live.data.home)];
+    // nothing left (signed out): a blank playlist, marked as untouched filler, so the next sign-in
+    // drops it and never offers it or its board (0.10.3)
+    let filler = null;
+    if (!this.boards.length) { this.boards = [fromTemplate('blank', this.S.lang, this.live.data.home)]; filler = this.boards[0].id; }
     if (!this.boards.some(b => b.id === curId)) { Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() }); this.active = 0; }
     this.save(); this.account.replacing = false;
+    if (filler) { this.freshId = filler; setFlag('sf_fresh', filler); }
     this.refresh();
   }
   replaceBoards(list) { this.replacePlaylists(list); }
@@ -406,7 +412,7 @@ export class App {
   upd(fn, quiet) {
     if (this.S.editing && this.lookTpl) { const b = clone(this.lookTpl); fn(b); this.lookTpl = b; this.refresh(quiet); return; }   // a template is only looked at
     const i = this.curIdx(), b = clone(this.boards[i] || this.cur()); fn(b); this.boards[i] = b; this.save();
-    if (b.id === this.freshId) this.freshId = null;
+    if (b.id === this.freshId) { this.freshId = null; setFlag('sf_fresh', ''); }
     if (this.S.editing) this.saved();
     this.refresh(quiet);
   }
@@ -1011,7 +1017,8 @@ export class App {
   useTemplate(id) {
     if (!TEMPLATES.some(x => x.id === id)) return;
     if (this.plCount() >= MAX_PL && !(this.startPending() && this.freshId === this.shown().id)) { this.say(this.t.sbFull, { fail: true }); return; }
-    const t = this.t, nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace()), prev = this.active;
+    // at the template's own size, or the one picked in its preview (0.10.3)
+    const t = this.t, nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace(), this.editor && this.editor.tplSize(id)), prev = this.active;
     const replace = this.startPending() && this.freshId === this.shown().id;
     if (replace) {
       // the untouched demo leaves no trace: its boards go too, unless something else shows them

@@ -2,6 +2,14 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.10.3 (2026-10-04): Fixes
+
+A fix for signing out and back in, and templates that start at the size they are made for.
+
+- **Signing out and in again adds nothing.** Signing out left a blank playlist behind, and signing in then offered it next to your own, while its board went to your account by itself. The blank is now left out at sign-in, and your playlists come back in their order. A stray "Board 1" from before can be deleted in Boards.
+- **Templates start at their own size.** Station board is 10 × 32, the big tiles are 12 × 40 and messages are 6 × 22. A template shows at that size, and you can pick another in its preview before you show it.
+- **No instructions on the flaps.** A new message board says HELLO instead of TYPE HERE, since nobody types on the wall. How to type is in the editor, over an empty grid.
+
 ## v0.10.2 (2026-10-04): Big boards
 
 New playlists have been 12 × 40 since 0.9, but most tiles were still drawn for 6 × 22 and left most of the board dark. This release gives the most used ones a layout for the big board, and makes the editor work on a phone.

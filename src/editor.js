@@ -11,7 +11,7 @@ import { h, clone } from './dom.js';
 import { THEMES, renderStatic, staticGeom, GEOM } from './renderer.js';
 import { CHIPS, CHIP_NAMES } from './charset.js';
 import { compose, zonesFor, LAYOUTS, newId, blank, templateTokens, fixedCut, vestaboard, nearKey } from './content.js';
-import { TEMPLATES, fromTemplate, availableFor, SECTIONS as TPL_SECTIONS, sectionOf } from './templates.js';
+import { TEMPLATES, fromTemplate, availableFor, SECTIONS as TPL_SECTIONS, sectionOf, fitOf } from './templates.js';
 import { searchStations, searchCities, searchStops, nearStops, MODE_LETTERS } from './live.js';
 import { placeOf, formatsFor, priceMark, screenTz, tzDiffers, FX_CURRENCIES } from './place.js';
 import { SOURCES } from './sources.js';
@@ -357,7 +357,7 @@ export class Editor {
     // none: a message board at the size of the one on now, shown in turn with what is on
     const p0 = b.pages.find(p => !p.missing) || b.pages[0], id = newId('p'), solo = !!b.solo, first = p0.name || this.t.page;
     app.look = null;
-    app.upd(bb => { bb.pages.push(Object.assign({ id, name: this.t.myMessage, layout: 'full', dur: 10, wins: [], hue: nextHue(bb), zones: [{ ch: 'message', o: { lines: ['', this.lang === 'sv' ? 'SKRIV HÄR' : 'TYPE HERE'] } }] },
+    app.upd(bb => { bb.pages.push(Object.assign({ id, name: this.t.myMessage, layout: 'full', dur: 10, wins: [], hue: nextHue(bb), zones: [{ ch: 'message', o: { lines: ['', this.lang === 'sv' ? 'HEJ' : 'HELLO'] } }] },
       p0.size ? { size: p0.size, rows: p0.rows, cols: p0.cols, theme: p0.theme } : {})); if (solo) { delete bb.solo; bb.name = this.t.inTurnName(first, this.t.myMessage); } }, true);
     app.say(this.t.nowInTurn(first, this.t.myMessage));
     this.go({ sec: 'sb', lv: 'board', sb: app.shown().id, bd: id, from: 'boards' }, { silent: false, zone: { zone: 0, zoneOpen: true } });
@@ -778,7 +778,7 @@ export class Editor {
   setLayout(id) {
     this.app.updPage(p => {
       const need = id === 'full' ? 1 : 2; p.layout = id;
-      while (p.zones.length < need) p.zones.push(id === 'ticker' ? { ch: 'message', o: { text: 'YOUR TICKER TEXT' } } : { ch: 'clock', o: { fmt: '24' } });
+      while (p.zones.length < need) p.zones.push(id === 'ticker' ? { ch: 'message', o: { text: this.lang === 'sv' ? 'HA EN BRA DAG' : 'HAVE A GOOD DAY' } } : { ch: 'clock', o: { fmt: '24' } });
       p.zones.length = need;
     });
   }
@@ -861,7 +861,7 @@ export class Editor {
   defaults(tile, zd, theme, preview) {
     const o = clone(tile.def || {}), home = this.app.live.data.home, loc = this.app.cur().loc;
     if (tile.id === 'message') {
-      if (this.isTicker()) o.text = this.lang === 'sv' ? 'DIN LÖPTEXT HÄR' : 'YOUR TICKER TEXT';
+      if (this.isTicker()) o.text = this.lang === 'sv' ? 'HA EN BRA DAG' : 'HAVE A GOOD DAY';   // real words on the wall, never an instruction (0.10.3)
       else if (preview) o.lines = zd.h >= 3 ? ['', this.lang === 'sv' ? 'HEJ' : 'HELLO', 'roygbv'] : [this.lang === 'sv' ? 'HEJ' : 'HELLO'];
     }
     // defaults in the page's language (0.7.3: the Swedish page started these in English)
@@ -1227,6 +1227,7 @@ export class Editor {
       h('p', { class: 'sf-note big' }, tp.desc[this.lang]),
       h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'use-tpl', disabled: app.plCount() >= MAX_PL, onclick: () => app.useTemplate(tp.id) }, t.showOn)),
       h('p', { class: 'sf-hint' }, t.tplCopyNote),
+      this.tplSizeEl(tp),
       h('ol', { class: 'sf-pls' }, nb.pages.map((p, i) => h('li', { class: 'sf-pl tpl-row', style: `--hue:${hueOf(nb, i)}` },
         h('div', { class: 'sf-pl-open static' },
           this.thumb(`tp-${tp.id}-${i}`, d.rows, d.cols, () => compose(p, d.rows, d.cols, now, this.lang, previewLive(app.live.data, now)), nb.theme),
@@ -1235,10 +1236,23 @@ export class Editor {
           h('button', { class: 'sf-small-btn', 'data-k': `tpl-save-${i}`, disabled: app.blueprints.length >= MAX_MY, onclick: () => this.saveToMy(p, { kind: 'template', id: tp.id }, Object.assign({ size: sizeOf(nb) }, d), nb.theme) }, t.mSave),
           h('button', { class: 'sf-small-btn', 'data-k': `tpl-copy-${i}`, onclick: () => { this.E.sheet = { kind: 'copy', tplPage: Object.assign(clone(p), { size: sizeOf(nb), rows: d.rows, cols: d.cols, theme: nb.theme }) }; app.render(); } }, t.addToSb))))));
   }
+  // The template's size in its preview: its own, marked Recommended, or another, which Show on
+  // this screen then uses (0.10.3)
+  tplSizeEl(tp) {
+    const t = this.t, own = fitOf(tp.id), cur = this.tplSize(tp.id) || own, label = s => s === 'fill' ? t.fill : s.replace('x', ' × ');
+    const opts = [own, ...['6x22', '12x40', '3x15', '10x32'].filter(x => x !== own)];
+    const pick = s => { this.E.tplSizes = Object.assign({}, this.E.tplSizes, { [tp.id]: s === own ? null : s }); this.app.lookAtTemplate(this.tplBoard(tp.id)); this.app.render(); };
+    return h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, t.size),
+      h('div', { class: 'sf-row wrap', role: 'group', 'aria-label': t.size }, opts.map(s => h('button', { class: 'sf-seg', 'aria-pressed': String(s === cur), 'data-k': 'tpl-size-' + s, onclick: () => pick(s) },
+        label(s), s === own ? h('span', { class: 'sf-tag' }, t.recommended) : null))),
+      h('span', { class: 'sf-hint' }, cur === own ? t.tplSizeOwn : t.tplSizeOther(label(own))));
+  }
+  // the size picked in a template's preview (0.10.3), else none and the template's own
+  tplSize(id) { return (this.E.tplSizes || {})[id] || null; }
   tplBoard(id) {
     this.tplCache = this.tplCache || new Map();
-    const pl = this.app.newPlace(), k = id + this.lang + (pl ? pl.lat + ',' + pl.lon : '');
-    if (!this.tplCache.has(k)) this.tplCache.set(k, fromTemplate(id, this.lang, this.app.live.data.home, pl));
+    const pl = this.app.newPlace(), sz = this.tplSize(id), k = id + this.lang + (pl ? pl.lat + ',' + pl.lon : '') + (sz || '');
+    if (!this.tplCache.has(k)) this.tplCache.set(k, fromTemplate(id, this.lang, this.app.live.data.home, pl, sz));
     return this.tplCache.get(k);
   }
 

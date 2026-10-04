@@ -135,6 +135,24 @@ try {
   const mine = await ev(`splitFlap.blueprints.find(x => x.id === '${tapped}') ? 1 : 0`);
   check('a link with other content under your board\'s id comes in as a copy', (await ev(`JSON.stringify(splitFlap.boards.find(x => x.id === '${shown0}').pages[0].zones[0].o.text || '')`)) === '"FROM A LINK"' && (await ev(`splitFlap.blueprints.some(x => x.page.zones[0] && x.page.zones[0].o.text === 'FROM A LINK' && x.id !== splitFlap.boards.find(b => b.id === '${shown0}').pages[1].id)`)) === true && /as copies/.test(await status()), await status());
 
+  // 0.10.3: a template shows at its own recommended size, and Show on this screen uses it unless
+  // another was picked in the preview
+  await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'tpl', tpl: 'station', section: 'travel' })`); await sleep(500);
+  check('a template previews at its recommended size', (await ev('JSON.stringify(splitFlap.dims())')) === JSON.stringify({ rows: 10, cols: 32 }) && (await ev(`document.querySelector('[data-k="tpl-size-10x32"]').getAttribute('aria-pressed')`)) === 'true', await ev('JSON.stringify(splitFlap.dims())'));
+  await ev(`document.querySelector('[data-k=use-tpl]').click()`); await sleep(500);
+  check('and Show on this screen keeps it', (await ev('splitFlap.shown().pages[0].size')) === 'custom' && (await ev('splitFlap.shown().pages[0].rows')) === 10);
+  await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'tpl', tpl: 'weather', section: 'home' })`); await sleep(500);
+  await ev(`document.querySelector('[data-k="tpl-size-6x22"]').click()`); await sleep(400);
+  check('another size picked in the preview is shown there', (await ev('JSON.stringify(splitFlap.dims())')) === JSON.stringify({ rows: 6, cols: 22 }) && /made for 12 × 40/.test(await ev(`document.querySelector('.sf-panel-body').textContent`)));
+  await ev(`document.querySelector('[data-k=use-tpl]').click()`); await sleep(500);
+  check('and is the size Show on this screen uses', (await ev('splitFlap.shown().pages[0].size')) === '6x22');
+  // no flap tells anyone to type: a new message says hello, and the editor says how to type
+  await ev(`(() => { const app = splitFlap; app.editor.go({ sec: 'sb', lv: 'showing' }); })()`); await sleep(300);
+  await ev(`splitFlap.useTemplate('blank')`); await sleep(500);
+  check('a blank board prints a greeting, never TYPE HERE', /HELLO/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)) && !/TYPE/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)));
+  await ev(`(() => { const app = splitFlap; app.updPage(p => { p.zones = [{ ch: 'message', o: {} }]; }); app.editor.openZone(0); })()`); await sleep(500);
+  check('an empty message shows the instruction in the editor only', (await ev(`(() => { const h = document.querySelector('[data-k=comp-hint]'); return !!h && !h.hidden && /type/i.test(h.textContent); })()`)) === true && !/TAP|TYPE/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)));
+
   // a first visit that picks a template: the demo leaves no boards behind
   await go('about:blank'); await go(URL0); await ev('localStorage.clear()'); await go(URL0);
   await ev(`splitFlap.useTemplate('cafe')`); await sleep(500);

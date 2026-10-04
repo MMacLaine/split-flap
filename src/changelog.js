@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.10.3', date: '2026-10-04',
+    tag: { en: 'Fixes', sv: 'Rättningar' },
+    desc: {
+      en: 'A fix for signing out and back in, and templates that start at the size they are made for.',
+      sv: 'En rättning för att logga ut och in igen, och mallar som börjar i storleken de är gjorda för.'
+    },
+    items: {
+      en: [
+        '**Signing out and in again adds nothing.** Signing out left a blank playlist behind, and signing in then offered it next to your own, while its board went to your account by itself. The blank is now left out at sign-in, and your playlists come back in their order. A stray "Board 1" from before can be deleted in Boards.',
+        '**Templates start at their own size.** Station board is 10 × 32, the big tiles are 12 × 40 and messages are 6 × 22. A template shows at that size, and you can pick another in its preview before you show it.',
+        '**No instructions on the flaps.** A new message board says HELLO instead of TYPE HERE, since nobody types on the wall. How to type is in the editor, over an empty grid.'
+      ],
+      sv: [
+        '**Att logga ut och in igen lägger inte till något.** Att logga ut lämnade en tom spellista kvar, och vid inloggningen erbjöds den bredvid din egen, medan dess tavla hamnade i ditt konto av sig själv. Den tomma lämnas nu utanför vid inloggningen, och dina spellistor kommer tillbaka i sin ordning. En överbliven "Tavla 1" från förut kan tas bort i Tavlor.',
+        '**Mallar börjar i sin egen storlek.** Stationstavlan är 10 × 32, de stora rutorna är 12 × 40 och meddelanden är 6 × 22. En mall visas i den storleken, och du kan välja en annan i förhandsvisningen innan du visar den.',
+        '**Inga instruktioner på flapparna.** En ny meddelandetavla säger HEJ i stället för SKRIV HÄR, eftersom ingen skriver på väggen. Hur du skriver står i redigeraren, över ett tomt rutnät.'
+      ]
+    }
+  },
+  {
     v: '0.10.2', date: '2026-10-04',
     tag: { en: 'Big boards', sv: 'Stora tavlor' },
     desc: {

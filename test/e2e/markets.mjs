@@ -56,9 +56,11 @@ try {
   await ev(`document.querySelector('[data-k=back]').click()`); await sleep(400);
   check('and Back returns to the section', (await at()) === '#/explore/finance', await at());
 
-  // a new storyboard is 12 x 40; an older one keeps its size
+  // 0.10.3: each template is made at its own size: Blank at 6 x 22, Stocks at 12 x 40
   await ev(`splitFlap.useTemplate('blank')`); await sleep(400);
-  check('a new storyboard is 12 x 40', (await ev('JSON.stringify(splitFlap.dims())')) === '{"rows":12,"cols":40}');
+  check('Blank is made at its recommended 6 x 22', (await ev('JSON.stringify(splitFlap.dims())')) === '{"rows":6,"cols":22}');
+  await ev(`splitFlap.useTemplate('stocks')`); await sleep(400);
+  check('and Stocks at 12 x 40', (await ev('JSON.stringify(splitFlap.dims())')) === '{"rows":12,"cols":40}');
   check('and the demo from before keeps its 6 x 22', before === '{"rows":6,"cols":22}', before);
 
   // your own key: kept in this browser, never in the board, a link, a blueprint or the saved storyboards

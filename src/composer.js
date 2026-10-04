@@ -100,7 +100,10 @@ export class Composer {
       h('div', { class: 'sf-row' }, undo, redo))];
     if (mode === 'paint') parts.push(this.paintTools(T, names));
     if (mode === 'photo') parts.push(this.photoPick());
-    parts.push(h('div', { class: 'sf-composer' + (tight ? ' scroll' : '') }, grid, input));
+    // the instruction lives here, greyed over an empty grid, and is never printed on the board (0.10.3)
+    const hint = h('span', { class: 'sf-comp-hint', 'aria-hidden': 'true', 'data-k': 'comp-hint' }, t.compHint);
+    this.els.hint = hint;
+    parts.push(h('div', { class: 'sf-composer' + (tight ? ' scroll' : '') }, grid, input, mode === 'type' ? hint : null));
     if (tight) parts.push(h('span', { class: 'sf-hint', 'data-k': 'comp-scroll' }, t.compScroll));
     if (mode === 'type') parts.push(h('div', { class: 'sf-row' },
       CHIP_KEYS.map(k => h('button', { class: 'sf-chip', style: `background:${k === 'f' ? T.filled : CHIPS[k]}`, 'aria-label': t.chip(names[k]), title: t.chip(names[k]), onclick: () => { this.place([k]); input.focus(); } })),
@@ -125,6 +128,7 @@ export class Composer {
       el.classList.toggle('caret', i === caret);
     });
     E.used.textContent = `${grid.filter(x => x !== ' ').length} / ${n} ${this.t.flaps}`;
+    if (E.hint) E.hint.hidden = grid.some(x => x !== ' ') || caret >= 0;
     const H = this.hist[this.key()];
     E.undo.disabled = !(H && H.i > 0); E.redo.disabled = !(H && H.i < H.st.length - 1);
   }

@@ -631,3 +631,5 @@ strong > .sf-tag.on-now { margin-left: 8px; vertical-align: 2px; }
 .sf-playlist-fold > summary .sf-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sf-playlist-fold > summary .sf-eyebrow { flex: none; }
 .sf-playlist.sf-playlist-fold { padding-top: 8px; padding-bottom: 8px; gap: 8px; }
+/* 0.10.3: the composer's instruction, greyed over an empty grid, never on the board */
+.sf-comp-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px; color: var(--muted); font-size: 13px; pointer-events: none; }

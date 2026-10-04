@@ -403,6 +403,9 @@ export class Account {
     if (kept) this.app.flash(this.app.t.keptAsGuest(kept));
   }
   forget() {
+    // signed out from the first line (0.10.3): what is made here while the account's things leave
+    // (the blank playlist when none is left) must never be taken into the account
+    this.user = null;
     // the boards first, so the playlists left behind are resolved with what stays. A playlist
     // kept here (its changes had not reached the account) keeps the boards it shows, as a guest's.
     const r = signOut(this.app.playlists, this.state), need = new Set(r.boards.flatMap(p => p.items.map(i => i.id)));

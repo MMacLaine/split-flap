@@ -159,6 +159,24 @@ try {
   await D.ev(`document.querySelector('[data-k=last-show]').click()`); await sleep(800);
   check('and one press shows it there', (await D.ev('splitFlap.shown().id')) === Y);
 
+  // 0.10.3: an account migrated from 0.10.0, on screen, signed out and in again: no playlist
+  // appears that nobody made, the order stays, and no board goes to the account by itself
+  const E = await browser('E'), emailE = `resign-${Date.now()}@example.com`;
+  await E.go('http://localhost:8787/'); await E.ev(`localStorage.setItem('sf_cue_seen','1')`);
+  await E.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailE}', name: 'Re Sign' }) }).then(r => r.status)`);
+  await E.ev(`fetch('/split-flap/api/boards/bm_old', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ baseRev: 0, board: { id: 'bm_old', name: 'New board', size: '12x40', rows: 6, cols: 22, theme: 'solari', pages: [{ id: 'pd1', name: 'Departures', layout: 'full', dur: 10, wins: [], zones: [{ ch: 'clock', o: {} }] }] } }) }).then(r => r.status)`);
+  await E.go('http://localhost:8787/'); await sleep(4000);
+  await E.ev(`splitFlap.account.answerOffer(false)`); await sleep(2500);
+  check('the migrated playlist is on the screen', (await E.ev('splitFlap.shown().id')) === 'bm_old', await names(E));
+  const libBefore = await serverMy(E);
+  await E.ev(`splitFlap.account.signOut()`); await sleep(3000);
+  await E.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailE}', name: 'Re Sign' }) }).then(r => r.status)`);
+  await E.go('http://localhost:8787/'); await sleep(4500);
+  check('signed in again, no playlist appears that nobody made', (await names(E)) === JSON.stringify(['New board']), await names(E));
+  check('and nothing is offered', (await E.ev('splitFlap.account.offerCount()')) === 0, String(await E.ev('splitFlap.account.offerCount()')));
+  check('and no board went to the account on its own', (await serverMy(E)) === libBefore, `${libBefore} then ${await serverMy(E)}`);
+  check('and the migrated playlist is what the screen shows', (await E.ev('splitFlap.shown().id')) === 'bm_old');
+
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);
   await B.ev(`splitFlap.upd(b => { b.name = 'B unsynced at sign out'; })`); await sleep(2500);
