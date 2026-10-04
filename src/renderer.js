@@ -79,6 +79,7 @@ export const FOLD = {
   // Every flap between here and there, like the hardware. Steps are quicker than Fast
   // so a full turn of the drum (74 flaps) lands in about four seconds.
   authentic: { step: 52,  final: 160, settle: 90,  maxSteps: Infinity },
+  meter:     { step: 40,  final: 50,  settle: 1,   maxSteps: 1, dimFade: 80 },   // [F] the meter (0.11.2): faint to lit in 80 ms, not 600
   exp: 1.35,          // fold angle = PI * t^1.35 (gravity: slow release, accelerating fall)
   settleAngle: 0.13,  // rebound after the final flap lands (radians)
   fade: 140,          // reduced motion crossfade
@@ -91,7 +92,8 @@ export const STAGGER = {
   drift:   () => Math.random() * 1200,
   curtain: (r, c) => r * 140 + c * 6,
   ripple:  (r, c, R, C) => Math.hypot((c - (C - 1) / 2) * 0.79, (r - (R - 1) / 2) * 1.17) * 46,   // [F] from the centre, in tile units
-  shimmer: (r, c) => (c + r * 0.6) * 12 + Math.random() * 90                                // [F] a quick diagonal sweep
+  shimmer: (r, c) => (c + r * 0.6) * 12 + Math.random() * 90,                               // [F] a quick diagonal sweep
+  none:    () => 0                                                                          // [F] the meter: every cell at once
 };
 // [D] a composed look's theme, from looks.js themeFor, so a board can be drawn in it by id
 export function register(T) { if (T && T.id) THEMES[T.id] = T; return T && T.id; }
@@ -101,12 +103,12 @@ export function register(T) { if (T && T.id) THEMES[T.id] = T; return T && T.id;
 // path is built: a queued flip lands in the new state, a running flip, fade or settle
 // ends in it, and a still flap fades in place from start. Returns false when the letter
 // itself changes, so the caller builds a normal path.
-export function retargetFaint(cell, want, start) {
+export function retargetFaint(cell, want, start, dur = FOLD.dimFade) {
   const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
   if (want === dest || baseChar(want) !== baseChar(dest)) return false;
   if (cell.q.length) cell.q[cell.q.length - 1] = want;
   else if (cell.a) cell.a.to = want;
-  else { cell.sp = null; cell.a = { kind: 'fade', from: cell.cur, to: want, start, dur: FOLD.dimFade }; }
+  else { cell.sp = null; cell.a = { kind: 'fade', from: cell.cur, to: want, start, dur }; }
   return true;
 }
 
@@ -462,7 +464,7 @@ export class Board {
         const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
         if (want === dest) continue;
         // Only faint to lit or back: never a turn of the drum (see retargetFaint).
-        if (retargetFaint(cell, want, now + st(r, c, R, C) * 0.5)) { any = true; continue; }
+        if (retargetFaint(cell, want, now + st(r, c, R, C) * 0.5, sp.dimFade || FOLD.dimFade)) { any = true; continue; }   // [F] the speed's own fade
         cell.q = this.o.reduced ? [want] : this._path(dest, want, sp.maxSteps); cell.sp = null;
         if (!cell.a) cell.due = now + st(r, c, R, C);
         any = true;

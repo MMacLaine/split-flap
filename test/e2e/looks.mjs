@@ -35,8 +35,8 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: '${pl}', bd: '${b1}' })`); await sleep(400);
   check('a board shows its look with a swatch and Change', /Look\s*Default \(Classic\)/.test(await ev(`document.querySelector('.sf-lk-row').textContent`)) && (await ev(`String(!!document.querySelector('.sf-lk-row .sf-swatch-lk'))`)) === 'true');
   await click('lk-change-board'); await sleep(400);
-  check('the sheet offers Default, then the looks that have shipped', (await cards()) === 'Default,Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday', await cards());   // 0.11.1: five more have shipped
-  check('each card is a thumbnail of the board, drawn in its look', (await ev(`document.querySelectorAll('.sf-lk-card canvas[data-thumb]').length`)) === 8);
+  check('the sheet offers Default, then the looks that have shipped', (await cards()) === 'Default,Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday,Party', await cards());   // 0.11.1: five more have shipped
+  check('each card is a thumbnail of the board, drawn in its look', (await ev(`document.querySelectorAll('.sf-lk-card canvas[data-thumb]').length`)) === 9);
   await click('lk-card-classic'); await sleep(300);
   check('a Default board is already Classic: picking it previews it, since it becomes its own', /Previewing Classic/.test(await st()));
   await click('lk-card-default'); await sleep(300);
@@ -71,7 +71,7 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'acc', lv: 'main' })`); await sleep(300);
   check('Account shows the default look and how many boards follow it', /Default look\s*Classic\s*5 boards follow the default/.test(await ev(`document.querySelector('[data-k=default-look]').textContent`)));
   await click('lk-change-default'); await sleep(300);
-  check('the default sheet has no Default card', (await cards()) === 'Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday');
+  check('the default sheet has no Default card', (await cards()) === 'Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday,Party');
   await click('lk-card-calm'); await sleep(300); await click('lk-use'); await sleep(400);
   check('the line says what changed', /New boards start as Calm. 5 boards follow the default/.test(await st()), await st());
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: '${pl}', bd: '${b2}' })`); await sleep(400);
@@ -84,7 +84,7 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'showing' })`); await sleep(300);
   check('Showing says the screen follows each board', /Follows each board/.test(await ev(`document.querySelector('[data-k=lk-change-screen]').parentNode.textContent`)));
   await click('lk-change-screen'); await sleep(300);
-  check('This screen\'s first card is Follow the boards', (await cards()) === 'Follow the boards,Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday');
+  check('This screen\'s first card is Follow the boards', (await cards()) === 'Follow the boards,Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday,Party');
   await click('lk-card-classic'); await sleep(300); await click('lk-use'); await sleep(400);
   check('a pin says so, with Undo', /This screen always shows Classic/.test(await st()));
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: '${pl}', bd: '${b1}' })`); await sleep(400);

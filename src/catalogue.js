@@ -142,6 +142,9 @@ export const TILES = [
       { k: 'max', t: 'stepper', label: t2('Lines at most', 'Högst antal rader'), min: 1, max: 12, step: 1, unit: '', dflt: 4, adv: 1 },
       { k: 'header', t: 'text', label: t2('Heading line', 'Rubrikrad'), upper: 1, len: 60, adv: 1 }] },
 
+  { id: 'meter', g: 'live', ch: 'meter', name: t2('Music meter', 'Musikmätare'), desc: t2('A level meter for the music in the room', 'En nivåmätare för musiken i rummet'), def: {},
+    fields: [SEG('style', t2('Style', 'Stil'), [['mixer', t2('Mixer', 'Mixer')], ['bars', t2('Bars', 'Staplar')], ['mirror', t2('Mirror', 'Spegel')]], { dflt: 'mixer' }),
+      { t: 'note', label: t2('It moves while Listen is on, from the control bar or Showing, or the L key on a kiosk. Made for 12 × 40.', 'Den rör sig medan Lyssna är på, från kontrollraden eller Visas, eller tangenten L på en kiosk. Gjord för 12 × 40.') }] },
   { id: 'draw', g: 'pictures', ch: 'message', mode: 'paint', name: t2('Draw', 'Rita'), desc: t2('Paint with the colour flaps', 'Måla med färgflapparna'), def: {} },
   { id: 'photo', g: 'pictures', ch: 'message', mode: 'photo', name: t2('Photo', 'Foto'), desc: t2('A picture turned into colour flaps', 'En bild omgjord till färgflappar'), def: {} },
   { id: 'art', g: 'pictures', ch: 'art', name: t2('Colour pattern', 'Färgmönster'), desc: t2('Rainbows, flags, rain and confetti', 'Regnbågar, flaggor, regn och konfetti'), def: { pattern: 'rainbow', step: 4 },

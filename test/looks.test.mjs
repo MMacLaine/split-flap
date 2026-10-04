@@ -103,8 +103,9 @@ test('template looks: only once the look has shipped, keyed to the real template
   assert.equal(fromTemplate('stocks', 'en').pages[0].look, 'backlit');
   assert.equal(fromTemplate('cafe', 'en').pages[0].look, 'sunday');
   assert.equal(fromTemplate('news', 'en').pages[0].look, undefined);   // the rest stay on their 0.10 theme
-  assert.equal(L.templateLook('meter'), null);
-  for (const id of Object.keys(L.TEMPLATE_LOOKS)) assert.ok(['demo', 'blank', 'home', 'morning', 'news', 'weather', 'station', 'lobby', 'world', 'cafe', 'money', 'stocks', 'indices', 'crypto', 'rates', 'colour', 'letters', 'showcase'].includes(id), id);
+  assert.equal(L.templateLook('meter'), 'party');   // 0.11.2: Party has shipped with Listen
+  assert.equal(fromTemplate('meter', 'en').pages[0].look, 'party');
+  for (const id of Object.keys(L.TEMPLATE_LOOKS)) assert.ok(['demo', 'blank', 'home', 'morning', 'news', 'weather', 'station', 'lobby', 'world', 'cafe', 'money', 'stocks', 'indices', 'crypto', 'rates', 'colour', 'letters', 'meter', 'showcase'].includes(id), id);
 });
 
 test('the strings load, and every English key has a Swedish one', async () => {

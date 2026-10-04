@@ -11,6 +11,7 @@ import { isoWeek, dayOfYear, swedishDay, sunTimes } from './almanac.js';
 import { wallIn } from './place.js';
 import { marketsCells, EXCHANGES } from './markets.js';
 import { ratesCells } from './rates.js';
+import { restGrid } from './meter.js';
 
 const DAYS = {
   en: ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'],
@@ -26,10 +27,12 @@ export const UNSET = '-';
 const WORDS = {
   en: { tomorrow: 'TOMORROW', yesterday: 'YESTERDAY', now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', messages: 'MESSAGES', web: 'FROM THE WEB', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
     week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', empty: 'NOTHING IN THE FEED', otd: 'ON THIS DAY',
-    deps: 'DEPARTURES', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', headlines: 'HEADLINES', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK', rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
+    deps: 'DEPARTURES', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', headlines: 'HEADLINES', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK',
+    meter: { idle: ['MUSIC METER', '', 'PRESS LISTEN'], listening: 'LISTENING', stopped: 'STOPPED', refused: ['NO MICROPHONE', '', 'PRESS LISTEN TO ASK AGAIN'], noMic: ['NO MICROPHONE'] }, rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
   sv: { tomorrow: 'I MORGON', yesterday: 'I GÅR', now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', messages: 'MEDDELANDEN', web: 'FRÅN WEBBEN', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
     week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', empty: 'INGET I FLÖDET', otd: 'DEN HÄR DAGEN',
-    deps: 'AVGÅNGAR', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', headlines: 'RUBRIKER', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA', rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
+    deps: 'AVGÅNGAR', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', headlines: 'RUBRIKER', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA',
+    meter: { idle: ['MUSIKMÄTARE', '', 'TRYCK PÅ LYSSNA'], listening: 'LYSSNAR', stopped: 'STOPPAD', refused: ['INGEN MIKROFON', '', 'TRYCK PÅ LYSSNA FÖR ATT FRÅGA IGEN'], noMic: ['INGEN MIKROFON'] }, rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
 };
 
 // Hours in words for the word clock, twelve first so hour % 12 indexes it.
@@ -154,7 +157,7 @@ export const QUOTES = {
 };
 
 export const CHANNELS = ['message', 'clock', 'bigclock', 'bigtext', 'countdown', 'sl', 'weather', 'art', 'quote',
-  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock', 'departures', 'worldtime', 'markets', 'rates', 'headlines'];
+  'rotating', 'menu', 'wordclock', 'today', 'electricity', 'currency', 'onthisday', 'url', 'letterclock', 'departures', 'worldtime', 'markets', 'rates', 'headlines', 'meter'];
 // Channels that paint cells directly (pixel font, patterns) instead of printing lines.
 const DRAWN = new Set(['bigclock', 'bigtext', 'art']);
 export const LAYOUTS = ['full', 'header', 'split', 'ticker', 'stacked'];
@@ -728,6 +731,13 @@ export function compose(page, R, C, now, lang, live) {
   const g = blank(R, C); if (!page) return g;
   zonesFor(page.layout, R, C).forEach((z, i) => {
     const zd = page.zones[i] || { ch: 'message', o: {} }, o = zd.o || {}, ticker = page.layout === 'ticker' && i === 1;
+    // the Meter (0.11.2): the tick's grid while Listen runs, the unlit meter with its words when not
+    if (zd.ch === 'meter') {
+      const L = live && live.listen, words = (WORDS[lang] || WORDS.en).meter;
+      const cells = L && L.running() ? L.gridFor(z.h, z.w, o.style, words) : restGrid(z.h, z.w, o.style, L ? L.state : 'idle', words);
+      for (let r = 0; r < z.h; r++) for (let c = 0; c < z.w; c++) g[z.r + r][z.c + c] = cells[r][c];
+      return;
+    }
     if (zd.ch === 'message' && !ticker) {
       const cells = toCells(o, z.h, z.w);
       for (let r = 0; r < z.h; r++) for (let c = 0; c < z.w; c++) g[z.r + r][z.c + c] = cells[r][c];

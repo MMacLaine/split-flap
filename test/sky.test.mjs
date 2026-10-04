@@ -5,13 +5,14 @@ import { readFileSync } from 'node:fs';
 import * as L from '../src/looks.js';
 import { wxKind, skyInputs } from '../src/ambient.js';
 
-test('the ring: five effects, the palettes, three stops each', () => {
-  assert.deepEqual(L.RING_FX, ['off', 'glow', 'breathe', 'chase', 'flash']);
+test('the ring: six effects, the palettes, three stops each', () => {
+  assert.deepEqual(L.RING_FX, ['off', 'glow', 'breathe', 'chase', 'flash', 'music']);
   const r = L.ringFor(L.partsOf('backlit'), null, null);
   assert.equal(r.fx, 'flash'); assert.deepEqual(r.colours, L.RING.palettes.warm.c); assert.equal(r.bright, 0.75); assert.equal(r.size, 1);
   const p = L.sanitizeParts({ material: 'flap', ring: { fx: 'chase', pal: 'ocean', speed: 'quick', bright: 'high', size: 'wide' } });
   assert.deepEqual(p.ring, { fx: 'chase', pal: 'ocean', speed: 'quick', bright: 'high', size: 'wide' });
-  assert.equal(L.sanitizeParts({ material: 'flap', ring: { fx: 'music', pal: 'neon', speed: 11 } }).ring.fx, 'off');   // Music waits for Listen (0.11.2)
+  assert.deepEqual(L.sanitizeParts({ material: 'flap', ring: { fx: 'music', pal: 'neon', speed: 11 } }).ring, { fx: 'music', pal: 'warm', speed: 'medium', bright: 'medium', size: 'medium' });   // Music came with Listen (0.11.2)
+  assert.equal(L.sanitizeParts({ material: 'flap', ring: { fx: 'disco' } }).ring.fx, 'off');
 });
 
 test('From the board: the chip most on the board, red over any number of greens, amber with none', () => {

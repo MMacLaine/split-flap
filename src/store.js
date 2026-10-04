@@ -127,6 +127,7 @@ function sanitizeZone(z) {
     out.title = str(o.title, 60); out.items = list(o.items, 16, 60); out.suffix = /^[ A-Z:$.-]{0,5}$/.test(o.suffix || '') ? o.suffix || '' : '';
     if (o.prefix === '$') out.prefix = '$';   // 0.8: dollar prices, $3.50
   } else if (ch === 'letterclock') { if (o.dots === false) out.dots = false; }
+  else if (ch === 'meter') { if (o.style === 'bars' || o.style === 'mirror') out.style = o.style; }   // 0.11.2; Mixer is the default
   else if (ch === 'today') { if (o.week === false) out.week = false; if (o.sun === false) out.sun = false; if (o.days === false) out.days = false; if (o.doy) out.doy = true; }
   else if (ch === 'electricity') { out.area = AREAS[o.area] ? o.area : 'SE3'; out.view = o.view === 'chart' ? 'chart' : 'now'; if (o.vat === false) out.vat = false; }
   else if (ch === 'currency') {

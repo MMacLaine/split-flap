@@ -329,6 +329,9 @@ html, body { margin: 0; background: #13151A; }
 .sf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 4px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border-2); max-width: 100%; box-sizing: border-box; }
 .sf-bar-btn { height: 36px; padding: 0 12px; border-radius: 8px; border: 0; background: none; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
 .sf-bar-btn[aria-expanded="true"] { background: var(--bg-2); }
+/* 0.11.2: Listen's Stop, with a red dot while the microphone is on */
+.sf-rec { width: 8px; height: 8px; border-radius: 50%; background: #D5352B; display: inline-block; flex: none; }
+.sf-btn .sf-rec { margin-right: 6px; vertical-align: 1px; }
 .sf-bar-btn .state { color: var(--muted); }
 .sf-bar-btn[aria-pressed="true"] .state { color: var(--accent); }
 .sf-bar-board { height: 36px; padding: 0 12px; border-radius: 8px; border: 0; background: none; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; flex: none; max-width: 200px; }

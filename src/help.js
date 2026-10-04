@@ -37,6 +37,10 @@ export const HELP = {
       'Some looks have light round the frame. It can take its colour from the board, so Signal turns red when a red chip is on it. Outside follows the sky where the screen is, the time of day and the weather, and without a place it follows the sun alone.',
       'A slow screen drops the moving wall first and the light last. Smoothness on Showing sets it for this screen.'
     ] },
+    { h: 'The Music meter', p: [
+      'The Music meter is a board of level bars, and Party is a look whose light moves to the music. Both use the microphone while Listen is on. Listen is in the control bar and on Showing, and on a kiosk the L key starts and stops it. Stop turns the microphone off.',
+      'Listen never stays on through a reload, so a kiosk that reloads at night needs L pressed again in the morning. The browser remembers that you allowed the microphone, so it doesn\'t ask again.'
+    ] },
     { h: 'Messages', fig: 'message', p: [
       'Messages are made straight on the grid, so you see where every letter lands. Type puts letters where you click, Paint drags colour flaps across the grid, and Photo turns a picture into colour flaps.',
       'Undo and redo are there, and Ctrl or Cmd and Z works too. A message you change is kept under Earlier messages in this browser.'
@@ -107,6 +111,10 @@ export const HELP = {
       ['En tavla på Standard följer standardutseendet under ', { k: 'account', t: 'Konto' }, '. Visas kan fästa ett utseende vid den här skärmen, över varje tavla, och Samma utseende för alla ger alla tavlor i en spellista samma utseende.'],
       'Vissa utseenden har ljus runt ramen. Det kan ta sin färg från tavlan, så Signal blir röd när ett rött fält finns på den. Ute följer himlen där skärmen är, tiden på dygnet och vädret, och utan en plats följer den bara solen.',
       'En långsam skärm tar bort den rörliga väggen först och ljuset sist. Jämnhet under Visas ställer in det för den här skärmen.'
+    ] },
+    { h: 'Musikmätaren', p: [
+      'Musikmätaren är en tavla med nivåstaplar, och Fest är ett utseende vars ljus rör sig efter musiken. Båda använder mikrofonen medan Lyssna är på. Lyssna finns i kontrollraden och under Visas, och på en kiosk startar och stoppar tangenten L den. Stoppa stänger av mikrofonen.',
+      'Lyssna är aldrig kvar efter en omladdning, så en kiosk som laddar om på natten behöver L igen på morgonen. Webbläsaren minns att du tillät mikrofonen, så den frågar inte igen.'
     ] },
     { h: 'Meddelanden', fig: 'message', p: [
       'Meddelanden görs direkt på rutnätet, så du ser var varje bokstav hamnar. Skriv sätter bokstäver där du klickar, Måla drar färgblad över rutnätet, och Foto gör om en bild till färgblad.',
