@@ -583,7 +583,7 @@ export function stopDeps(stop, now, fmt, live) {
 }
 function depLines(o, z, now, W, w, live) {
   const stops = depStops(o, live);
-  if (!stops.length) return { lines: [w.deps, o.near && live && live.loc ? w.loading : UNSET], align: 'center' };
+  if (!stops.length) return { lines: [w.deps, o.near ? w.loading : UNSET], align: 'center' };   // near: waiting for the place, not unset
   const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null, walk = +o.walk || 0;
   const only = String(o.lines || '').toUpperCase().split(/[\s,]+/).filter(Boolean);
   const showClock = o.eta === 'clock' || (o.eta === 'cycle' && Math.floor(now / 6000) % 2 === 1);
@@ -927,7 +927,7 @@ export function unsetOf(zone, live) {
   if (ch === 'sl') return o.home || (o.stations && o.stations.length) || (o.sites && o.sites.length) || o.site ? null : 'sl';
   if (ch === 'headlines') return (o.feeds || []).length ? null : 'headlines';
   if (ch === 'worldtime') return (o.places || []).some(p => p && p.tz) ? null : 'worldtime';
-  if (ch === 'departures') return (o.stops || []).length || o.near ? null : 'departures';
+  if (ch === 'departures') return (o.stops || []).length ? null : o.near ? (live && live.loc ? null : 'departuresNear') : 'departures';
   if (ch === 'markets') return (o.symbols || []).length ? null : 'markets';
   if (ch === 'rates') return (o.banks || []).length ? null : 'rates';
   return null;

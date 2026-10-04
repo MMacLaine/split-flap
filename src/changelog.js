@@ -12,12 +12,12 @@ export const CHANGELOG = [
     items: {
       en: [
         '**Signing out and in again adds nothing.** Signing out left a blank playlist behind, and signing in then offered it next to your own, while its board went to your account by itself. The blank is now left out at sign-in, and your playlists come back in their order. A stray "Board 1" from before can be deleted in Boards.',
-        '**Templates start at their own size.** Station board is 10 × 32, the big tiles are 12 × 40 and messages are 6 × 22. A template shows at that size, and you can pick another in its preview before you show it.',
+        '**Templates start at their own size.** Station board and Office lobby are 10 × 32, the big tiles are 12 × 40, and messages and the currency board are 6 × 22. A template shows at that size, and you can pick another in its preview before you show it.',
         '**No instructions on the flaps.** A new message board says HELLO instead of TYPE HERE, since nobody types on the wall, and a tile with nothing set yet shows its name and a dash instead of PICK A CITY or ADD A FEED. What to do is in the editor, beside the tile.'
       ],
       sv: [
         '**Att logga ut och in igen lägger inte till något.** Att logga ut lämnade en tom spellista kvar, och vid inloggningen erbjöds den bredvid din egen, medan dess tavla hamnade i ditt konto av sig själv. Den tomma lämnas nu utanför vid inloggningen, och dina spellistor kommer tillbaka i sin ordning. En överbliven "Tavla 1" från förut kan tas bort i Tavlor.',
-        '**Mallar börjar i sin egen storlek.** Stationstavlan är 10 × 32, de stora rutorna är 12 × 40 och meddelanden är 6 × 22. En mall visas i den storleken, och du kan välja en annan i förhandsvisningen innan du visar den.',
+        '**Mallar börjar i sin egen storlek.** Stationstavla och Kontorsentré är 10 × 32, de stora rutorna är 12 × 40, och meddelanden och Valutatavla är 6 × 22. En mall visas i den storleken, och du kan välja en annan i förhandsvisningen innan du visar den.',
         '**Inga instruktioner på flapparna.** En ny meddelandetavla säger HEJ i stället för SKRIV HÄR, eftersom ingen skriver på väggen, och en ruta som inte är inställd än visar sitt namn och ett streck i stället för VÄLJ EN STAD eller LÄGG TILL ETT FLÖDE. Vad du ska göra står i redigeraren, bredvid rutan.'
       ]
     }

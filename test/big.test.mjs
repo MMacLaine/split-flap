@@ -121,3 +121,12 @@ test('no unset tile tells anyone to pick, add, choose, set up, type or press on 
   const sl = compose({ layout: 'full', zones: [{ ch: 'weather', o: {} }] }, 6, 22, 0, 'en', {}).map(r => r.join('').trim()).filter(Boolean);
   assert.deepEqual(sl, ['WEATHER', '-']);
 });
+
+test('0.10.3 review: Rates says its name over the dash, and departures waiting for a place says LOADING', () => {
+  const r = compose({ layout: 'full', zones: [{ ch: 'rates', o: { banks: [] } }] }, 6, 22, 0, 'en', {}).map(x => x.join('').trim()).filter(Boolean);
+  assert.deepEqual(r, ['RATES', '-']);
+  const d = compose({ layout: 'full', zones: [{ ch: 'departures', o: { near: true } }] }, 6, 22, 0, 'en', {}).map(x => x.join('').trim()).filter(Boolean);
+  assert.deepEqual(d, ['DEPARTURES', 'LOADING']);
+  assert.equal(unsetOf({ ch: 'departures', o: { near: true } }, {}), 'departuresNear');
+  assert.equal(unsetOf({ ch: 'departures', o: { near: true } }, { loc: { lat: 1, lon: 2 } }), null);
+});

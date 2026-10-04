@@ -128,7 +128,9 @@ export class Composer {
       el.classList.toggle('caret', i === caret);
     });
     E.used.textContent = `${grid.filter(x => x !== ' ').length} / ${n} ${this.t.flaps}`;
-    if (E.hint) E.hint.hidden = grid.some(x => x !== ' ') || caret >= 0;
+    // the hint shows on a new message board until its first edit: an empty grid, or the HELLO it
+    // comes with (0.10.3 review), and never while the caret is in the grid
+    if (E.hint) { const text = grid.join('').replace(/\s+/g, ''); E.hint.hidden = caret >= 0 || !(text === '' || text === 'HELLO' || text === 'HEJ'); }
     const H = this.hist[this.key()];
     E.undo.disabled = !(H && H.i > 0); E.redo.disabled = !(H && H.i < H.st.length - 1);
   }
