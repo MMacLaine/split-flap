@@ -4,7 +4,7 @@
 // keep focus and the phone keyboard stays up.
 
 import { Board, THEMES, fillGrid, renderStatic, staticGeom, register, resetStatic } from './renderer.js';
-import { lookFor, drawFor, accentOf, isLight, motionOf, lookOf, legacyOf, defaultOf, LOOKS, sanitizeParts } from './looks.js';
+import { lookFor, drawFor, accentOf, isLight, motionOf, lookOf, legacyOf, defaultOf, LOOKS, sanitizeParts, smokeStep } from './looks.js';
 import { isChip, isDim } from './charset.js';
 import { compose, FALLBACK_PAGE, newId, blank } from './content.js';
 import { TEMPLATES, fromTemplate } from './templates.js';
@@ -626,7 +626,7 @@ export class App {
     const d = this.dims(), th = this.themeNow(), o = this.board.o;
     // a new look crossfades, and so does the sky's smoke behind the letters stepping (0.11.1
     // review 3.2); the tint's own small steps do not
-    const lk = this.lookKey() + ((/-sm\d+/.exec(th) || [''])[0]);
+    const lk = this.lookKey() + smokeStep(th);
     if (!this.previewing && o.theme !== th && o.theme && lk !== this.lastLookKey && this.lastLookKey) this.crossfade();   // a new look, not the sky moving on
     this.lastLookKey = lk;
     if (!this.previewing && (o.rows !== d.rows || o.cols !== d.cols || o.theme !== th)) { this.board.setOptions({ rows: d.rows, cols: d.cols, theme: th }); this.loadFace(th); this.chromeTheme(); }

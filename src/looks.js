@@ -401,13 +401,14 @@ function inkHex(mat, ink) { const m = MATERIALS[mat]; const f = m.inks.find(i =>
 const TL = SKY.timeline;
 function phaseAt(minute, rise, set) {
   const at = s => { const n = +s.slice(2) || 0; return (s[0] === 'R' ? rise : set) + (s[1] === '-' ? -n : n); };
-  // every key kept inside the day and in order, so a sunrise before 01:10 or a sunset after
-  // 22:40 still blends (0.11.1 review 2.3)
-  const keys = [[0, 'night']].concat(TL.map(k => [Math.min(1440, Math.max(0, at(k[1]))), k[0]])).concat([[1440, 'night']]);
+  // Nothing is clamped (0.11.1 build review 1.1): a long summer day runs its sunset past
+  // 1440, and the night after it runs to the next sunrise at rise + 1440, so the blend into
+  // the next dawn still works. Keys are kept in order for a day too long to fit.
+  const keys = [[-Infinity, 'night']].concat(TL.map(k => [at(k[1]), k[0]]), [[rise + 1440 - 70, 'night'], [rise + 1440, 'dawn'], [rise + 1440 + 70, 'day']]);
   for (let j = 1; j < keys.length; j++) if (keys[j][0] < keys[j - 1][0]) keys[j][0] = keys[j - 1][0];
   let i = 0; while (i < keys.length - 2 && minute >= keys[i + 1][0]) i++;
   const [m0, p0] = keys[i], [m1, p1] = keys[i + 1];
-  const t = m1 > m0 ? Math.min(1, Math.max(0, (minute - m0) / (m1 - m0))) : 0;
+  const t = m1 > m0 && m0 > -Infinity ? Math.min(1, Math.max(0, (minute - m0) / (m1 - m0))) : 0;
   return { from: p0, to: p1, t, near: t < 0.5 ? p0 : p1 };
 }
 // WMO weather codes to the sky's six kinds (0.11.1 review 2.4).
@@ -611,6 +612,8 @@ export function accentOf(l) {
   if (l.id !== 'custom' && LOOKS[l.id]) return LOOKS[l.id].chrome.accent;
   return MATERIALS[(l.parts || {}).material] && MATERIALS[l.parts.material].light ? '#8C6222' : '#C8974A';
 }
+// The smoke step in a theme id ('sm0', 'sm0.5', 'sm1'), so a step crossfades (0.11.1 build review 1.2).
+export const smokeStep = id => (/-sm[\d.]+-/.exec(id || '') || [''])[0];
 export const isLight = l => !!MATERIALS[(l.parts || partsOf(l.id)).material].light;
 // The motion a look asks for, or null to leave it to the playlist.
 export function motionOf(l) { const m = (l.parts || partsOf(l.id)).motion; return MOTION[m] || null; }

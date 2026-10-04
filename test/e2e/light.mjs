@@ -110,6 +110,30 @@ try {
   for (let i = 0; i < 20 && !(await ev('splitFlap.ambient.auto')); i++) await sleep(500);
   await send('Emulation.setCPUThrottlingRate', { rate: 1 });
   check('a still board on a slow screen: the probe steps down when the look goes on', (await ev('splitFlap.ambient.auto')) >= 1, `${await ev('splitFlap.ambient.auto')}`);
+
+  // Classic on a slow screen (0.11.1 build review 1.4): nothing of the ring or the wall to drop,
+  // so on a 1x screen it says nothing, and on a 2x screen it goes straight to lower sharpness
+  await ev(`splitFlap.ambient.setQuality('auto')`); await look(0, 'classic'); await sleep(500);
+  await ev(`(() => { const a = splitFlap; window.__said = []; const say = a.say.bind(a); a.say = (m, o) => { window.__said.push(String(m)); return say(m, o); }; })()`);
+  await ev(`splitFlap.ambient.slow(); splitFlap.ambient.slow()`);
+  check('Classic on a 1x screen: nothing to drop, and nothing said', (await ev('splitFlap.ambient.auto')) === 0 && (await ev('window.__said.length')) === 0, await ev('JSON.stringify(window.__said)'));
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false }); await sleep(600);
+  await send('Emulation.setCPUThrottlingRate', { rate: 30 });
+  await ev(`(() => { const a = splitFlap; window.__spin = setInterval(() => { const g = a.board.cells.map(r => r.map(() => 'ABCDEFGHIJ'[Math.floor(Math.random() * 10)])); a.board.setGrid(g); }, 700); })()`);
+  for (let i = 0; i < 40 && !(await ev('splitFlap.ambient.auto')); i++) await sleep(500);
+  await send('Emulation.setCPUThrottlingRate', { rate: 1 }); await ev('clearInterval(window.__spin)');
+  const said = JSON.parse(await ev('JSON.stringify(window.__said.filter(m => /dropped/.test(m)))'));
+  check('Classic on a 2x screen goes straight to lower sharpness, said once', (await ev(`localStorage.getItem('sf_quality_auto')`)) === 'lowres' && said.length === 1 && /sharpness/.test(said[0]), JSON.stringify(said));
+  await ev(`splitFlap.ambient.setQuality('auto')`);
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+
+  // a kiosk's first load (0.11.1 build review 1.3): the sky asks for the weather at the
+  // playlist's own place, not the screen's
+  await ev(`(() => { const a = splitFlap; localStorage.setItem('sf_place', JSON.stringify({ city: 'Stockholm', lat: 59.33, lon: 18.07, tz: 'Europe/Stockholm' }));
+    a.upd(b => { b.loc = { city: 'Tokyo', lat: 35.68, lon: 139.69, tz: 'Asia/Tokyo' }; }); })()`); await sleep(300);
+  await look(0, 'outside'); await sleep(1500);
+  await go(URL0 + '?kiosk=1');
+  check('a kiosk on first load wants the weather at the playlist\'s place', (await ev(`JSON.stringify([...splitFlap.live.wanted.wx.keys()])`)).includes('35.68,139.69'), await ev(`JSON.stringify([...splitFlap.live.wanted.wx.keys()])`));
 } catch (e) { results.push('ERROR ' + e.message); }
 function splitFlap_in_wrap(v) { return v === 'true'; }
 console.log(results.join('\n'));

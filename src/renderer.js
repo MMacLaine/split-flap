@@ -358,7 +358,7 @@ export class Board {
     // [E] the board's rectangle in CSS px of the canvas box (k corrects for a scaled ancestor)
     if (this.o.onLayout) { const k = this.cv.offsetWidth ? r.width / this.cv.offsetWidth : 1, s = dpr * k, T = THEMES[this.o.theme];
       this.lastLayout = { x: this.bx / s, y: this.by / s, w: this.bw / s, h: this.bh / s, r: this.th * T.frameRadius / s, tile: this.th / s };
-      this.o.onLayout({ x: this.bx / s, y: this.by / s, w: this.bw / s, h: this.bh / s, r: this.th * T.frameRadius / s, tile: this.th / s }); }
+      this.o.onLayout(this.lastLayout); }
   }
   _layout() {
     const T = THEMES[this.o.theme], G = GEOM, rows = this.o.rows, cols = this.o.cols, pad = T.framePad;

@@ -22,19 +22,18 @@ const STALE = 3 * 3600e3;   // weather up to three hours old holds
 // The sky's inputs for a place at a moment: { minute, rise, set, wx, stale, none }. Pure, for tests.
 // The sky's day is worked out in epoch ms from the place's own sunrise and sunset, so a board
 // for Tokyo shown in Stockholm is in Tokyo's night (0.11.1 review 2.2): sunrise sits at 06:30
-// on the sky's own clock and the rest follows. Polar day is day all day, polar night night.
+// on the sky's own clock and the rest follows, past midnight on that clock if the day is long.
+// Polar day is day all day, polar night night.
 export function skyInputs(place, now, wx) {
   if (!place || place.lat == null) { const d = new Date(now); return { minute: d.getHours() * 60 + d.getMinutes(), rise: 390, set: 1110, wx: 'clear', none: true }; }
-  const day = 864e5;
-  let s = sunTimes(new Date(now), place.lat, place.lon), out;
-  if (s.polar) out = { minute: s.polar === 'day' ? 720 : 0, rise: 390, set: 1110 };
-  else {
-    // the sunrise of the day the place is in: yesterday's if now is before today's, by more than half a day
-    if (now - s.up > day * 0.75) s = sunTimes(new Date(now + day), place.lat, place.lon);
-    else if (s.up - now > day * 0.25) s = sunTimes(new Date(now - day), place.lat, place.lon);
-    if (s.polar) out = { minute: s.polar === 'day' ? 720 : 0, rise: 390, set: 1110 };
-    else { const len = (s.down - s.up) / 60e3; out = { minute: (((390 + (now - s.up) / 60e3) % 1440) + 1440) % 1440, rise: 390, set: Math.min(1440, 390 + len) }; }
-  }
+  const day = 864e5, sun = t => sunTimes(new Date(t), place.lat, place.lon);
+  // the last sunrise before now, at this place; the sky's minute counts on from it, past
+  // 1440 on a long day, until the next one
+  let s = sun(now);
+  if (!s.polar && s.up > now) s = sun(now - day);
+  else if (!s.polar) { const n = sun(now + day); if (!n.polar && n.up <= now) s = n; }
+  const out = s.polar ? { minute: s.polar === 'day' ? 720 : 0, rise: 390, set: 1110 }
+    : { minute: 390 + (now - s.up) / 60e3, rise: 390, set: 390 + (s.down - s.up) / 60e3 };
   const old = !wx || wx.t == null ? null : now - (wx.at || 0);
   const stale = old == null || old > STALE;
   return Object.assign(out, { wx: stale ? 'clear' : wxKind(wx.code), stale: old != null && old > STALE, hours: old != null ? Math.floor(old / 3600e3) : null });
@@ -68,7 +67,9 @@ export class Ambient {
   }
 
   // ---------- the sky ----------
-  place() { const l = this.app.live.data.loc; if (l && l.lat != null) return l; const p = this.app.newPlace(); return p && p.lat != null ? p : null; }
+  // the playlist's own place, read from the playlist, not from live.data.loc, which want()
+  // sets only after the sky has asked (0.11.1 build review 1.3); else sf_place, else Home
+  place() { const b = this.app.cur && this.app.cur(), l = b && b.loc; if (l && l.lat != null) return l; const p = this.app.newPlace(); return p && p.lat != null ? p : null; }
   // The sky now for a look that follows it, else null. Worked out once a minute.
   skyFor(l) {
     const p = l.parts; if (!p || !p.sky || !p.sky.on) return null;
@@ -98,9 +99,22 @@ export class Ambient {
     this.key = null; this.app.refresh();
   }
   // The renderer kept missing its frame budget: one rung down, said once.
+  // A rung whose feature isn't on the screen is passed over, so Classic goes straight to lower
+  // sharpness as 0.10 did, and the line always names something you can see go (0.11.1 build
+  // review 1.4). A 1x screen has no sharpness to drop, so it is never told anything.
+  has(id) {
+    const b = this.app.board, dpr = Math.min(window.devicePixelRatio || 1, b ? b.o.maxDpr || 2 : 2);
+    if (id === 'still') return !!(this.wallMoves || this.layerOn || (this.on && /chase|breathe/.test(this.rg.fx)));
+    if (id === 'noweather') return !!this.layerOn;
+    if (id === 'noring') return !!this.on;
+    if (id === 'lowres') return dpr > 1;
+    return false;
+  }
   slow() {
-    if (getFlag('sf_quality') || this.auto >= QUALITY.length - 1) return;
-    this.auto++; this.key = null; setFlag('sf_quality_auto', QUALITY[this.auto].id);
+    if (getFlag('sf_quality')) return;
+    let next = this.auto + 1; while (next < QUALITY.length && !this.has(QUALITY[next].id)) next++;
+    if (next >= QUALITY.length) return;
+    this.auto = next; this.key = null; setFlag('sf_quality_auto', QUALITY[this.auto].id);
     if (QUALITY[this.auto].id === 'lowres') { this.app.board.o.maxDpr = 1; this.app.board._sizeKey = null; this.app.board.resize(); }
     this.app.say(this.app.t.lk.stQuality(this.app.t.lk.quality[QUALITY[this.auto].id]));
     this.paint(true);
@@ -110,7 +124,8 @@ export class Ambient {
   // never sees it on a board that rarely turns. Two seconds of frames counted when such a look
   // goes on, and every five minutes while it stays on; a screen that cannot keep up is one rung down.
   probe() {
-    if (this.probing || document.hidden || getFlag('sf_quality')) return;
+    if (this.probing || getFlag('sf_quality')) return;
+    if (document.hidden) { this.probeAt = Date.now(); return; }   // a hidden tab waits its five minutes too
     this.probing = true; this.probeAt = Date.now();
     let last = 0, n = 0, slow = 0; const end = performance.now() + PROBE_MS;
     const step = t => {
@@ -180,7 +195,7 @@ export class Ambient {
     this.palBoard = p.ring && p.ring.pal === 'board';
     const layer = obs || rung >= 2 || !d.wall ? null : d.wall.layer;
     const key = [rg.fx, rg.colours.join(), rg.bright, rg.size, rg.speed, on, this.still, layer, d.wall && d.wall.layerOpacity, sk && sk.storm, rung].join('|');
-    this.rg = rg; this.on = on;
+    this.rg = rg; this.on = on; this.layerOn = !!layer; this.wallMoves = !!(d.wall && d.wall.kind === 'fields' && !obs);
     const heavy = on || !!layer || !!(d.wall && d.wall.kind !== 'room' && !obs);
     if (heavy && (!this.heavy || Date.now() - (this.probeAt || 0) > PROBE_EVERY)) this.probe();
     this.heavy = heavy;
