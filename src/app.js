@@ -1156,7 +1156,8 @@ export class App {
   saveImage() {
     const b = this.cur(), d = this.dims(), g = staticGeom(d.rows, d.cols, 0.6), scale = Math.min(96, Math.max(24, Math.floor(2400 / g.uw)));
     const cv = document.createElement('canvas');
-    renderStatic(cv, { rows: d.rows, cols: d.cols, grid: this.grid(), theme: b.theme, pad: 0.6, width: Math.round(g.uw * scale), height: Math.round(g.uh * scale) });
+    // the board in its own look, on its wall (0.11 review 4)
+    renderStatic(cv, { rows: d.rows, cols: d.cols, grid: this.grid(), theme: this.themeNow(), pad: 0.6, width: Math.round(g.uw * scale), height: Math.round(g.uh * scale) });
     const page = this.currentPage(), name = `${b.name || 'board'} ${page && page.name ? page.name : ''}`.trim().replace(/[^\wÀ-ɏ-]+/g, '_');
     cv.toBlob(blob => { if (!blob) return; const a = h('a', { href: URL.createObjectURL(blob), download: name + '.png' }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }, 'image/png');
   }
@@ -1169,7 +1170,7 @@ export class App {
     const card = blank(d.rows, d.cols);
     for (let r = 0; r < d.rows; r++) for (let c = 0; c < d.cols; c++) card[r][c] = RAINBOW[(r + c) % 6];
     const tr = this.transitionNow(); this.board.setOptions({ transition: tr });
-    const label = [...`${t.transitions[tr] || tr} ${t.speeds[this.speedNow()]}`.toUpperCase()].slice(0, d.cols);
+    const label = [...`${t.transitionAll[tr] || tr} ${t.speeds[this.speedNow()]}`.toUpperCase()].slice(0, d.cols);
     const mid = Math.floor(d.rows / 2), off = Math.floor((d.cols - label.length) / 2);
     for (let c = 0; c < d.cols; c++) card[mid][c] = ' ';
     label.forEach((ch, i) => { card[mid][off + i] = ch; });

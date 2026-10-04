@@ -30,8 +30,10 @@ const FRAME = theme => `(async () => {
   const next = rows.map(s => [...s.split('').reverse().join('').padEnd(22)].slice(0, 22));
   b.setGrid(next); cancelAnimationFrame(b._raf); b._raf = 0;
   const t0 = 1000; b.cells.forEach(row => row.forEach(c => { if (c.q.length) c.a = b._start(c, t0, { step: 70, final: 160, settle: 90 }); }));
-  const real = performance.now; performance.now = () => t0 + 31; b._full(); const mid = sum(); performance.now = real;
-  return JSON.stringify({ rest, mid });
+  const real = performance.now; let mid, late;
+  try { performance.now = () => t0 + 31; b._full(); mid = sum(); performance.now = () => t0 + 52; b._full(); late = sum(); }   // before and after edge-on
+  finally { performance.now = real; }
+  return JSON.stringify({ rest, mid, late });
 })()`;
 async function frames(url, theme) {
   await send('Page.navigate', { url: 'about:blank' }); await sleep(300);
@@ -63,6 +65,7 @@ try {
     const a = await frames(OLD, theme), b = await frames(NEW, theme);
     check(`${theme}: at rest, every pixel as 0.10.2`, a.rest === b.rest, `${a.rest} / ${b.rest}`);
     check(`${theme}: mid-flip, every pixel as 0.10.2`, a.mid === b.mid, `${a.mid} / ${b.mid}`);
+    check(`${theme}: the second half of the fold, every pixel as 0.10.2`, a.late === b.late && a.late !== a.mid, `${a.late} / ${b.late}`);
   }
 } catch (e) { results.push('ERROR ' + e.message); }
 console.log(results.join('\n'));
