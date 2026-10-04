@@ -102,3 +102,10 @@ test('template looks: only once the look has shipped, keyed to the real template
   assert.equal(L.lookOf({ theme: fromTemplate('station', 'en').theme }).look, 'solari');   // until then, on its 0.10 theme
   for (const id of Object.keys(L.TEMPLATE_LOOKS)) assert.ok(['demo', 'blank', 'home', 'morning', 'news', 'weather', 'station', 'lobby', 'world', 'cafe', 'money', 'stocks', 'indices', 'crypto', 'rates', 'colour', 'letters', 'showcase'].includes(id), id);
 });
+
+test('the strings load, and every English key has a Swedish one', async () => {
+  const { STR } = await import('../src/strings.js');
+  const keys = o => Object.keys(o).sort();
+  assert.deepEqual(keys(STR.sv), keys(STR.en)); assert.deepEqual(keys(STR.sv.lk), keys(STR.en.lk));
+  assert.ok(!/theme/i.test(STR.en.themeAll + STR.en.boardSize + STR.en.sizeOwn));   // "look" throughout (review 8)
+});

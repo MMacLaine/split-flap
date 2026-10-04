@@ -654,7 +654,10 @@ strong > .sf-tag.on-now { margin-left: 8px; vertical-align: 2px; }
 @media (prefers-reduced-motion: reduce) { .sf-wall-fields i { animation-play-state: paused; } }
 .sf-plate { position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.9s ease; }
 .sf-plate.on { opacity: 1; }
-.sf-fade { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
+.sf-canvas-wrap .sf-fade { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
+/* under the glass, the stage is dark while the wall fades in, never the light chrome's cream (review 2) */
+.sf-canvas-wrap { background: #0A0A0C; }
+html.sf-transparent .sf-canvas-wrap { background: transparent; }
 html.sf-transparent .sf-wall, html.sf-transparent .sf-plate { display: none; }
 /* 0.11.0: the look sheet, its cards, the Look row, the swatch, and the pinned chip */
 .sf-lk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 10px; }

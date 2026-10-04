@@ -30,8 +30,9 @@ export const STR = {
     },
     // 0.10.1: one Boards list, playlists that point at boards, a board's own size, Home.
     fillNote: (r, c) => `Fill screen is worked out by the wall that shows it. Until a wall here has run it full screen, the editor shows it at ${r} × ${c}.`, fillSeen: (r, c) => `Fill screen is worked out by the wall that shows it. The editor shows it at ${r} × ${c}, the size a wall in this browser last filled.`,
-    compScroll: 'The board is wider than the phone. Swipe sideways in Type mode to reach the rest.', typeOwnNew: 'Adds a message board, shown in turn with this', mixedSizes: 'Mixed sizes', boardSize: 'Size and theme', sizeOwn: 'This board keeps its own size and theme in every playlist it is in.',
-    themeAll: 'Sets the theme of every board in this playlist. A board that is in other playlists changes there too.', sizeOnBoard: 'Each board has its own size now. Change it on the board.',
+    compScroll: 'The board is wider than the phone. Swipe sideways in Type mode to reach the rest.', typeOwnNew: 'Adds a message board, shown in turn with this', mixedSizes: 'Mixed sizes', boardSize: 'Size and look', sizeOwn: 'This board keeps its own size and look in every playlist it is in.',
+    themeAll: 'Gives every board in this playlist one look. A board that is in other playlists changes there too.', motionByLook: l => `${l} sets its own motion, so the board on the screen turns its way. The playlist’s transition and speed apply to boards whose look leaves motion to the playlist. Change the look under Look on the board.`,
+    transitionAll: { classic: 'Classic', wave: 'Wave', drift: 'Drift', curtain: 'Curtain', ripple: 'Ripple', shimmer: 'Shimmer' }, sizeOnBoard: 'Each board has its own size now. Change it on the board.',
     deletedBoard: x => `Deleted ${x}.`, deletedIn: (x, names) => `Deleted ${x}. Also taken out of ${names.join(' and ').replace(/ and (?=.* and )/g, ', ')}.`, restored: x => `${x} is back.`,
     lastShowed: x => `Last time you showed ${x}`, lastShowedSub: 'Your account had it on a screen. Show it here too?',
     anotherOne: 'Show another board in turn', yourBoards: 'Your Boards', boardsSub: (nb, npl) => `${nb === 1 ? '1 board' : nb + ' boards'} · ${npl === 1 ? '1 playlist' : npl + ' playlists'}`,
@@ -221,8 +222,9 @@ export const STR = {
     },
     // 0.10.1: en lista med tavlor, spellistor som pekar på tavlor, tavlans egen storlek, Hem.
     fillNote: (r, c) => `Fyll skärmen räknas ut av väggen som visar den. Tills en vägg här har visat den i helskärm visar redigeraren den i ${r} × ${c}.`, fillSeen: (r, c) => `Fyll skärmen räknas ut av väggen som visar den. Redigeraren visar den i ${r} × ${c}, storleken en vägg i den här webbläsaren senast fyllde.`,
-    compScroll: 'Tavlan är bredare än telefonen. Svep åt sidan i läget Skriv för att nå resten.', typeOwnNew: 'Lägger till en meddelandetavla, som visas i tur med den här', mixedSizes: 'Blandade storlekar', boardSize: 'Storlek och tema', sizeOwn: 'Tavlan behåller sin storlek och sitt tema i varje spellista den finns i.',
-    themeAll: 'Sätter temat för alla tavlor i spellistan. En tavla som finns i andra spellistor ändras där också.', sizeOnBoard: 'Varje tavla har sin egen storlek nu. Ändra den på tavlan.',
+    compScroll: 'Tavlan är bredare än telefonen. Svep åt sidan i läget Skriv för att nå resten.', typeOwnNew: 'Lägger till en meddelandetavla, som visas i tur med den här', mixedSizes: 'Blandade storlekar', boardSize: 'Storlek och utseende', sizeOwn: 'Tavlan behåller sin storlek och sitt utseende i varje spellista den finns i.',
+    themeAll: 'Ger alla tavlor i spellistan samma utseende. En tavla som finns i andra spellistor ändras där också.', motionByLook: l => `${l} har en egen rörelse, så tavlan på skärmen vänder på sitt sätt. Spellistans övergång och hastighet gäller tavlor vars utseende lämnar rörelsen åt spellistan. Byt utseende under Utseende på tavlan.`,
+    transitionAll: { classic: 'Klassisk', wave: 'Våg', drift: 'Drift', curtain: 'Ridå', ripple: 'Krusning', shimmer: 'Skimmer' }, sizeOnBoard: 'Varje tavla har sin egen storlek nu. Ändra den på tavlan.',
     deletedBoard: x => `${x} är borttagen.`, deletedIn: (x, names) => `${x} är borttagen. Den togs också ur ${names.join(' och ').replace(/ och (?=.* och )/g, ', ')}.`, restored: x => `${x} är tillbaka.`,
     lastShowed: x => `Förra gången visade du ${x}`, lastShowedSub: 'Ditt konto hade den på en skärm. Visa den här också?',
     anotherOne: 'Visa en till tavla i tur', yourBoards: 'Dina tavlor', boardsSub: (nb, npl) => `${nb === 1 ? '1 tavla' : nb + ' tavlor'} · ${npl === 1 ? '1 spellista' : npl + ' spellistor'}`,

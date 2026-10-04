@@ -166,7 +166,8 @@ function startOwn(ed, from, cb) {
 }
 function setPart(ed, k, v) {
   const S = ed.E.sheet, p = clone(S.own);
-  if (k === 'material') { p.material = v; if (!MATRIX.walls[v].includes(p.wall.kind)) p.wall = wallPreset(MATRIX.walls[v][0], v); }
+  // a new material takes its own wall colour, even when the wall's kind carries over (review 6)
+  if (k === 'material') { p.material = v; p.wall = wallPreset(MATRIX.walls[v].includes(p.wall.kind) ? p.wall.kind : MATRIX.walls[v][0], v); }
   else if (k === 'wall') p.wall = wallPreset(v, p.material);
   else p[k] = v;
   S.own = sanitizeParts(p);

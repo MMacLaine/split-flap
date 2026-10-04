@@ -103,11 +103,18 @@ try {
   await ev(`(() => { const app = splitFlap; app.S.pageIdx = 2; app.S.pageStart = Date.now(); app.tick(); })()`); await sleep(1500);
   const looks = JSON.parse(await ev('JSON.stringify(splitFlap.board.A.looks)'));
   check('a playlist with Classic and Calm boards keeps both looks\' glyphs', looks.includes('black') && looks.some(x => /^L11-glass/.test(x)) && (await ev('splitFlap.board.A.m.size')) > 0, JSON.stringify(looks));
-  check('and a look change crossfades instead of cutting', (await ev(`splitFlap.fadeCv.style.transition`)).includes('opacity'));
+  // a Classic to Calm turn: the old frame lies over the board and fades, never off the screen (review 1)
+  await ev(`(() => { const app = splitFlap; app.S.pageIdx = 0; app.S.pageStart = Date.now(); app.tick(); })()`); await sleep(1500);
+  const fade = JSON.parse(await ev(`(async () => { const app = splitFlap; app.S.pageIdx = 1; app.S.pageStart = Date.now(); app.tick(); await new Promise(r => setTimeout(r, 200));
+    const f = app.fadeCv.getBoundingClientRect(), c = app.canvas.getBoundingClientRect(), op = +getComputedStyle(app.fadeCv).opacity;
+    return JSON.stringify({ top: [f.top, c.top], size: [f.width, f.height, c.width, c.height], op, z: getComputedStyle(app.fadeCv).position }); })()`));
+  check('a look change crossfades: the old frame lies over the board, part way faded', fade.top[0] === fade.top[1] && fade.size[0] === fade.size[2] && fade.size[1] === fade.size[3] && fade.op > 0 && fade.op < 1 && fade.z === 'absolute', JSON.stringify(fade));
 
   // Same look for all, with the names and Undo
   await ev('splitFlap.toggleEdit()'); await sleep(300);
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${pl}', view: 'display' })`); await sleep(300);
+  await ev(`(() => { const app = splitFlap; app.S.pageIdx = 1; app.S.pageStart = Date.now(); app.tick(); app.render(); })()`); await sleep(300);
+  check('Display says when the board on the screen has a look with its own motion', /sets its own motion/.test(await ev(`(document.querySelector('[data-k=motion-by-look]') || {}).textContent || ''`)));
   await click('same-look'); await sleep(300); await click('lk-card-calm'); await sleep(300);
   check('Same look for all previews every board', /Calm for every board in Demo/.test(await bar()), await bar());
   await click('look-show'); await sleep(400);

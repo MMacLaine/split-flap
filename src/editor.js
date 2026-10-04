@@ -36,7 +36,7 @@ import { weekView, hueOf, nextHue } from './week.js';
 import { getFlag, setFlag, sizeOf, dimsOfSize } from './store.js';
 import { HELP, INTRO } from './help.js';
 import { lookSheet, lookRow, lookLabel, ownLook, swatchEl, openLook, closeLook, ctxValue } from './lookSheet.js';
-import { defaultOf } from './looks.js';
+import { defaultOf, motionOf, lookFor } from './looks.js';
 import * as sound from './sound.js';
 
 const MAX_MY = 500, MAX_PL = 100;
@@ -74,6 +74,8 @@ export class Editor {
   // Move to a level. Each move is a history entry, so browser Back goes up the way it came.
   go(r, opts = {}) {
     const E = this.E, prevSec = E.sec, wasLooking = this.app.looking(), prevLv = E.sec + ':' + E.lv;
+    // leaving a look preview by going elsewhere puts the look back and says which (review 7)
+    if (E.sheet && E.sheet.kind === 'look' && E.sheet.prev && !opts.silent) { const S = E.sheet; E.sheet = null; this.app.say(this.t.lk.stBack(lookLabel(this.app, S.ctx.kind === 'playlist' ? lookFor(this.app.currentPage(), this.app.pin(), this.app.lookSetting(), null) : ctxValue(this, S.ctx)))); opts = Object.assign({}, opts, { quietBack: true }); }
     this.composer.leave(); E.confirm = null; E.menu = null; E.sheet = null; E.card = null; E.preview = null;
     if (typeof r === 'string') r = { account: { sec: 'acc', lv: 'main' }, help: { sec: 'acc', lv: 'help' }, log: { sec: 'acc', lv: 'log' }, start: { sec: 'ex', lv: 'list' },
       settings: { sec: 'sb', lv: 'sb', sb: this.app.cur().id, view: 'display' } }[r] || { sec: 'sb', lv: 'list' };   // named levels, from Help's links
@@ -1166,6 +1168,8 @@ export class Editor {
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.transition),
         h('div', { class: 'sf-row' }, seg(Object.entries(t.transitions), b.transition, v => { app.upd(bb => { bb.transition = v; }); app.previewTransition(); }, 'tr')),
         h('div', { class: 'sf-row' }, h('span', { class: 'sf-label muted w' }, t.speed), seg([['fast', t.speeds.fast], ['gentle', t.speeds.gentle], ['authentic', t.speeds.authentic]], b.speed, v => { app.upd(bb => { bb.speed = v; }); app.previewTransition(); }, 'sp')),
+        // a look with its own motion wins over the playlist's (0.11), so say so here (review 3)
+        motionOf(app.lookNow()) ? h('span', { class: 'sf-hint', 'data-k': 'motion-by-look' }, t.motionByLook(lookLabel(app, app.lookNow()))) : null,
         h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'tr-preview', onclick: () => app.previewTransition() }, t.preview))),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.boardLoc),
         loc && loc.lat != null ? h('div', { class: 'sf-chosen' }, h('span', null, loc.city), h('button', { class: 'sf-icon', 'aria-label': t.remove, 'data-k': 'loc-clear', onclick: () => app.upd(bb => { delete bb.loc; }) }, '×')) : null,

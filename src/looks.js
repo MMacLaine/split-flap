@@ -152,7 +152,7 @@ const TYPES = {
   mono:    { label: 'Mono',    font: '"DM Mono"',             weight: 500, capRatio: 0.700, file: 'dm-mono-500.woff2',             licence: 'SIL OFL 1.1' },
   grotesk: { label: 'Grotesk', font: '"Schibsted Grotesk"',   weight: 700, capRatio: 0.703, file: 'schibsted-grotesk.woff2',       licence: 'SIL OFL 1.1' },
   round:   { label: 'Round',   font: '"Plus Jakarta Sans"',   weight: 600, capRatio: 0.745, file: 'plus-jakarta-sans.woff2',       licence: 'SIL OFL 1.1' },
-  serif:   { label: 'Serif',   font: '"Cormorant Garamond"',  weight: 500, capRatio: 0.625, file: 'cormorant-garamond-normal.woff2', licence: 'SIL OFL 1.1' }
+  serif:   { label: 'Serif',   font: '"Cormorant Garamond"',  weight: 500, capRatio: 0.625, file: 'cormorant-garamond-lnum.woff2', licence: 'SIL OFL 1.1' }
 };
 
 // ---- Motion ----------------------------------------------------------------------
