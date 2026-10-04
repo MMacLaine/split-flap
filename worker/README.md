@@ -100,6 +100,8 @@ npm test
 The test-only `/dev/session` route makes an account without Google. It only answers when
 `DEV_TEST` is `1` and `BASE_URL` is a localhost address, so it can never run in production.
 
+The Worker tests run one file at a time (`--test-concurrency=1`): two of them open the local D1 with `wrangler d1 execute` beside the dev server. Don't run them while the browser suites (`npm run e2e`) are running either, since both share the local D1 and the `/data` rate limit.
+
 ## Deploy
 
 ```sh
