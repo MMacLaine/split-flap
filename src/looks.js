@@ -368,13 +368,13 @@ LOOKS.rgb = {
   chrome: { mode: 'dark', accent: '#C8974A' }, legacy: 'black'
 };
 const ORDER = ['classic', 'backlit', 'rgb', 'signal', 'calm', 'outside', 'sunday', 'party'];
-// What 0.11.0 offers: the looks whose parts have shipped. Backlit and Signal need the
-// ring, Outside and Sunday the sky (0.11.1), Party Listen (0.11.2).
-const SHIPPED = ['classic', 'backlit', 'rgb', 'signal', 'calm', 'outside', 'sunday'];   // 0.11.1: the ring and the sky; Party needs Listen (0.11.2)
+// What the sheet offers: the looks whose parts have shipped. Backlit and Signal need the
+// ring, Outside and Sunday the sky (0.11.1), Party Listen (0.11.2). All of them now.
+const SHIPPED = ['classic', 'backlit', 'rgb', 'signal', 'calm', 'outside', 'sunday', 'party'];
 
 // The look each template comes in (Fable 6.7), keyed to the app's template ids (0.10.3).
 // Used only once the look has shipped; until then a template comes in on its 0.10 theme.
-const TEMPLATE_LOOKS = { station: 'signal', weather: 'outside', letters: 'calm', stocks: 'backlit', indices: 'backlit', crypto: 'backlit', rates: 'backlit', cafe: 'sunday' };
+const TEMPLATE_LOOKS = { station: 'signal', weather: 'outside', letters: 'calm', stocks: 'backlit', indices: 'backlit', crypto: 'backlit', rates: 'backlit', cafe: 'sunday', meter: 'party' };
 
 // ---- The Make your own matrix --------------------------------------------------------
 // What each material allows. Anything not listed is not offered.
@@ -547,8 +547,8 @@ export function sanitizeParts(p) {
   return { material: p.material, type: types.includes(p.type) ? p.type : types[0], ink: inks.includes(p.ink) ? p.ink : inks[0],
     lit: !!p.lit && !!m.lit, motion: MOTIONS.includes(p.motion) ? p.motion : 'playlist', ring: ringPart(p.ring), wall, sky: skyPart(p.sky, m) };
 }
-// The ring (0.11.1): an effect, a palette and three stops. Music needs Listen (0.11.2).
-export const RING_FX = ['off', 'glow', 'breathe', 'chase', 'flash'];
+// The ring (0.11.1): an effect, a palette and three stops. Music came with Listen (0.11.2).
+export const RING_FX = ['off', 'glow', 'breathe', 'chase', 'flash', 'music'];
 function ringPart(r) {
   r = r && typeof r === 'object' ? r : {};
   const st = RING.stops, pick = (v, o, d) => Object.prototype.hasOwnProperty.call(o, v) ? v : d;

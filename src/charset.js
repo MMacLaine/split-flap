@@ -21,12 +21,18 @@ export const CHIP_NAMES = {
 // Half flaps (0.9): only the top or the bottom half coloured, green, red or the theme's
 // glyph colour, so a line chart has two heights per row. They are private-use characters,
 // one UTF-16 unit each like every other flap, that no keyboard types, and they sit after
-// the chips so the drum's order for everything before them is unchanged.
-export const HALF = { gTop: '\uE000', gBottom: '\uE001', rTop: '\uE002', rBottom: '\uE003', fTop: '\uE004', fBottom: '\uE005' };
-export const HALVES = { '\uE000': ['g', 'top'], '\uE001': ['g', 'bottom'], '\uE002': ['r', 'top'], '\uE003': ['r', 'bottom'], '\uE004': ['f', 'top'], '\uE005': ['f', 'bottom'] };
+// the chips so the drum's order for everything before them is unchanged. Amber halves came
+// in 0.11.2 for the meter, after the 0.9 ones for the same reason.
+export const HALF = { gTop: '\uE000', gBottom: '\uE001', rTop: '\uE002', rBottom: '\uE003', fTop: '\uE004', fBottom: '\uE005', yTop: '\uE006', yBottom: '\uE007' };
+export const HALVES = { '\uE000': ['g', 'top'], '\uE001': ['g', 'bottom'], '\uE002': ['r', 'top'], '\uE003': ['r', 'bottom'], '\uE004': ['f', 'top'], '\uE005': ['f', 'bottom'], '\uE006': ['y', 'top'], '\uE007': ['y', 'bottom'] };
 export const isHalf = ch => Object.prototype.hasOwnProperty.call(HALVES, ch);
 export const DRUM = ' ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖÆØÜÉ0123456789.,:;!?\'"-+/&%#@()=$°♥' + CHIP_KEYS.join('') + Object.keys(HALVES).join('');
 export const DRUM_IDX = Object.fromEntries([...DRUM].map((c, i) => [c, i]));
+// The drum as 0.9 to 0.11.1 had it. A turn that neither starts nor ends on an amber half
+// takes this one, so every flip of a Classic board is the one it always was, frame for frame.
+const AMBER = new Set([HALF.yTop, HALF.yBottom]);
+const DRUM_09 = [...DRUM].filter(c => !AMBER.has(c)).join('');
+const DRUM_09_IDX = Object.fromEntries([...DRUM_09].map((c, i) => [c, i]));
 
 // Characters that are not on the drum but have an honest stand-in.
 const FOLD_MAP = {
@@ -143,13 +149,14 @@ export function composerInput(s) {
 // max caps the visible steps (the flap starts nearer the target); Infinity is the
 // full authentic rotation.
 export function drumPath(from, to, max = Infinity) {
-  const n = DRUM.length;
-  const fi = DRUM_IDX[from] ?? 0, ti = DRUM_IDX[to];
+  const amber = AMBER.has(from) || AMBER.has(to), D = amber ? DRUM : DRUM_09, I = amber ? DRUM_IDX : DRUM_09_IDX;
+  const n = D.length;
+  const fi = I[from] ?? 0, ti = I[to];
   if (ti === undefined) return [];
   const steps = ((ti - fi) % n + n) % n || n;
   const k = Math.min(steps, max);
   const out = [];
-  for (let i = k - 1; i >= 0; i--) out.push(DRUM[((ti - i) % n + n) % n]);
+  for (let i = k - 1; i >= 0; i--) out.push(D[((ti - i) % n + n) % n]);
   return out;
 }
 

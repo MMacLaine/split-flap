@@ -244,6 +244,12 @@ export const TEMPLATES = [
       quiet: { on: true, from: '23:00', to: '06:30', mode: 'dim' }, pages: [page(sv ? 'Klocka' : 'Clock', 'full', 3600, [z('letterclock')])] }); }
   },
   {
+    id: 'meter', fit: '12x40', section: 'fun', works: 'anywhere', needs: [],
+    name: { en: 'Music meter', sv: 'Musikmätare' },
+    desc: { en: 'A level meter for the room’s music, in Party. Press Listen to start it.', sv: 'En nivåmätare för musiken i rummet, i Fest. Tryck på Lyssna för att starta den.' },
+    make: a => { const sv = a.sv; return base(sv ? 'Musikmätare' : 'Music meter', { pages: [page(sv ? 'Mätare' : 'Meter', 'full', 3600, [z('meter')])] }); }
+  },
+  {
     id: 'showcase', fit: 'fill', section: 'fun', works: 'anywhere', needs: [],
     name: { en: 'Everything at once', sv: 'Allt på en gång' },
     desc: { en: 'The extreme one: fills the screen, rolls every flap the long way round, and never sits still.', sv: 'Den extrema: fyller skärmen, rullar varje blad hela varvet och står aldrig still.' },

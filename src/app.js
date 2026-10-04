@@ -26,6 +26,7 @@ import { parseRoute } from './route.js';
 import { nowShowing, playlistPanel } from './week.js';
 import { h, clone } from './dom.js';
 import { VERSION, versionIn, shouldReload } from './changelog.js';
+import { Listen } from './meter.js';
 
 const LOOK_MS = 180000;   // three minutes untouched ends a preview (0.10)
 export const MAX_PL = 100, MAX_LIB = 500;   // playlists, and boards in your Boards (0.10.1)
@@ -129,9 +130,14 @@ export class App {
     this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent,
       onLayout: r => { this.placePlate(r); if (this.ambient) this.ambient.placeRing(r); },
       onSlow: () => { if (this.ambient) this.ambient.slow(); },   // the quality ladder (0.11.1)
-      onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode()) sound.play(f, b.soundStyle, pan); }
+      onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode() && !this.meterRunning()) sound.play(f, b.soundStyle, pan); }   // the clack is off while the meter runs (0.11.2)
     }));
     this.ambient = new Ambient(this);   // the ring, the sky and the quality ladder (0.11.1)
+    // Listen (0.11.2): the Meter board and the Music light. Never stored, never kept through a reload
+    this.listen = new Listen({ change: (st, line) => this.listenChanged(st, line), frame: () => this.meterFrame() });
+    this.live.data.listen = this.listen;
+    if (location.hostname === 'localhost') window.__sfListen = this.listen;   // the e2e reads the track and the context
+    addEventListener('pagehide', () => this.listen.end());
     if (this.board.lastLayout) this.ambient.placeRing(this.board.lastLayout);
     this.chromeTheme();
     this.bind();
@@ -552,7 +558,23 @@ export class App {
   lookKey() { const l = this.lookNow(); return l.id + (l.id === 'custom' ? JSON.stringify(l.parts) : ''); }
   accentNow() { return accentOf(this.lookNow()); }
   // A look's motion wins over the playlist's; a page's own transition wins over both.
-  speedNow() { const m = motionOf(this.lookNow()); return (m && m.speed) || this.cur().speed; }
+  speedNow() { if (this.isMeter()) return 'meter'; const m = motionOf(this.lookNow()); return (m && m.speed) || this.cur().speed; }
+  // The Meter (0.11.2) has its own fold and no stagger, over the page, the look and the playlist
+  isMeter() { const p = this.currentPage(); return !!(p && (p.zones || []).some(z => z && z.ch === 'meter')); }
+  meterRunning() { return !!(this.listen && this.listen.running() && this.isMeter()); }
+  // Listen shows whenever the board is a Meter or the look's light is Music
+  listenWanted() { const p = this.lookNow().parts || {}; return this.isMeter() || !!(p.ring && p.ring.fx === 'music'); }
+  // One tick of Listen: the meter's grid straight to the board, and the Music light
+  meterFrame() {
+    if (this.isMeter() && !this.previewing && this.quietMode() !== 'blank') this.board.setGrid(this.grid());
+    if (this.ambient) this.ambient.music();
+  }
+  listenChanged(st, line) {
+    if (line) this.say(this.t.lk[line]);
+    if (this.isMeter() && !this.previewing) this.board.setGrid(this.grid());
+    if (this.ambient) { this.ambient.key = null; this.ambient.paint(); }
+    this.renderOverlay(); if (this.S.editing) this.render();
+  }
   boardOpts() { const d = this.dims(); return { rows: d.rows, cols: d.cols, theme: this.themeNow(), transition: this.transitionNow(), speed: this.speedNow() }; }
   // The wall for a look whose wall is CSS: a flat colour or three slow colour fields. Classic's
   // room is painted on the canvas, so the wall layer is off. Quiet hours hold the fields still.
@@ -581,7 +603,7 @@ export class App {
     document.fonts.load(`${T.weight} 40px ${T.font}`).then(() => { this.board.refont(); resetStatic(); if (this.editor) this.editor.refreshThumbs(); }).catch(() => {});
   }
   // The page showing (or being edited) may pick its own transition; else the board's.
-  transitionNow() { const p = this.currentPage(), m = motionOf(this.lookNow()); return (p && p.tr) || (m && m.transition) || this.cur().transition; }
+  transitionNow() { if (this.isMeter()) return 'none'; const p = this.currentPage(), m = motionOf(this.lookNow()); return (p && p.tr) || (m && m.transition) || this.cur().transition; }
   quietMode() { const b = this.cur(); return !this.S.editing && inQuiet(b.quiet, Date.now()) ? b.quiet.mode : null; }
   // The big board holds the board being edited; anywhere else in the editor it plays on.
   holding() { return this.S.editing && (this.editor.onBoard() || this.editor.onBlueprint() || !!this.editor.E.card || !!this.editor.E.preview); }
@@ -649,6 +671,10 @@ export class App {
     const text = g.map(r => r.map(c => isChip(c) || isDim(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
     if (text !== this.lastAria) { this.lastAria = text; this.twin.textContent = text; }
     const pageKey = [b.id, this.holding() ? 'e' + this.selIdx() : this.S.pageIdx, this.S.lang].join(':');
+    // Listen is offered only on a Meter or a Music light; moving off them stops it, so the
+    // microphone is never on with no Stop in sight (0.11.2)
+    const lw = this.listenWanted();
+    if (lw !== this.lastListenWanted) { const first = this.lastListenWanted === undefined; this.lastListenWanted = lw; if (!lw && this.listen.active()) this.listen.stop(); if (!first) this.renderOverlay(); }
     if (pageKey !== this.lastPageKey) {
       this.lastPageKey = pageKey; this.stage.setAttribute('aria-label', this.stageLabel()); this.stage.setAttribute('aria-roledescription', this.t.stageRole);
       // Spoken only when a person caused the change: the first load, a board picked, the
@@ -823,6 +849,7 @@ export class App {
     this.wake();
     const k = e.key.toLowerCase();
     if (k === 'r') { this.announce(); return; }   // read the board aloud, kiosk or not
+    if (k === 'l' && this.listenWanted()) { this.listen.press(); return; }   // Listen, kiosk or not: a key is a gesture, so the microphone can ask (0.11.2)
     if (this.kioskStrict) return;
     if (k === 'e') this.toggleEdit(); else if (k === 'f') this.toggleFull(); else if (k === 's') this.toggleSound();
   }
@@ -966,6 +993,8 @@ export class App {
         h('button', { class: 'sf-bar-btn', 'aria-keyshortcuts': 'F', 'data-k': 'bar-full', onclick: () => this.toggleFull() }, S.isFull ? t.exitFs : t.fullscreen),
         h('button', { class: 'sf-bar-btn', 'aria-pressed': String(!!b.sound), 'aria-keyshortcuts': 'S', 'data-k': 'bar-sound', onclick: () => this.toggleSound() },
           h('span', null, t.sound), h('span', { class: 'state' }, b.sound ? t.on : t.off)),
+        this.listenWanted() ? h('button', { class: 'sf-bar-btn' + (this.listen.active() ? ' live' : ''), 'aria-pressed': String(this.listen.active()), 'aria-keyshortcuts': 'L', 'data-k': 'bar-listen', onclick: () => this.listen.press() },
+          this.listen.active() ? [h('span', { class: 'sf-rec', 'aria-hidden': 'true' }), t.lk.stop] : t.lk.listen) : null,
         h('button', { class: 'sf-bar-btn', 'aria-expanded': String(S.share), 'data-k': 'bar-share', onclick: () => this.openShare() }, t.share),
         this.account && this.account.available ? h('button', { class: 'sf-bar-btn' + (this.account.signedIn() ? ' named' : ' signin'), 'data-k': 'bar-account', onclick: () => this.openAccount(),
             title: this.account.status === 'failed' || this.account.status === 'signedout' ? this.editor.accountStatus() : null },

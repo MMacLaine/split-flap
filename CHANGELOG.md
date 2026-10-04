@@ -2,6 +2,15 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.11.2 (2026-10-04): Music
+
+A Music meter board, and Party, a look whose light moves to the music in the room. Both listen through the microphone, only while Listen is on.
+
+- **Music meter.** Level bars across the board, green, amber and red, with the peak held for a moment. Before you press Listen it sits there unlit, like a real meter switched off. Mixer, Bars or Mirror, and it is made for 12 × 40.
+- **Party.** Smoked glass, rose letters and a wide light on Music. Without Listen the light breathes slowly, and with it on it follows the beat.
+- **Listen** is in the control bar and on Showing whenever the board can use it, and the L key starts it on a kiosk. Stop turns the microphone off, and a reload always does.
+- The clack is off while the meter runs, since the meter turns flaps many times a second.
+
 ## v0.11.1 (2026-10-04): Light and sky
 
 Looks can now have light round the frame and follow the sky outside. Five new looks use them: Backlit, Classic RGB, Signal, Outside and Sunday.

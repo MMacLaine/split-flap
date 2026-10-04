@@ -3,6 +3,28 @@
 
 export const CHANGELOG = [
   {
+    v: '0.11.2', date: '2026-10-04',
+    tag: { en: 'Music', sv: 'Musik' },
+    desc: {
+      en: 'A Music meter board, and Party, a look whose light moves to the music in the room. Both listen through the microphone, only while Listen is on.',
+      sv: 'En musikmätare, och Fest, ett utseende vars ljus rör sig efter musiken i rummet. Båda lyssnar genom mikrofonen, bara medan Lyssna är på.'
+    },
+    items: {
+      en: [
+        '**Music meter.** Level bars across the board, green, amber and red, with the peak held for a moment. Before you press Listen it sits there unlit, like a real meter switched off. Mixer, Bars or Mirror, and it is made for 12 × 40.',
+        '**Party.** Smoked glass, rose letters and a wide light on Music. Without Listen the light breathes slowly, and with it on it follows the beat.',
+        '**Listen** is in the control bar and on Showing whenever the board can use it, and the L key starts it on a kiosk. Stop turns the microphone off, and a reload always does.',
+        'The clack is off while the meter runs, since the meter turns flaps many times a second.'
+      ],
+      sv: [
+        '**Musikmätare.** Nivåstaplar över tavlan, gröna, gula och röda, med toppen kvar en stund. Innan du trycker på Lyssna står den släckt, som en riktig mätare som är avstängd. Mixer, Staplar eller Spegel, och den är gjord för 12 × 40.',
+        '**Fest.** Rökfärgat glas, rosa bokstäver och ett brett ljus på Musik. Utan Lyssna andas ljuset långsamt, och med det på följer det takten.',
+        '**Lyssna** finns i kontrollraden och under Visas när tavlan kan använda det, och tangenten L startar det på en kiosk. Stoppa stänger av mikrofonen, och det gör en omladdning alltid.',
+        'Klapprandet är av medan mätaren går, eftersom mätaren vänder flappar många gånger i sekunden.'
+      ]
+    }
+  },
+  {
     v: '0.11.1', date: '2026-10-04',
     tag: { en: 'Light and sky', sv: 'Ljus och himmel' },
     desc: {

@@ -80,7 +80,7 @@ try {
   await go('about:blank'); await go(URL0); await ev('splitFlap.toggleEdit()'); await sleep(400);
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: splitFlap.shown().id, bd: splitFlap.shown().pages[0].id })`); await sleep(400);
   await click('lk-change-board'); await sleep(300);
-  check('the sheet now offers the looks with light and sky', (await ev(`[...document.querySelectorAll('.sf-lk-card strong')].map(x => x.textContent).join()`)) === 'Default,Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday');
+  check('the sheet now offers the looks with light and sky', (await ev(`[...document.querySelectorAll('.sf-lk-card strong')].map(x => x.textContent).join()`)) === 'Default,Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday,Party');   // Party since 0.11.2
   await ev(`(() => { const d = document.querySelector('.sf-lk details'); d.open = true; d.dispatchEvent(new Event('toggle')); })()`); await sleep(400);
   await click('lk-fx-breathe'); await sleep(300);
   check('Make your own has the Light row, with its colours and stops', (await ev(`String(!!document.querySelector('[data-k=lk-pal-rainbow]') && !!document.querySelector('[data-k=lk-speed-slow]') && !!document.querySelector('[data-k=lk-bright-high]') && !!document.querySelector('[data-k=lk-rsize-wide]'))`)) === 'true');

@@ -346,6 +346,11 @@ export class Editor {
         h('span', { class: 'sf-hint' }, summary),
         // 0.11: this screen's look, a pin over every board, or each board's own
         lookRow(this, t.lk.look, app.pin() ? t.lk.pinnedRow(lookLabel(app, app.pin())) : t.lk.followsEach, app.pin() || { id: 'follow' }, onPage, { kind: 'screen' }, app.pin() ? t.lk.pinNote(lookLabel(app, app.pin())) : t.lk.unpinNote),
+        // 0.11.2: Listen, when the board is a Meter or its light is Music
+        app.listenWanted() ? h('div', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.lk.listenRow),
+          h('div', { class: 'sf-row wrap' }, h('button', { class: 'sf-btn' + (app.listen.active() ? ' live' : ''), 'aria-pressed': String(app.listen.active()), 'data-k': 'listen', onclick: () => app.listen.press() },
+            app.listen.active() ? [h('span', { class: 'sf-rec', 'aria-hidden': 'true' }), t.lk.stop] : t.lk.listen)),
+          h('span', { class: 'sf-hint' }, t.lk.listenHint)) : null,
         // 0.11.1: the quality ladder, per screen
         h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.lk.qualityRow),
           h('select', { class: 'sf-input', 'data-k': 'quality', onchange: e => app.ambient.setQuality(e.target.value) },

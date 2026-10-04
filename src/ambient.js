@@ -139,6 +139,13 @@ export class Ambient {
     requestAnimationFrame(step);
   }
 
+  // One of Listen's ticks: the Music light rises on a beat and falls away after it.
+  music() {
+    if (!this.on || !this.hears || !this.rg || this.rg.fx !== 'music') return;
+    const M = RING.effects.music;
+    this.ring.style.opacity = Math.min(1, (M.rest + M.gain * this.app.listen.beat()) * this.rg.bright).toFixed(3);
+  }
+
   // ---------- the ring ----------
   placeRing(r) { this.rect = r; this.maskKey = ''; this.mask(); }
   mask() {
@@ -191,10 +198,11 @@ export class Ambient {
     const obs = app.transparent, quiet = !!app.quietMode();
     const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.still = quiet || reduced || rung >= 1;
-    const rg = ringFor(p, sk, this.grid, null), on = rg.fx !== 'off' && !obs && rung < 3 && rg.fx !== 'music';
+    const rg = ringFor(p, sk, this.grid, null), on = rg.fx !== 'off' && !obs && rung < 3;
     this.palBoard = p.ring && p.ring.pal === 'board';
     const layer = obs || rung >= 2 || !d.wall ? null : d.wall.layer;
-    const key = [rg.fx, rg.colours.join(), rg.bright, rg.size, rg.speed, on, this.still, layer, d.wall && d.wall.layerOpacity, sk && sk.storm, rung].join('|');
+    const hears = rg.fx === 'music' && !!(app.listen && app.listen.active()) && !this.still;
+    const key = [hears, rg.fx, rg.colours.join(), rg.bright, rg.size, rg.speed, on, this.still, layer, d.wall && d.wall.layerOpacity, sk && sk.storm, rung].join('|');
     this.rg = rg; this.on = on; this.layerOn = !!layer; this.wallMoves = !!(d.wall && d.wall.kind === 'fields' && !obs);
     const heavy = on || !!layer || !!(d.wall && d.wall.kind !== 'room' && !obs);
     if (heavy && (!this.heavy || Date.now() - (this.probeAt || 0) > PROBE_EVERY)) this.probe();
@@ -214,6 +222,14 @@ export class Ambient {
         op = (E.breathe.min + E.breathe.max) / 2 * rg.bright;
         if (!this.still) this.anim = this.ring.animate([{ opacity: E.breathe.min * rg.bright }, { opacity: E.breathe.max * rg.bright }], { duration: E.breathe.period[rg.speed] / 2, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
       }
+      // Music (0.11.2): with Listen on it follows the beat, set on each of Listen's ticks;
+      // without, it rests as a slow breathe
+      this.ring.style.transition = hears ? 'opacity 90ms linear' : '';
+      if (rg.fx === 'music') {
+        const M = E.music, B = E.breathe; op = M.rest * rg.bright;
+        if (!hears && !this.still) this.anim = this.ring.animate([{ opacity: M.rest * 0.6 * rg.bright }, { opacity: M.rest * rg.bright }], { duration: B.period.slow / 2, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
+      }
+      this.hears = hears;
       this.ring.style.opacity = String(op);
     } else this.ring.style.opacity = '0';
     // the weather on the wall

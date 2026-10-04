@@ -9,9 +9,10 @@ import { wrap, toCells, depMinutes, channelLines, compose, zonesFor } from '../s
 import { sanitizeBoard, encodeBoard, decodeBoard } from '../src/store.js';
 
 // ---------- charset ----------
-test('drum holds 80 flaps', () => {
-  // 1 blank + 26 letters + 7 Nordic (Å Ä Ö Æ Ø Ü É) + 10 digits + 20 punctuation + the heart + 9 chips + 6 half flaps (0.9)
-  assert.equal(DRUM.length, 80);
+test('drum holds 82 flaps', () => {
+  // 1 blank + 26 letters + 7 Nordic (Å Ä Ö Æ Ø Ü É) + 10 digits + 20 punctuation + the heart + 9 chips + 6 half flaps (0.9) + 2 amber halves (0.11.2)
+  assert.equal(DRUM.length, 82);
+  assert.deepEqual(DRUM.slice(-2), '\uE006\uE007');
 });
 
 // Names from the places 0.8's sources cover, and what the flaps print for each (worked
@@ -53,7 +54,8 @@ test('the composer expands stand-ins of several letters', () => {
 });
 
 test('Z to B goes forward the long way round', () => {
-  // Z is flap 26, B is flap 2. Forward from 26 to 2 wraps: (2 - 26) mod 80 = 56 steps.
+  // Z is flap 26, B is flap 2. Forward from 26 to 2 wraps: (2 - 26) mod 80 = 56 steps. The amber
+  // halves (0.11.2) are only on the way to or from one, so this turn is 0.10's.
   const full = drumPath('Z', 'B');
   assert.equal(full.length, 56);
   assert.equal(full[0], 'Å');                 // flap 27, the one after Z
@@ -63,6 +65,9 @@ test('Z to B goes forward the long way round', () => {
 test('fast speed shows only the last 10 flaps before the target', () => {
   // Last 10 flaps ending at B (flap 2): flap 73 is the filled chip, 74..79 the six half flaps, then 0 1 2.
   assert.deepEqual(drumPath('Z', 'B', 10), ['f', '\uE000', '\uE001', '\uE002', '\uE003', '\uE004', '\uE005', ' ', 'A', 'B']);
+  // to an amber half the drum has them, after the 0.9 halves
+  assert.deepEqual(drumPath('A', '\uE007', 3), ['\uE005', '\uE006', '\uE007']);
+  assert.deepEqual(drumPath('\uE006', 'A', 3), ['\uE007', ' ', 'A']);
 });
 
 test('same flap to itself is a full turn (80)', () => {
