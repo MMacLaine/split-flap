@@ -3,6 +3,32 @@
 
 export const CHANGELOG = [
   {
+    v: '0.11.1', date: '2026-10-04',
+    tag: { en: 'Light and sky', sv: 'Ljus och himmel' },
+    desc: {
+      en: 'Looks can now have light round the frame and follow the sky outside. Five new looks use them: Backlit, Classic RGB, Signal, Outside and Sunday.',
+      sv: 'Utseenden kan nu ha ljus runt ramen och följa himlen ute. Fem nya utseenden använder det: Bakljus, Klassisk RGB, Signal, Ute och Söndag.'
+    },
+    items: {
+      en: [
+        '**Light round the frame.** It can glow, breathe, chase or flash when the board changes, in a colour you pick or the board\'s own: Signal goes red when a red chip is on the board, so a late train shows from across the room.',
+        '**Follow the sky.** Outside takes the time of day and the weather where the screen is, so the wall goes from night to dawn to day, and rain on the forecast is rain on the wall. Without a place it follows the sun alone, and the board\'s page says so.',
+        '**Classic RGB.** Classic as it is, with a ring of colour round it. The board itself is Classic to the pixel.',
+        '**Make your own** has Light and Sky rows now, with a few stops for speed, brightness and size instead of sliders.',
+        '**Smoothness.** A slow screen drops the moving wall first and the light last, and says so once. Showing has the setting for this screen, Automatic or a step of your own.',
+        'Templates start in the look made for them: the station board in Signal, the weather in Outside, the markets in Backlit and the café menu in Sunday.'
+      ],
+      sv: [
+        '**Ljus runt ramen.** Det kan lysa, andas, jaga eller blinka när tavlan ändras, i en färg du väljer eller tavlans egen: Signal blir röd när ett rött fält finns på tavlan, så ett sent tåg syns från andra sidan rummet.',
+        '**Följ himlen.** Ute tar tiden på dygnet och vädret där skärmen är, så väggen går från natt till gryning till dag, och regn i prognosen är regn på väggen. Utan en plats följer den bara solen, och tavlans sida säger det.',
+        '**Klassisk RGB.** Klassisk som den är, med en ring av färg runt. Själva tavlan är Klassisk pixel för pixel.',
+        '**Gör ditt eget** har raderna Ljus och Himmel nu, med några steg för hastighet, ljusstyrka och storlek i stället för reglage.',
+        '**Jämnhet.** En långsam skärm tar bort den rörliga väggen först och ljuset sist, och säger det en gång. Visas har inställningen för den här skärmen, Automatiskt eller ett eget steg.',
+        'Mallar börjar i utseendet gjort för dem: stationstavlan i Signal, vädret i Ute, marknaderna i Bakljus och kafémenyn i Söndag.'
+      ]
+    }
+  },
+  {
     v: '0.11.0', date: '2026-10-04',
     tag: { en: 'Looks', sv: 'Utseenden' },
     desc: {

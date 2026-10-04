@@ -357,6 +357,7 @@ export class Board {
     this._sizeKey = key;   // only once painted, so a failed paint is tried again at the same size
     // [E] the board's rectangle in CSS px of the canvas box (k corrects for a scaled ancestor)
     if (this.o.onLayout) { const k = this.cv.offsetWidth ? r.width / this.cv.offsetWidth : 1, s = dpr * k, T = THEMES[this.o.theme];
+      this.lastLayout = { x: this.bx / s, y: this.by / s, w: this.bw / s, h: this.bh / s, r: this.th * T.frameRadius / s, tile: this.th / s };
       this.o.onLayout({ x: this.bx / s, y: this.by / s, w: this.bw / s, h: this.bh / s, r: this.th * T.frameRadius / s, tile: this.th / s }); }
   }
   _layout() {
@@ -499,10 +500,16 @@ export class Board {
   // Frame budget: 45 long frames (over 34ms, so under ~30fps) in one run of animation
   // means the device cannot keep up at this density. Drop to 1x once; it stays there.
   _budget(now) {
-    if (this._last && this.o.maxDpr > 1 && (window.devicePixelRatio || 1) > 1) {
+    // 0.11.1: with an onSlow hook (the app's quality ladder) the budget counts at any density
+    // and hands each sustained shortfall to it, one rung at a time; without one, as 0.10
+    if (this._last && (this.o.onSlow || (this.o.maxDpr > 1 && (window.devicePixelRatio || 1) > 1))) {
       const dt = now - this._last;
       if (dt > 34 && dt < 250 && !document.hidden) this._slow++;   // over 250ms is a background tab, not a slow device
-      if (this._slow > 45) { this.o.maxDpr = 1; this._slow = 0; this._sizeKey = null; this.resize(); if (this.o.onDegrade) this.o.onDegrade(); }
+      if (this._slow > 45) {
+        this._slow = 0;
+        if (this.o.onSlow) this.o.onSlow();
+        else { this.o.maxDpr = 1; this._sizeKey = null; this.resize(); if (this.o.onDegrade) this.o.onDegrade(); }
+      }
     }
     this._last = now;
   }

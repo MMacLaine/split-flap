@@ -19,6 +19,7 @@ import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
 import { commitLook, barLine, lookLabel } from './lookSheet.js';
+import { Ambient } from './ambient.js';
 import { Account, loadState, loadMyState } from './account.js';
 import { loadConns, saveConns, sanitizeConnection } from './connections.js';
 import { parseRoute } from './route.js';
@@ -125,9 +126,13 @@ export class App {
     this.plate = h('div', { class: 'sf-plate', 'aria-hidden': 'true' });
     this.fadeCv = h('canvas', { class: 'sf-fade', 'aria-hidden': 'true' });
     this.wrap.prepend(this.wallEl, this.plate); this.wrap.append(this.fadeCv);
-    this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent, onLayout: r => this.placePlate(r),
+    this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent,
+      onLayout: r => { this.placePlate(r); if (this.ambient) this.ambient.placeRing(r); },
+      onSlow: () => { if (this.ambient) this.ambient.slow(); },   // the quality ladder (0.11.1)
       onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode()) sound.play(f, b.soundStyle, pan); }
     }));
+    this.ambient = new Ambient(this);   // the ring, the sky and the quality ladder (0.11.1)
+    if (this.board.lastLayout) this.ambient.placeRing(this.board.lastLayout);
     this.chromeTheme();
     this.bind();
     this.openLink().then(() => {
@@ -529,9 +534,22 @@ export class App {
   // A board's look with no pin and no preview, for its thumbnail and its swatch.
   lookOfBoard(x) { return lookFor(x, null, this.lookSetting(), null); }
   // The renderer's theme for a look: 0.10's own for Classic, Paper and Solari, else composed.
-  drawOf(l) { const d = drawFor(l); if (d.theme && !THEMES[d.id]) register(d.theme); return d; }
+  // The sky now for a look that follows it (0.11.1), else null.
+  skyOf(l) { return this.ambient ? this.ambient.skyFor(l) : null; }
+  // Composed themes are kept for the last few looks only: a look that follows the sky makes a
+  // new one as its letters' tint moves through the day (0.11.1).
+  drawOf(l, sk) {
+    const d = drawFor(l, sk === undefined ? this.skyOf(l) : sk);
+    if (d.theme && !THEMES[d.id]) {
+      register(d.theme); this.composed = (this.composed || []).filter(id => id !== d.id); this.composed.push(d.id);
+      while (this.composed.length > 24) { const gone = this.composed.shift(); if (gone !== this.board?.o.theme) delete THEMES[gone]; }
+    }
+    return d;
+  }
   themeOf(x) { return this.drawOf(this.lookOfBoard(x)).id; }
   themeNow() { return this.drawOf(this.lookNow()).id; }
+  // A look as it is chosen, apart from the sky's moment: a change of this crossfades.
+  lookKey() { const l = this.lookNow(); return l.id + (l.id === 'custom' ? JSON.stringify(l.parts) : ''); }
   accentNow() { return accentOf(this.lookNow()); }
   // A look's motion wins over the playlist's; a page's own transition wins over both.
   speedNow() { const m = motionOf(this.lookNow()); return (m && m.speed) || this.cur().speed; }
@@ -540,7 +558,7 @@ export class App {
   // room is painted on the canvas, so the wall layer is off. Quiet hours hold the fields still.
   paintWall() {
     const d = this.drawOf(this.lookNow()), w = d.wall, el = this.wallEl, on = !!(w && w.kind !== 'room' && !this.transparent);
-    const quiet = this.quietMode(), still = quiet || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const quiet = this.quietMode(), still = quiet || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (this.ambient && this.ambient.rung() >= 1);
     const key = [d.id, on, still].join('|'); if (key === this.wallKey) return; this.wallKey = key;
     el.classList.toggle('on', on); el.classList.toggle('still', !!still);
     if (on) { el.style.backgroundColor = w.base; el.classList.toggle('fields', w.kind === 'fields'); [w.a, w.b, w.c].forEach((c, i) => { el.firstChild.children[i].style.backgroundColor = c; }); }
@@ -587,6 +605,8 @@ export class App {
   refresh(quiet) {
     this.board.setOptions(this.boardOpts());
     sound.setVolume(this.cur().volume ?? sound.DEFAULT_VOLUME);
+    // a look that follows the sky asks for the weather where the board is, through the same fetch (0.11.1)
+    const sl = this.lookNow(); this.live.skyPlace = sl.parts && sl.parts.sky && sl.parts.sky.on && this.ambient ? this.ambient.place() : null;
     this.live.want(this.cur(), this.S.lang);
     this.tick(true);
     if (!quiet) this.render();
@@ -604,13 +624,18 @@ export class App {
     // a board arrives at its own size and theme (0.10.1), and with its own transition, so they
     // are set before the new grid
     const d = this.dims(), th = this.themeNow(), o = this.board.o;
-    if (!this.previewing && o.theme !== th && o.theme) this.crossfade();
+    // a new look crossfades, and so does the sky's smoke behind the letters stepping (0.11.1
+    // review 3.2); the tint's own small steps do not
+    const lk = this.lookKey() + ((/-sm\d+/.exec(th) || [''])[0]);
+    if (!this.previewing && o.theme !== th && o.theme && lk !== this.lastLookKey && this.lastLookKey) this.crossfade();   // a new look, not the sky moving on
+    this.lastLookKey = lk;
     if (!this.previewing && (o.rows !== d.rows || o.cols !== d.cols || o.theme !== th)) { this.board.setOptions({ rows: d.rows, cols: d.cols, theme: th }); this.loadFace(th); this.chromeTheme(); }
     if (!this.previewing && o.speed !== this.speedNow()) this.board.setOptions({ speed: this.speedNow() });
     this.paintWall();
     const g = this.grid();
     if (!this.previewing && this.board.o.transition !== this.transitionNow()) this.board.setOptions({ transition: this.transitionNow() });
     if (!this.previewing) this.board.setGrid(g);
+    if (this.ambient) { const gk = g.map(r => r.join('')).join('|'); if (gk !== this.lastGridKey) { const first = !this.lastGridKey; this.lastGridKey = gk; if (!first) this.ambient.gridChanged(g); else this.ambient.grid = g; } this.ambient.paint(); }
     this.paintHighlight();
     if (this.S.editing && !this.account.state.user) {   // editor time, for the sign-in prompt
       this.editMs = (this.editMs || 0) + Math.min(now - (this.lastEditTick || now), 1000); this.lastEditTick = now;

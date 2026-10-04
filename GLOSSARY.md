@@ -11,6 +11,9 @@ They came into the app with 0.7.0. In 0.10.0 "storyboard" became "playlist", and
 | Playlist | Spellista | Boards shown in turn: which boards, in what order, how long and when each shows, and the display settings. It points at boards in Boards. Called a storyboard from 0.7 to 0.9. | `app.playlists`, `sf_playlists`, the `playlist` table; resolved with its boards as `app.boards` |
 | Look | Utseende | How a board is made: its material, type, letters, motion and wall. A board has its own, or Default, which follows the account's default look. Never "theme" or "mood". | `look`, `lookParts` on a board; `src/looks.js` |
 | Default look | Standardutseende | The look new boards start as, and every board on Default shows, chosen in Account. | settings row `look` |
+| Light | Ljus | The light round a board's frame, in a look: Off, Glow, Breathe, Chase or Flash on change. | `parts.ring`, `RING` in `src/looks.js`, `.sf-ring` |
+| Sky | Himmel | A look following the time of day and the weather at the board's place. | `parts.sky`, `SKY`, `skyAt`, `src/ambient.js` |
+| Smoothness | Jämnhet | What a slow screen drops to keep the flaps smooth, Automatic or set per screen. | `QUALITY`, `sf_quality`, `sf_quality_auto` |
 | Pinned | Fäst | A look held on one screen, over every board it shows. | `sf_look_pin`, never synced |
 | Home | Hem | The city, stops and currency new tiles start from, under Account. | `settings` row `home`, `sf_settings` |
 | Showing | Visas | This screen: what it runs now, and the first tab of the editor. | `sb:showing`, `#/showing` |

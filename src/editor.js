@@ -36,7 +36,7 @@ import { weekView, hueOf, nextHue } from './week.js';
 import { getFlag, setFlag, sizeOf, dimsOfSize } from './store.js';
 import { HELP, INTRO } from './help.js';
 import { lookSheet, lookRow, lookLabel, ownLook, swatchEl, openLook, closeLook, ctxValue } from './lookSheet.js';
-import { defaultOf, motionOf, lookFor } from './looks.js';
+import { defaultOf, motionOf, lookFor, QUALITY } from './looks.js';
 import * as sound from './sound.js';
 
 const MAX_MY = 500, MAX_PL = 100;
@@ -346,6 +346,11 @@ export class Editor {
         h('span', { class: 'sf-hint' }, summary),
         // 0.11: this screen's look, a pin over every board, or each board's own
         lookRow(this, t.lk.look, app.pin() ? t.lk.pinnedRow(lookLabel(app, app.pin())) : t.lk.followsEach, app.pin() || { id: 'follow' }, onPage, { kind: 'screen' }, app.pin() ? t.lk.pinNote(lookLabel(app, app.pin())) : t.lk.unpinNote),
+        // 0.11.1: the quality ladder, per screen
+        h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.lk.qualityRow),
+          h('select', { class: 'sf-input', 'data-k': 'quality', onchange: e => app.ambient.setQuality(e.target.value) },
+            [h('option', { value: 'auto', selected: !getFlag('sf_quality') }, t.lk.qualityAuto), ...QUALITY.map(q => h('option', { value: q.id, selected: getFlag('sf_quality') === q.id }, t.lk.qualityNames[q.id]))]),
+          h('span', { class: 'sf-hint' }, t.lk.qualityHint)),
         h('div', { class: 'sf-row wrap' },
           h('button', { class: 'sf-btn', 'data-k': 'put-on', onclick: () => { if (this.phone()) app.toggleEdit(); app.openShare(false, b); } }, t.putOn),
           h('button', { class: 'sf-btn', 'data-k': 'screen-settings', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'display' }) }, t.settings))),
@@ -732,7 +737,8 @@ export class Editor {
         h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.rows), h('input', { type: 'number', class: 'sf-input num', min: 1, max: 24, value: own.rows, 'data-k': 'rows', onchange: e => set(o => { o.rows = Math.max(1, Math.min(24, +e.target.value || 6)); }) })),
         h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.cols), h('input', { type: 'number', class: 'sf-input num', min: 4, max: 60, value: own.cols, 'data-k': 'cols', onchange: e => set(o => { o.cols = Math.max(4, Math.min(60, +e.target.value || 22)); }) }))) : null,
       // 0.11: the board's look, with its swatch and Change (replaces the theme buttons)
-      lookRow(this, t.lk.look, lookLabel(app, ownLook(own)), ownLook(own), own, { kind: 'board', id: this.bp() ? this.bp().id : own.id }),
+      lookRow(this, t.lk.look, lookLabel(app, ownLook(own)), ownLook(own), own, { kind: 'board', id: this.bp() ? this.bp().id : own.id },
+        app.ambient && app.ambient.skyNote(app.lookOfBoard(own))),   // 0.11.1: what the sky follows, when it can't follow the weather
       cur === 'fill' ? h('span', { class: 'sf-hint', 'data-k': 'fill-note' }, app.fillSeen() ? t.fillSeen(d.rows, d.cols) : t.fillNote(d.rows, d.cols)) : null,
       h('span', { class: 'sf-hint' }, t.sizeOwn));
   }
