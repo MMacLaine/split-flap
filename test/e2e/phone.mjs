@@ -22,7 +22,7 @@ try {
   await go(URL0); await ev(`localStorage.setItem('sf_started','1'); localStorage.setItem('sf_cue_seen','1')`); await go(URL0);
 
   // 12 x 40: a clock fills the board
-  await ev(`(() => { const app = splitFlap; app.useTemplate('blank'); app.updPage(p => { p.layout = 'full'; p.zones = [{ ch: 'clock', o: { fmt: '24' } }]; }); })()`); await sleep(500);
+  await ev(`(() => { const app = splitFlap; app.editor.E.tplSizes = { blank: '12x40' }; app.useTemplate('blank'); app.updPage(p => { p.layout = 'full'; p.zones = [{ ch: 'clock', o: { fmt: '24' } }]; }); })()`); await sleep(500);
   check('a 12 x 40 board is 12 x 40', (await ev('JSON.stringify(splitFlap.dims())')) === JSON.stringify({ rows: 12, cols: 40 }), await ev('JSON.stringify(splitFlap.dims())'));
   check('a clock on it uses the board, big digits and the date', (await rowsUsed()) >= 11, String(await rowsUsed()));
   await ev(`splitFlap.updPage(p => { p.zones = [{ ch: 'worldtime', o: { places: [{ city: 'London', tz: 'Europe/London' }, { city: 'Tokyo', tz: 'Asia/Tokyo' }] } }]; })`); await sleep(300);

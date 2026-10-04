@@ -83,3 +83,25 @@ test('the 12-hour big clock says AM or PM, and 12 x 30 still gets big digits', (
   assert.ok(rows(grid('clock', { fmt: '12' })).some(r => /MONDAY 5 OCT +AM/.test(r)));
   assert.equal(used(grid('clock', { fmt: '24' }, {}, 12, 30)), 11);
 });
+
+// 0.10.3
+import { TEMPLATES, fromTemplate, fitOf } from '../src/templates.js';
+test('every template has a recommended size, and is made at it', () => {
+  for (const tp of TEMPLATES) {
+    assert.ok(tp.fit, tp.id);
+    const b = fromTemplate(tp.id, 'en'), want = tp.fit === 'fill' ? 'fill' : tp.fit;
+    assert.equal(b.size === 'custom' ? `${b.rows}x${b.cols}` : b.size, want, tp.id);
+  }
+  assert.equal(fitOf('station'), '10x32'); assert.equal(fitOf('weather'), '12x40'); assert.equal(fitOf('blank'), '6x22');
+  const picked = fromTemplate('weather', 'en', null, null, '6x22');
+  assert.deepEqual([picked.size, picked.rows, picked.cols], ['6x22', 6, 22]);   // a size picked in the preview wins
+});
+
+test('no board a template makes tells anyone to type or press on the wall', () => {
+  for (const lang of ['en', 'sv']) for (const tp of TEMPLATES) {
+    const b = fromTemplate(tp.id, lang, null, { city: 'London', lat: 51.5, lon: -0.1, cc: 'GB', tz: 'Europe/London' });
+    const text = JSON.stringify(b.pages.map(p => p.zones.map(z => z.o)));
+    assert.ok(!/TYPE HERE|SKRIV HÄR|PRESS|TRYCK|TAP |YOUR TICKER|DIN LÖPTEXT/i.test(text), `${tp.id} ${lang}`);
+  }
+  assert.equal(fromTemplate('blank', 'en').name, 'New playlist'); assert.equal(fromTemplate('blank', 'sv').name, 'Ny spellista');
+});
