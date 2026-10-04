@@ -133,3 +133,11 @@ test('a browser signed in before migrates with sync states in step', () => {
   assert.deepEqual(pl.boards, { b1: { rev: 1, dirty: false, owner: 'u' } }); assert.deepEqual(pl.offer, ['b2']);
   assert.deepEqual(lib.boards, { p1: { rev: 1, dirty: false, owner: 'u' } }); assert.deepEqual(lib.offer.sort(), ['q1', 'q2']);
 });
+
+test('the migration gives the same ids and content whatever order the storyboards come in', () => {
+  const sb = (id, pages) => sanitizeBoard({ id, name: id, size: '6x22', pages });
+  const a = sb('b2', [{ id: 'p1', name: 'C', layout: 'full', zones: [{ ch: 'clock', o: { fmt: '12' } }] }]), b = sb('b1', [{ id: 'p1', name: 'C', layout: 'full', zones: [{ ch: 'clock', o: {} }] }]);
+  const bp = [lb('m2', 'Two'), lb('m1', 'One')];
+  assert.deepEqual(migrateData([a, b], bp), migrateData([b, a], bp.slice().reverse()));
+  assert.equal(migrateData([a, b], []).playlists.find(p => p.id === 'b1').items[0].id, 'p1');   // the lowest storyboard id keeps the shared page id
+});

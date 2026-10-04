@@ -107,6 +107,8 @@ try {
   check('one status line at a time', (await ev(`document.querySelectorAll('.sf-drawer .sf-status-line').length`)) === 1, String(await ev(`document.querySelectorAll('.sf-drawer .sf-status-line').length`)));
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'showing' })`); await sleep(400);
   check('Showing names it a board', /^Board/.test(await ev(`document.querySelector('.sf-now-card .sf-meta').textContent`)), await ev(`document.querySelector('.sf-now-card .sf-meta').textContent`));
+  check('the board alone keeps the screen\'s settings', (await ev('JSON.stringify(splitFlap.shown().quiet)')) === (await ev(`JSON.stringify(splitFlap.boards.find(b => b.id === '${shown0}').quiet)`)));
+  check('and is not counted as a playlist against the limit', (await ev('splitFlap.plCount()')) === (await ev('splitFlap.playlists.filter(p => !p.solo).length')) && (await ev('splitFlap.plCount()')) < (await ev('splitFlap.playlists.length')));
   // Show another board in turn makes a playlist of two
   await ev(`document.querySelector('[data-k=add-in-turn]').click()`); await sleep(500);
   const second = await ev(`(() => { const b = [...document.querySelectorAll('[data-k^=add-blueprint-]')].find(x => !x.disabled); b.click(); return b.dataset.k.replace('add-blueprint-', ''); })()`); await sleep(400);
@@ -127,6 +129,11 @@ try {
   await go(URL0); await ev('splitFlap.toggleEdit()'); await sleep(400);
   await ev(`document.querySelector('[data-k=tab-my]').click()`); await sleep(400);
   check('after a reload with another playlist on, it is one press away in Boards', (await ev(`String(!!document.querySelector('[data-k="bp-${made}"]'))`)) === 'true');
+
+  // a board link opened in a browser you edit in never overwrites a board of yours (0.10.1 review)
+  await ev(`(async () => { const app = splitFlap, b = JSON.parse(JSON.stringify(app.boards.find(x => x.id === '${shown0}'))); b.pages[0].zones = [{ ch: 'message', o: { text: 'FROM A LINK' } }]; location.hash = 'b=' + await (await import('./src/store.js')).encodeBoard(b); })()`); await sleep(1200);
+  const mine = await ev(`splitFlap.blueprints.find(x => x.id === '${tapped}') ? 1 : 0`);
+  check('a link with other content under your board\'s id comes in as a copy', (await ev(`JSON.stringify(splitFlap.boards.find(x => x.id === '${shown0}').pages[0].zones[0].o.text || '')`)) === '"FROM A LINK"' && (await ev(`splitFlap.blueprints.some(x => x.page.zones[0] && x.page.zones[0].o.text === 'FROM A LINK' && x.id !== splitFlap.boards.find(b => b.id === '${shown0}').pages[1].id)`)) === true && /as copies/.test(await status()), await status());
 
   // a first visit that picks a template: the demo leaves no boards behind
   await go('about:blank'); await go(URL0); await ev('localStorage.clear()'); await go(URL0);

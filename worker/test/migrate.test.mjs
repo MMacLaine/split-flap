@@ -93,3 +93,22 @@ test('a browser that syncs with the account migrates to the same ids, in step at
   const again = migrateData(OLD.map(sanitizeBoard), []);
   assert.deepEqual(again, m);                                                     // the same input, the same answer, anywhere
 });
+
+test('the order rows arrive in never changes an id: a duplicated storyboard, shuffled three ways (0.10.1 review)', async () => {
+  // Morning duplicated to Office before 0.10.1, both with page p1, and Office's clock then set to 12 hours
+  const morning = sb('b_zz', 'Morning', '6x22', [pg('p1', 'Clock', [{ ch: 'clock', o: { fmt: '24' } }]), pg('p2', 'Hi', [{ ch: 'message', o: { text: 'HI' } }])]);
+  const office = sb('b_aa', 'Office', '6x22', [pg('p1', 'Clock', [{ ch: 'clock', o: { fmt: '12' } }]), pg('p2', 'Hi', [{ ch: 'message', o: { text: 'HI' } }])]);
+  const third = sb('b_mm', 'Hall', '6x22', [pg('p1', 'Clock', [{ ch: 'clock', o: { fmt: '24' } }])]);
+  const list = [morning, office, third].map(sanitizeBoard), orders = [list, [list[1], list[0], list[2]], [list[2], list[1], list[0]]];
+  const runs = orders.map(o => migrateData(o, []));
+  for (const r of runs.slice(1)) assert.deepEqual(r, runs[0]);
+  // the server, with its rows written in another order, agrees with a browser holding them in list order
+  const env = { DB: d1() };
+  for (const b of [office, third, morning]) env.DB.db.prepare('INSERT INTO board (user_id, id, rev, updated, deleted, json) VALUES (?, ?, 1, 0, 0, ?)').run('u1', b.id, JSON.stringify(b));
+  await migrate(env, 'u1');
+  const server = env.DB.db.prepare('SELECT id, json FROM playlist ORDER BY id').all().map(r => [r.id, JSON.parse(r.json).items.map(i => i.id)]);
+  const browser = migrateData(OLD.length ? [morning, office, third].map(sanitizeBoard) : [], []).playlists.slice().sort((a, b) => a.id < b.id ? -1 : 1).map(p => [p.id, p.items.map(i => i.id)]);
+  assert.deepEqual(server, browser);
+  const lib = Object.fromEntries(env.DB.db.prepare('SELECT id, json FROM blueprint').all().map(r => [r.id, JSON.parse(r.json)]));
+  for (const b of runs[0].library) assert.deepEqual(lib[b.id], b);   // the same content under each id
+});

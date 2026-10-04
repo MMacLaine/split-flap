@@ -12,7 +12,7 @@ import { nextPage, inQuiet } from './schedule.js';
 import { STR } from './strings.js';
 import { loadBoards, loadBlueprints, sanitizeBlueprint, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard, loadLibrary, loadPlaylists, saveLibrary, savePlaylists, loadShown, saveShown,
   loadSettings, saveSettings, sanitizeSettings, sanitizePlaylist, sizeOf, dimsOfSize } from './store.js';
-import { resolve, decompose, loadModel, usedIn, soloOf } from './library.js';
+import { resolve, decompose, loadModel, usedIn, soloOf, settingsOf, boardFromPage } from './library.js';
 import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
@@ -261,12 +261,15 @@ export class App {
   }
   // Show one board of your Boards on this screen: through the one-board playlist made for
   // it, made now if there is none.
+  // Playlists against the cap: the one-board playlists made to show a board are not counted (0.10.1 review).
+  plCount() { return this.playlists.filter(p => !p.solo).length; }
   showBoard(id, o = {}) {
     const t = this.t, lb = this.blueprints.find(x => x.id === id); if (!lb) return;
     let i = this.boards.findIndex(b => b.solo && b.pages.length === 1 && b.pages[0].id === id);
     if (i < 0) {
-      if (this.playlists.length >= MAX_PL) { this.say(t.sbFull, { fail: true }); return; }
-      const pl = sanitizePlaylist(Object.assign({ name: lb.name, solo: true, items: [{ id, dur: lb.page.dur || 10, wins: [] }] }, this.newPlace() ? { loc: this.newPlace() } : {}));
+      // a one-board playlist keeps this screen's settings: its quiet hours, sound and transition (0.10.1 review)
+      const pl = sanitizePlaylist(Object.assign({}, settingsOf(this.shown()), { name: lb.name, solo: true, items: [{ id, dur: lb.page.dur || 10, wins: [] }] }, this.shown().loc || !this.newPlace() ? {} : { loc: this.newPlace() }));
+      delete pl.from;
       pl.id = newId('b'); this.playlists.push(pl); this.resolveAll(); i = this.boards.length - 1;
     }
     const prev = this.active;
@@ -641,11 +644,18 @@ export class App {
     // opening it again replaces the same ones.
     const i = this.boards.findIndex(x => x.id === b.id);
     if (b.pages.length === 1 && (b.pages[0].name || '') === b.name) b.solo = true;
+    // the copy rule (0.10.1 review): in a browser you edit in, a board of yours with the link's id
+    // but other content is kept, and the link's comes in as a copy. A wall replaces, to follow the link.
+    let copied = false;
+    if (!this.kioskStrict) {
+      const lib = this.libMap();
+      b.pages.forEach(p => { const own = lib.get(p.id); if (own && JSON.stringify(boardFromPage(p, b, p.id, own)) !== JSON.stringify(own)) { p.id = newId('p'); copied = true; } });
+    }
     if (i >= 0) this.boards[i] = b; else this.boards.push(b);
     this.active = i >= 0 ? i : this.boards.length - 1;
     this.S.pageIdx = 0; this.S.pageStart = Date.now(); this.S.sel = 0;
     this.save();
-    if (!this.kioskStrict) this.flash(this.t.imported);
+    if (!this.kioskStrict) this.flash(copied ? this.t.importedCopy : this.t.imported);
   }
   openLog() {
     history.replaceState(null, '', location.pathname + location.search);
@@ -994,6 +1004,7 @@ export class App {
   // editor lands on its board (one board) or its boards (several). Never the week view.
   useTemplate(id) {
     if (!TEMPLATES.some(x => x.id === id)) return;
+    if (this.plCount() >= MAX_PL && !(this.startPending() && this.freshId === this.shown().id)) { this.say(this.t.sbFull, { fail: true }); return; }
     const t = this.t, nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace()), prev = this.active;
     const replace = this.startPending() && this.freshId === this.shown().id;
     if (replace) {
@@ -1016,7 +1027,7 @@ export class App {
   // A copy of a playlist points at the same boards (0.10.1): it is the order and the times
   // that are copied. Duplicate a board for a board of its own.
   duplicateBoard(i) {
-    if (this.playlists.length >= MAX_PL) { this.say(this.t.sbFull, { fail: true }); return; }
+    if (this.plCount() >= MAX_PL) { this.say(this.t.sbFull, { fail: true }); return; }
     const nb = clone(this.boards[i]); nb.id = newId('b'); nb.name = this.boards[i].name + this.t.copySuffix; delete nb.from; delete nb.solo;
     this.boards.push(nb);
     if (this.S.editing) this.look = this.boards.length - 1; else this.active = this.boards.length - 1;   // the editor looks at the copy; the screen keeps running
