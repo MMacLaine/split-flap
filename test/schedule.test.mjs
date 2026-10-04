@@ -202,3 +202,24 @@ test('a time made by newWin is open on the wall exactly when the strip draws it'
   assert.equal(inWindow(w, new Date(2026, 9, 7, 11, 30).getTime()), false);
   assert.equal(inWindow(w, new Date(2026, 9, 8, 10, 0).getTime()), false);
 });
+
+test('movedWin: an overnight or all-day time keeps its shape when its end moves (0.11.4 review)', async () => {
+  const { movedWin } = await import('../src/schedule.js');
+  const n = { from: '22:00', to: '02:00', days: [5] };
+  assert.deepEqual(movedWin(n, 'end', 30), { from: '22:00', to: '02:30', days: [5] });
+  assert.deepEqual(movedWin(n, 'end', -30), { from: '22:00', to: '01:30', days: [5] });
+  assert.deepEqual(movedWin({ from: '00:00', to: '00:00', days: [] }, 'end', -30), { from: '00:00', to: '23:30', days: [] });
+  assert.deepEqual(movedWin(n, 'end', -600), { from: '22:00', to: '22:15', days: [5] });   // never before the start
+});
+
+test('movedWin on a whole day is 1440 long, and blocksFor draws nothing on the next day for a time to midnight (0.11.4 review)', async () => {
+  const { movedWin, newWin, blocksFor } = await import('../src/schedule.js');
+  const all = { from: '00:00', to: '00:00', days: [] };
+  assert.deepEqual(movedWin(all, 'start', 60), { from: '01:00', to: '00:00', days: [] });
+  assert.deepEqual(movedWin(all, 'end', -60), { from: '00:00', to: '23:00', days: [] });
+  assert.deepEqual(movedWin({ from: '09:00', to: '09:00', days: [2] }, 'end', 30), { from: '09:00', to: '09:00', days: [2] });   // a whole day can't grow past a day
+  assert.deepEqual(movedWin(all, 'start', -60), all);
+  const day = new Date(2026, 9, 7), w = newWin(day, 1380, 1440);
+  assert.deepEqual(blocksFor([{ wins: [w] }], day).map(b => [b.s, b.e]), [[1380, 1440]]);
+  assert.deepEqual(blocksFor([{ wins: [w] }], new Date(2026, 9, 8)), []);   // no phantom at 00:00
+});

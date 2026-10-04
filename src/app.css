@@ -522,9 +522,10 @@ html[data-chrome="light"], html[data-chrome="light"] body { background: #F4F0E7;
 .sf-strip-days .today { color: var(--accent); }
 .sf-strip-grid { grid-template-columns: 26px repeat(7, minmax(0,1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .sf-strip-grid.one { grid-template-columns: 26px minmax(0,1fr); }
-/* the strip's days take no scrolling, so a finger draws a time instead of fighting the page */
-.sf-day-col.strip { touch-action: none; background-size: 100% calc(100% / 4); }
+/* a finger swipes the page over the strip's days; a hold draws (week.js), and its own blocks take the finger */
+.sf-day-col.strip { touch-action: pan-y; background-size: 100% calc(100% / 4); }
 .sf-block.faint { opacity: 0.32; pointer-events: none; border-style: dashed; }
+html[data-chrome="light"] .sf-block.faint { opacity: 0.6; border-color: oklch(0.45 0.12 var(--hue)); }   /* 0.11.4 review: the light surface needs more */
 .sf-block.mine { padding: 0 3px; font-size: 9px; touch-action: none; cursor: grab; }
 .sf-block.mine span { font-size: 9px; }
 .sf-strip .sf-pop { position: relative; margin-top: 6px; }
