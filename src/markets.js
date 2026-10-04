@@ -109,9 +109,9 @@ export function lineChart(series, h, w, { thick = false, ref = false } = {}) {
 
 // ---------- the Markets zone ----------
 const WORDS = {
-  en: { open: 'OPEN', closed: 'CLOSED', to: 'TO', opens: 'OPENS', always: 'OPEN 24/7', sample: 'SAMPLE', loading: 'LOADING', nodata: 'NO DATA YET', pick: 'PICK A SYMBOL', via: 'VIA',
+  en: { open: 'OPEN', closed: 'CLOSED', to: 'TO', opens: 'OPENS', always: 'OPEN 24/7', sample: 'SAMPLE', loading: 'LOADING', nodata: 'NO DATA YET', pick: '-', via: 'VIA',
     periods: { '1d': '1 DAY', '1w': '1 WEEK', '1m': '1 MONTH', '3m': '3 MONTHS', '1y': '1 YEAR' }, days: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'], needsKey: 'NEEDS YOUR KEY', close: 'CLOSE', later: ['UPDATES TOMORROW', 'TOMORROW'] },
-  sv: { open: 'ÖPPET', closed: 'STÄNGT', to: 'TILL', opens: 'ÖPPNAR', always: 'ÖPPET JÄMT', sample: 'EXEMPEL', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', pick: 'VÄLJ EN SYMBOL', via: 'VIA',
+  sv: { open: 'ÖPPET', closed: 'STÄNGT', to: 'TILL', opens: 'ÖPPNAR', always: 'ÖPPET JÄMT', sample: 'EXEMPEL', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', pick: '-', via: 'VIA',
     periods: { '1d': '1 DAG', '1w': '1 VECKA', '1m': '1 MÅNAD', '3m': '3 MÅNADER', '1y': '1 ÅR' }, days: ['SÖN', 'MÅN', 'TIS', 'ONS', 'TOR', 'FRE', 'LÖR'], needsKey: 'BEHÖVER DIN NYCKEL', close: 'STÄNGNING', later: ['UPPDATERAS I MORGON', 'I MORGON'] }
 };
 export const PERIOD_DAYS = { '1d': 1, '1w': 7, '1m': 31, '3m': 92, '1y': 366 };

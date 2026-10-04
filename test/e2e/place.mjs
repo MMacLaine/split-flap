@@ -43,7 +43,7 @@ try {
   check('the nearest stops come back through the Worker', nearOk, await ev(`JSON.stringify(Object.values(splitFlap.live.data.near).map(n => (n.stops || []).slice(0, 2).map(s => s.name)))`));
   const depOk = await waitFor(`Object.values(splitFlap.live.data.tr).some(e => e.deps && e.deps.length)`, 30000);
   const board = await composed(`app.cur().pages.find(p => p.zones.some(z => z.ch === 'departures'))`);
-  check('and the departures board prints a London stop with times', depOk && /MIN|NOW/.test(board) && !/PICK A STOP|LOADING/.test(board), board.replace(/\s{2,}/g, ' '));
+  check('and the departures board prints a London stop with times', depOk && /MIN|NOW/.test(board) && !/LOADING/.test(board) && !/DEPARTURES +- /.test(board), board.replace(/\s{2,}/g, ' '));
 
   // a template for the place: the café prices in pounds, the station board uses the station look
   await ev(`splitFlap.useTemplate('cafe')`); await sleep(500);

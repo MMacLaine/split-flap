@@ -101,7 +101,23 @@ test('no board a template makes tells anyone to type or press on the wall', () =
   for (const lang of ['en', 'sv']) for (const tp of TEMPLATES) {
     const b = fromTemplate(tp.id, lang, null, { city: 'London', lat: 51.5, lon: -0.1, cc: 'GB', tz: 'Europe/London' });
     const text = JSON.stringify(b.pages.map(p => p.zones.map(z => z.o)));
-    assert.ok(!/TYPE HERE|SKRIV HÄR|PRESS|TRYCK|TAP |YOUR TICKER|DIN LÖPTEXT/i.test(text), `${tp.id} ${lang}`);
+    assert.ok(!/TYPE|SKRIV HÄR|PRESS|TRYCK|TAP |YOUR TICKER|DIN LÖPTEXT|PICK|VÄLJ|\bADD\b|LÄGG TILL|CHOOSE|SET UP/i.test(text), `${tp.id} ${lang}`);
   }
   assert.equal(fromTemplate('blank', 'en').name, 'New playlist'); assert.equal(fromTemplate('blank', 'sv').name, 'Ny spellista');
+});
+
+// 0.10.3: a tile with nothing set prints its name and a dash, in both languages; what to do is
+// said in the editor
+import { unsetOf } from '../src/content.js';
+test('no unset tile tells anyone to pick, add, choose, set up, type or press on the wall', () => {
+  const BAD = /TYPE|PRESS|TAP |PICK|\bADD\b|CHOOSE|SET UP|SIGN IN|VÄLJ|LÄGG TILL|SKRIV|TRYCK|LOGGA IN/;
+  const tiles = ['weather', 'rotating', 'url', 'sl', 'headlines', 'worldtime', 'departures', 'markets', 'rates', 'message', 'clock', 'today', 'currency', 'quote', 'menu', 'countdown'];
+  for (const lang of ['en', 'sv']) for (const ch of tiles) for (const [R, C] of [[6, 22], [12, 40], [3, 15]]) {
+    const g = compose({ layout: 'full', zones: [{ ch, o: {} }] }, R, C, Date.UTC(2026, 9, 5, 8), lang, {}).map(r => r.join('')).join('|');
+    assert.ok(!BAD.test(g), `${ch} ${lang} ${R}x${C}: ${g.replace(/\s+/g, ' ')}`);
+  }
+  for (const ch of ['weather', 'rotating', 'url', 'sl', 'headlines', 'worldtime', 'departures', 'markets', 'rates']) assert.ok(unsetOf({ ch, o: {} }, {}), ch);
+  assert.equal(unsetOf({ ch: 'weather', o: { lat: 1, lon: 2 } }, {}), null);
+  const sl = compose({ layout: 'full', zones: [{ ch: 'weather', o: {} }] }, 6, 22, 0, 'en', {}).map(r => r.join('').trim()).filter(Boolean);
+  assert.deepEqual(sl, ['WEATHER', '-']);
 });
