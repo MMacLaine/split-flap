@@ -6,7 +6,7 @@
 import { Board, THEMES, fillGrid, renderStatic, staticGeom, register, resetStatic } from './renderer.js';
 import { lookFor, drawFor, accentOf, isLight, motionOf, lookOf, legacyOf, defaultOf, LOOKS, sanitizeParts, smokeStep, partsOf } from './looks.js';
 import { isChip, isDim } from './charset.js';
-import { compose, FALLBACK_PAGE, newId, blank } from './content.js';
+import { compose, FALLBACK_PAGE, newId, blank, sheetGrid } from './content.js';
 import { TEMPLATES, fromTemplate } from './templates.js';
 import { RAINBOW } from './pixels.js';
 import { nextPage, inQuiet } from './schedule.js';
@@ -638,7 +638,10 @@ export class App {
   grid() {
     const d = this.dims();
     if (this.quietMode() === 'blank') return blank(d.rows, d.cols);
-    return compose(this.currentPage(), d.rows, d.cols, Date.now(), this.S.lang, this.live.data);
+    const g = compose(this.currentPage(), d.rows, d.cols, Date.now(), this.S.lang, this.live.data);
+    // an empty board under the open look sheet shows the specimen, so a change of type or ink shows (0.11.3)
+    const sh = this.S.editing && this.editor.E.sheet;
+    return sh && sh.kind === 'look' ? sheetGrid(g, d.rows, d.cols, this.S.lang) : g;
   }
 
   // Board settings or content changed: re-apply to the renderer, the fetcher and (unless

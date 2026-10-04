@@ -437,7 +437,7 @@ export class Editor {
   }
   addPage() {
     const t = this.t, b = this.app.cur(), n = b.pages.length, id = newId('p');
-    this.app.upd(bb => { bb.pages.push({ id, name: `${t.page} ${n + 1}`, layout: 'full', dur: 10, wins: [], hue: nextHue(bb), zones: [{ ch: 'message', o: {} }] }); }, true);
+    this.app.upd(bb => { bb.pages.push({ id, name: `${t.page} ${n + 1}`, layout: 'full', dur: 10, wins: [], hue: nextHue(bb), zones: [{ ch: 'message', o: { lines: ['', this.lang === 'sv' ? 'HEJ' : 'HELLO'] } }] }); }, true);   // HELLO, never blank (0.10.3, 0.11.3)
     this.go({ sec: 'sb', lv: 'board', sb: b.id, bd: id, from: this.E.lv === 'sb' ? this.E.view : 'boards' }, { zone: { zone: 0, zoneOpen: true, picking: true, fresh: true } });
   }
   // Copy a board into another storyboard: what it shows, not its times.
@@ -519,7 +519,7 @@ export class Editor {
   newLibBoard() {
     const app = this.app; if (app.blueprints.length >= MAX_MY) { app.say(this.t.myFull, { fail: true }); return; }
     const d = app.dimsOf(app.shown().pages[0] && app.shown().pages[0].size ? app.shown().pages[0] : app.shown()), id = newId('p');
-    const bp = { id, name: this.t.newBoard, size: sizeOf(app.shown().pages[0] || app.shown()), rows: d.rows, cols: d.cols, theme: 'black', look: 'default', page: { id, name: this.t.newBoard, layout: 'full', dur: 10, zones: [{ ch: 'message', o: {} }] } };
+    const bp = { id, name: this.t.newBoard, size: sizeOf(app.shown().pages[0] || app.shown()), rows: d.rows, cols: d.cols, theme: 'black', look: 'default', page: { id, name: this.t.newBoard, layout: 'full', dur: 10, zones: [{ ch: 'message', o: { lines: ['', this.lang === 'sv' ? 'HEJ' : 'HELLO'] } }] } };
     app.blueprints.unshift(bp); app.saveMy();
     this.go({ sec: 'my', lv: 'bp', bp: id }, { zone: { zone: 0, zoneOpen: true, picking: true, fresh: true } });
   }
@@ -892,6 +892,7 @@ export class Editor {
     if (tile.id === 'message') {
       if (this.isTicker()) o.text = this.lang === 'sv' ? 'HA EN BRA DAG' : 'HAVE A GOOD DAY';   // real words on the wall, never an instruction (0.10.3)
       else if (preview) o.lines = zd.h >= 3 ? ['', this.lang === 'sv' ? 'HEJ' : 'HELLO', 'roygbv'] : [this.lang === 'sv' ? 'HEJ' : 'HELLO'];
+      else o.lines = zd.h >= 2 ? ['', this.lang === 'sv' ? 'HEJ' : 'HELLO'] : [this.lang === 'sv' ? 'HEJ' : 'HELLO'];   // a picked Message starts with HELLO and the hint, never blank (0.11.3)
     }
     // defaults in the page's language (0.7.3: the Swedish page started these in English)
     if (this.lang === 'sv' && tile.id === 'rotating') o.messages = ['GOD MORGON', 'KAFFET ÄR KLART', 'LUNCH KL 12'];

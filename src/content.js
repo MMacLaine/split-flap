@@ -893,6 +893,23 @@ export function demoPages(lang) {
 
 export function newId(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
+// A specimen for the look sheet on an empty board (0.11.3): a word, the Nordic letters, digits,
+// a time and a row of chips, centred, so the type, the letter colour, the glow and the chips all
+// show. Only ever drawn inside the sheet, never saved.
+export const isBlankGrid = g => g.every(r => r.every(c => c === ' ' || c === ''));
+export function specimen(R, C, lang) {
+  const g = blank(R, C), lines = [lang === 'sv' ? 'HEJ' : 'HELLO', 'ÅÄÖ ABC 123', '12:34 18°', 'roygbv'].slice(0, Math.max(1, R));
+  const top = Math.max(0, Math.floor((R - lines.length) / 2));
+  lines.forEach((l, i) => {
+    const cells = l === 'roygbv' ? [...l] : textToCells(l.length > C ? l.split(' ')[0] : l);
+    const row = cells.slice(0, C), c0 = Math.max(0, Math.floor((C - row.length) / 2));
+    row.forEach((ch, j) => { g[top + i][c0 + j] = ch; });
+  });
+  return g;
+}
+// What the look sheet draws for a board: the board, or the specimen when it is all blank.
+export const sheetGrid = (g, R, C, lang) => isBlankGrid(g) ? specimen(R, C, lang) : g;
+
 export function defaultBoard(name, lang) {
   return {
     id: newId('b'), name: name || 'Demo',

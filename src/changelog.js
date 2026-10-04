@@ -13,11 +13,13 @@ export const CHANGELOG = [
       en: [
         '**A sound for each material.** Glass ticks high and short, smoke the same but lower, and paper taps softly. Flap and Solari clack as before. If you chose a sound for the playlist yourself, that one wins.',
         '**The old copies go.** Boards from before 0.10.1 were also kept in their old form, so the move could be undone. They are cleared out now, after a wait that the privacy page describes.',
+        '**Looks on an empty board.** The look sheet shows HELLO, the Nordic letters, a time and a row of colours on a board with nothing on it yet, so a change of type or letter colour shows. A new board starts with HELLO now, never blank.',
         'Help covers the light, the sky, Listen and the Music meter.'
       ],
       sv: [
         '**Ett ljud för varje material.** Glas tickar högt och kort, rök likadant men lägre, och papper knackar mjukt. Flapp och Solari klapprar som förut. Har du själv valt ett ljud för spellistan är det det som gäller.',
         '**De gamla kopiorna försvinner.** Tavlor från före 0.10.1 sparades också i sin gamla form, så att flytten kunde göras ogjord. Nu rensas de bort, efter en väntan som integritetssidan beskriver.',
+        '**Utseenden på en tom tavla.** Utseendepanelen visar HEJ, de nordiska bokstäverna, ett klockslag och en rad färger på en tavla som inte har något på sig än, så att ett byte av typsnitt eller bokstavsfärg syns. En ny tavla börjar med HEJ nu, aldrig tom.',
         'Hjälpen tar upp ljuset, himlen, Lyssna och Musikmätaren.'
       ]
     }

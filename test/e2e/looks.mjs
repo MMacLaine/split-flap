@@ -165,6 +165,26 @@ try {
 
   // the renderer: fillGrid as 0.10, a regrid still flips, roll still runs
   await go('about:blank'); await go(URL0); await sleep(300);
+  // 0.11.3: an empty board under the look sheet shows a specimen, never saved, gone on Cancel
+  await ev(`localStorage.setItem('sf_started','1'); localStorage.setItem('sf_cue_seen','1')`);
+  await ev(`splitFlap.upd(x => { x.pages[0].layout = 'full'; x.pages[0].zones = [{ ch: 'message', o: {} }]; })`); await sleep(300);
+  const ep = await ev('splitFlap.shown().id'), eb = await ev('splitFlap.shown().pages[0].id');
+  const snap = () => ev(`splitFlap.board.snapshot().map(r => r.join('')).join('|')`);
+  await ev('splitFlap.toggleEdit()'); await sleep(300);
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: '${ep}', bd: '${eb}' })`); await sleep(1500);
+  const blankBefore = !(await snap()).replace(/[|\s]/g, '');
+  await click('lk-change-board'); await sleep(2500);
+  const specs = await ev(`[...splitFlap.editor.specs].filter(([k]) => k.startsWith('lk-')).map(([k, sp]) => sp.fn().map(r => r.join('')).join('|'))`);
+  check('an empty board: every card shows the specimen', blankBefore && specs.length >= 8 && specs.every(g => g.includes('HELLO') && g.includes('ÅÄÖ') && /[roygbv]{6}/.test(g)), `${blankBefore} ${specs.length}`);
+  check('and so does the board behind the sheet', /HELLO/.test(await snap()) && /12:34/.test(await snap()), await snap());
+  await click('sheet-close'); await sleep(2500);
+  check('Cancel: the board is blank again, and nothing was saved', !(await snap()).replace(/[|\s]/g, '') && (await ev(`JSON.stringify(splitFlap.shown().pages[0].zones[0].o)`)) === '{}', await snap());
+  await ev('splitFlap.toggleEdit()'); await sleep(300);
+  // 0.11.3: a board added to a playlist starts with HELLO, never blank
+  await ev('splitFlap.toggleEdit()'); await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${ep}', view: 'boards' })`); await sleep(300);
+  await ev('splitFlap.editor.addPage()'); await sleep(300);
+  check('a new board in a playlist starts with HELLO', (await ev(`JSON.stringify(splitFlap.shown().pages.at(-1).zones[0].o.lines)`)) === '["","HELLO"]');
+  await ev('splitFlap.toggleEdit()'); await sleep(300);
   check('fillGrid is unchanged: a 1920 x 1080 wall is 8 rows', (await ev(`(async () => (await import('./src/renderer.js')).fillGrid(1920, 1080).rows)()`)) === 8);
   await ev(`(() => { const b = splitFlap.board; clearInterval(splitFlap.iv); splitFlap.tick = () => {}; b.setGrid([[..."HELLO"]], { instant: true }); b.target = [[..."WORLD"]]; b.setOptions({ rows: 3, cols: 15 }); })()`); await sleep(50);
   check('a regrid flips to the new size, never cuts', (await ev('String(splitFlap.board.isIdle())')) === 'false');
