@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.11.3', date: '2026-10-04',
+    tag: { en: 'Finishing', sv: 'Det sista' },
+    desc: {
+      en: 'The last of 0.11: glass, smoke and paper sound like what they are, and old copies of boards are cleared out.',
+      sv: 'Det sista i 0.11: glas, rök och papper låter som det de är, och gamla kopior av tavlor rensas bort.'
+    },
+    items: {
+      en: [
+        '**A sound for each material.** Glass ticks high and short, smoke the same but lower, and paper taps softly. Flap and Solari clack as before. If you chose a sound for the playlist yourself, that one wins.',
+        '**The old copies go.** Boards from before 0.10.1 were also kept in their old form, so the move could be undone. They are cleared out now, after a wait that the privacy page describes.',
+        'Help and the glossary cover the light, the sky, Listen and the Music meter.'
+      ],
+      sv: [
+        '**Ett ljud för varje material.** Glas tickar högt och kort, rök likadant men lägre, och papper knackar mjukt. Flapp och Solari klapprar som förut. Har du själv valt ett ljud för spellistan är det det som gäller.',
+        '**De gamla kopiorna försvinner.** Tavlor från före 0.10.1 sparades också i sin gamla form, så att flytten kunde göras ogjord. Nu rensas de bort, efter en väntan som integritetssidan beskriver.',
+        'Hjälpen och ordlistan tar upp ljuset, himlen, Lyssna och Musikmätaren.'
+      ]
+    }
+  },
+  {
     v: '0.11.2', date: '2026-10-04',
     tag: { en: 'Music', sv: 'Musik' },
     desc: {

@@ -307,6 +307,18 @@ export function saveBoards(boards, active) {
   const s = ls(); if (!s) return;
   try { s.setItem(K.boards, JSON.stringify(boards)); s.setItem(K.active, String(active)); } catch { /* storage full or blocked: the board still runs */ }
 }
+// 0.11.3: the keys of before 0.10.1 go two weeks after this version first loads here. The
+// first 0.11.3 load stamps sf_moved_at; a load 14 days or more after it removes them. Only
+// once the playlists exist, so a browser that has not moved yet keeps its only copy.
+export const OLD_KEYS = [K.boards, K.active, K.my];
+export function purgeOld(now = Date.now(), s = ls()) {
+  if (!s || !s.getItem(K.playlists) || !OLD_KEYS.some(k => s.getItem(k) != null)) return false;
+  const at = +s.getItem('sf_moved_at');
+  if (!at) { try { s.setItem('sf_moved_at', String(now)); } catch { /* storage blocked */ } return false; }
+  if (now - at < 14 * 864e5) return false;
+  for (const k of OLD_KEYS) s.removeItem(k);
+  return true;
+}
 export function saveActiveOnly(active) { try { ls().setItem(K.active, String(active)); } catch { /* storage blocked */ } }
 
 // --- 0.10.1: the library, the playlists, what this screen shows, and the settings ---

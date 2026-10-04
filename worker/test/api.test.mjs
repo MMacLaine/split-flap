@@ -6,6 +6,9 @@ import assert from 'node:assert/strict';
 
 const BASE = process.env.API || 'http://localhost:8787', API = BASE + '/split-flap/api', ORIGIN = new URL(BASE).origin;
 const run = Math.random().toString(36).slice(2, 8);
+// a connection row as D1 holds it, through the DEV_TEST route (0.11.3: no wrangler d1 execute
+// against the database the dev server has open)
+const row = async (q, id) => JSON.stringify((await (await fetch(API + '/dev/row', { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ q, id }) })).json()).row);
 
 async function session(email) {
   const r = await fetch(API + '/dev/session', { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json' }, body: JSON.stringify({ email, name: 'Ada Lovelace' }) });
@@ -115,7 +118,6 @@ test('export includes live blueprints, and deleting the account removes them', a
 
 // Connections (0.9.2): sealed at rest, opened for their owner only, never in an export.
 test('connections: stored sealed, read back by their owner, invisible to another account', async () => {
-  const { execFileSync } = await import('node:child_process');
   const email = `cn-${run}@example.com`, a = await session(email), other = await session(`cx-${run}@example.com`);
   const conn = { id: 'c' + run + 'k', kind: 'av', name: 'My key', value: 'SECRETKEY' + run.toUpperCase().replace(/[^A-Z0-9]/g, 'X'), updated: 1 };
   let r = await call(a, 'PUT', '/connections/' + conn.id, { board: conn, baseRev: 0 });
@@ -123,7 +125,7 @@ test('connections: stored sealed, read back by their owner, invisible to another
   r = await call(a, 'GET', '/connections');
   assert.equal(r.body.connections.find(x => x.id === conn.id).board.value, conn.value);
   // in D1 the value is ciphertext, never the key itself
-  const raw = execFileSync('npx', ['wrangler', 'd1', 'execute', 'split-flap', '--local', '--env', 'dev', '--json', '--command', `SELECT json FROM connection WHERE id = '${conn.id}'`], { cwd: new URL('..', import.meta.url).pathname, stdio: 'pipe' }).toString();
+  const raw = await row('json', conn.id);
   assert.ok(raw.includes('v1:') && !raw.includes(conn.value), 'sealed at rest');
   r = await call(other, 'GET', '/connections');
   assert.ok(!r.body.connections.some(x => x.id === conn.id));
@@ -136,7 +138,7 @@ test('connections: stored sealed, read back by their owner, invisible to another
   assert.ok(!JSON.stringify(r.body).includes(conn.value));
   // deleting the account removes them
   await call(a, 'DELETE', '/account', {});
-  const left = execFileSync('npx', ['wrangler', 'd1', 'execute', 'split-flap', '--local', '--env', 'dev', '--json', '--command', `SELECT COUNT(*) AS n FROM connection WHERE id = '${conn.id}'`], { cwd: new URL('..', import.meta.url).pathname, stdio: 'pipe' }).toString();
+  const left = await row('count', conn.id);
   assert.match(left, /"n":\s*0/);
 });
 
@@ -149,8 +151,6 @@ test('rates route: only the Bank of England and the Riksbank, and every data ans
 });
 
 test('feeds: an address no account has added is not fetched; adding one sets its lookup, deleting clears it', async () => {
-  const { execFileSync } = await import('node:child_process');
-  const q = sql => execFileSync('npx', ['wrangler', 'd1', 'execute', 'split-flap', '--local', '--env', 'dev', '--json', '--command', sql], { cwd: new URL('..', import.meta.url).pathname, stdio: 'pipe' }).toString();
   const addr = `https://feeds-${run}.example/rss.xml`;
   let r = await fetch(API + '/data/feed?u=' + encodeURIComponent(addr));
   assert.equal(r.status, 404);                                                 // nobody has added it
@@ -159,13 +159,13 @@ test('feeds: an address no account has added is not fetched; adding one sets its
   const a = await session(`fd-${run}@example.com`), id = 'cf' + run;
   r = await call(a, 'PUT', '/connections/' + id, { board: { id, kind: 'feed', name: 'Test feed', value: addr }, baseRev: 0 });
   assert.equal(r.status, 200);
-  assert.match(q(`SELECT lookup FROM connection WHERE id = '${id}'`), /"lookup":\s*"[0-9a-f]{64}"/);
-  assert.ok(!q(`SELECT lookup, json FROM connection WHERE id = '${id}'`).includes(addr));   // neither the lookup nor the row holds the address in plain text
+  assert.match(await row('lookup', id), /"lookup":\s*"[0-9a-f]{64}"/);
+  assert.ok(!(await row('lookup', id)).includes(addr));   // neither the lookup nor the row holds the address in plain text
   r = await call(a, 'PUT', '/connections/cx' + run, { board: { id: 'cx' + run, kind: 'feed', name: 'x', value: 'https://localhost/feed' }, baseRev: 0 });
   assert.equal(r.status, 400);
   r = await call(a, 'DELETE', '/connections/' + id, { baseRev: 1 });
   assert.equal(r.status, 200);
-  assert.match(q(`SELECT lookup FROM connection WHERE id = '${id}'`), /"lookup":\s*null/);
+  assert.match(await row('lookup', id), /"lookup":\s*null/);
 });
 
 // 0.10.1: playlists point at boards. The first request for them moves the storyboards over.

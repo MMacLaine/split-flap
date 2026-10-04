@@ -4,14 +4,14 @@
 // keep focus and the phone keyboard stays up.
 
 import { Board, THEMES, fillGrid, renderStatic, staticGeom, register, resetStatic } from './renderer.js';
-import { lookFor, drawFor, accentOf, isLight, motionOf, lookOf, legacyOf, defaultOf, LOOKS, sanitizeParts, smokeStep } from './looks.js';
+import { lookFor, drawFor, accentOf, isLight, motionOf, lookOf, legacyOf, defaultOf, LOOKS, sanitizeParts, smokeStep, partsOf } from './looks.js';
 import { isChip, isDim } from './charset.js';
 import { compose, FALLBACK_PAGE, newId, blank } from './content.js';
 import { TEMPLATES, fromTemplate } from './templates.js';
 import { RAINBOW } from './pixels.js';
 import { nextPage, inQuiet } from './schedule.js';
 import { STR } from './strings.js';
-import { loadBoards, loadBlueprints, sanitizeBlueprint, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard, loadLibrary, loadPlaylists, saveLibrary, savePlaylists, loadShown, saveShown,
+import { purgeOld, loadBoards, loadBlueprints, sanitizeBlueprint, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard, loadLibrary, loadPlaylists, saveLibrary, savePlaylists, loadShown, saveShown,
   loadSettings, saveSettings, sanitizeSettings, sanitizePlaylist, sizeOf, dimsOfSize } from './store.js';
 import { resolve, decompose, loadModel, usedIn, soloOf, settingsOf, boardFromPage } from './library.js';
 import { Live } from './live.js';
@@ -87,6 +87,7 @@ export class App {
     // boards (this.boards), the shape storyboards had, so the renderer, the week and the
     // editor work as before; save() takes an edited one apart again (library.js).
     const model = loadModel({ loadBoards, loadBlueprints, loadLibrary, loadPlaylists, saveLibrary, savePlaylists, loadShown, saveShown, getFlag, setFlag });
+    purgeOld();   // the keys of before 0.10.1, two weeks after this version first loads (0.11.3)
     this.blueprints = model.library; this.playlists = model.playlists || []; this.migrated = model.migrated;
     this.settings = loadSettings();
     const boards = this.playlists;
@@ -130,7 +131,7 @@ export class App {
     this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent,
       onLayout: r => { this.placePlate(r); if (this.ambient) this.ambient.placeRing(r); },
       onSlow: () => { if (this.ambient) this.ambient.slow(); },   // the quality ladder (0.11.1)
-      onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode() && !this.meterRunning()) sound.play(f, b.soundStyle, pan); }   // the clack is off while the meter runs (0.11.2)
+      onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode() && !this.meterRunning()) sound.play(f, this.soundNow(), pan); }   // the clack is off while the meter runs (0.11.2)
     }));
     this.ambient = new Ambient(this);   // the ring, the sky and the quality ladder (0.11.1)
     // Listen (0.11.2): the Meter board and the Music light. Never stored, never kept through a reload
@@ -560,6 +561,8 @@ export class App {
   // A look's motion wins over the playlist's; a page's own transition wins over both.
   speedNow() { if (this.isMeter()) return 'meter'; const m = motionOf(this.lookNow()); return (m && m.speed) || this.cur().speed; }
   // The Meter (0.11.2) has its own fold and no stagger, over the page, the look and the playlist
+  // The playlist's sound, or the look's material's when the playlist's is the default Clack (0.11.3)
+  soundNow() { const l = this.lookNow(), p = l.parts || partsOf(l.id) || {}; return sound.soundFor(this.cur().soundStyle, p.material); }
   isMeter() { const p = this.currentPage(); return !!(p && (p.zones || []).some(z => z && z.ch === 'meter')); }
   meterRunning() { return !!(this.listen && this.listen.running() && this.isMeter()); }
   // Listen shows whenever the board is a Meter or the look's light is Music
@@ -1246,7 +1249,7 @@ export class App {
     const input = h('input', {
       type: 'range', class: 'sf-vol', min: 0, max: 100, step: 5, value: v, 'aria-label': t.volume, 'data-k': 'volume',
       oninput: e => { out.textContent = e.target.value; sound.setVolume(e.target.value); },
-      onchange: e => { const nv = +e.target.value; this.upd(bb => { bb.volume = nv; }, true); if (nv > 0) sound.preview(b.soundStyle || 'clack'); }
+      onchange: e => { const nv = +e.target.value; this.upd(bb => { bb.volume = nv; }, true); if (nv > 0) sound.preview(this.soundNow()); }
     });
     return h('div', { class: 'sf-row' }, h('span', { style: 'font-size:12px;color:var(--muted);width:72px' }, t.volume), input, out);
   }

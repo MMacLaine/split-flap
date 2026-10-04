@@ -81,6 +81,11 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: splitFlap.shown().id, bd: splitFlap.shown().pages[0].id })`); await sleep(400);
   await click('lk-change-board'); await sleep(300);
   check('the sheet now offers the looks with light and sky', (await ev(`[...document.querySelectorAll('.sf-lk-card strong')].map(x => x.textContent).join()`)) === 'Default,Classic,Backlit,Classic RGB,Signal,Calm,Outside,Sunday,Party');   // Party since 0.11.2
+  // 0.11.3: each card's thumbnail is drawn on its look's own wall, without the ring
+  await sleep(500);
+  const corners = JSON.parse(await ev(`JSON.stringify([...document.querySelectorAll('.sf-lk-card')].map(c => { const cv = c.querySelector('canvas[data-thumb]'), x = cv.getContext('2d'), d = x.getImageData(1, 1, 1, 1).data; return [c.querySelector('strong').textContent, d[0] + ',' + d[1] + ',' + d[2]]; }))`));
+  const cornerOf = n => (corners.find(c => c[0] === n) || [])[1];
+  check('thumbnails are on each look\'s wall: Calm and Sunday differ from Classic, Classic RGB is Classic\'s', cornerOf('Calm') !== cornerOf('Classic') && cornerOf('Sunday') !== cornerOf('Classic') && cornerOf('Classic RGB') === cornerOf('Classic'), JSON.stringify(corners));
   await ev(`(() => { const d = document.querySelector('.sf-lk details'); d.open = true; d.dispatchEvent(new Event('toggle')); })()`); await sleep(400);
   await click('lk-fx-breathe'); await sleep(300);
   check('Make your own has the Light row, with its colours and stops', (await ev(`String(!!document.querySelector('[data-k=lk-pal-rainbow]') && !!document.querySelector('[data-k=lk-speed-slow]') && !!document.querySelector('[data-k=lk-bright-high]') && !!document.querySelector('[data-k=lk-rsize-wide]'))`)) === 'true');
