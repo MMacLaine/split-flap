@@ -35,9 +35,13 @@ import { parseRoute, routeHash, parentRoute } from './route.js';
 import { weekView, hueOf, nextHue } from './week.js';
 import { getFlag, setFlag, sizeOf, dimsOfSize } from './store.js';
 import { HELP, INTRO } from './help.js';
+import { lookSheet, lookRow, lookLabel, ownLook, swatchEl, openLook, closeLook, ctxValue } from './lookSheet.js';
+import { defaultOf } from './looks.js';
 import * as sound from './sound.js';
 
-const MAX_MY = 500, MAX_PL = 100;   // boards in your Boards, and playlists (0.10.1; app.js has the same)
+const MAX_MY = 500, MAX_PL = 100;
+// A board's look (0.11) goes with every copy and every add, as its theme does.
+const lookCopy = x => x && x.look ? Object.assign({ look: x.look }, x.look === 'custom' && x.lookParts ? { lookParts: JSON.parse(JSON.stringify(x.lookParts)) } : {}) : {};   // boards in your Boards, and playlists (0.10.1; app.js has the same)
 const DURS = [3, 5, 8, 10, 12, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1800, 3600];
 const LAYOUT_PIC = { full: ['1fr', '1fr', [['1', '1', 1]]], header: ['1fr', '1fr 2.4fr', [['1', '1', 0], ['1', '2', 1]]], split: ['1fr 1fr', '1fr', [['1', '1', 1], ['2', '1', 0]]],
   ticker: ['1fr', '2.4fr 1fr', [['1', '1', 1], ['1', '2', 0]]], stacked: ['1fr', '1fr 1fr', [['1', '1', 1], ['1', '2', 0]]] };
@@ -144,6 +148,7 @@ export class Editor {
   // otherwise it closes the editor.
   escape() {
     const E = this.E;
+    if (E.sheet && E.sheet.kind === 'look') { closeLook(this); return; }   // a look preview goes back, and says so
     if (E.menu || E.sheet || E.card) { E.menu = null; E.sheet = null; E.card = null; E.preview = null; E.confirm = null; this.app.render(); this.app.tick(true); return; }
     if (E.picking && !E.fresh && this.onBoard()) { E.picking = false; this.app.render(); return; }
     this.app.toggleEdit();
@@ -218,7 +223,7 @@ export class Editor {
   // a board's own size (0.10.1), else its playlist's, else the screen's
   pageGrid(p, b) { const src = p && p.size ? p : b, d = src ? this.app.dimsOf(src) : this.app.dims(); return () => compose(p, d.rows, d.cols, Date.now(), this.lang, this.app.live.data); }
   pageDims(p, b) { return this.app.dimsOf(p && p.size ? p : b); }
-  pageTheme(p, b) { return (p && p.theme) || b.theme; }
+  pageTheme(p, b) { return this.app.themeOf(p && (p.look || p.theme) ? p : b); }   // 0.11: the board's own look
 
   // ---------- the drawer ----------
   render() {
@@ -277,8 +282,8 @@ export class Editor {
   // and asks twice.
   more(key, verbs) {
     const t = this.t, open = this.E.menu === key;
-    const ORDER = ['open', 'rename', 'duplicate', 'save', 'copy', 'share', 'shareImage', 'export', 'takeout', 'delete'];
-    const label = { open: t.mOpen, rename: t.mRename, duplicate: t.mDuplicate, save: t.mSave, copy: t.mCopyTo, share: t.mShare, shareImage: t.mShareImage, export: t.mExport, takeout: t.mTakeOut, delete: t.mDelete };
+    const ORDER = ['open', 'rename', 'duplicate', 'sameLook', 'save', 'copy', 'share', 'shareImage', 'export', 'takeout', 'delete'];
+    const label = { open: t.mOpen, rename: t.mRename, duplicate: t.mDuplicate, sameLook: t.lk.sameForAll, save: t.mSave, copy: t.mCopyTo, share: t.mShare, shareImage: t.mShareImage, export: t.mExport, takeout: t.mTakeOut, delete: t.mDelete };
     const items = ORDER.filter(v => verbs[v]).map(v => {
       const armed = v === 'delete' && this.E.confirm === 'menu-del-' + key;
       return [v === 'delete' ? h('hr', { class: 'sf-menu-rule' }) : null,
@@ -321,7 +326,7 @@ export class Editor {
     const row = (k, title, sub, fn) => h('button', { class: 'sf-sec', 'data-k': k, onclick: fn }, h('span', null, h('strong', null, title), sub ? h('span', null, sub) : null), h('span', { class: 'sf-chev', 'aria-hidden': 'true' }, '›'));
     const welcome = this.messageBoard(b);
     const pl = placeOf(b, { langs: navigator.languages });
-    const summary = [THEMES[app.themeNow()] ? THEMES[app.themeNow()].label : '', app.sizeLabel(b), pl && pl.city, b.sound ? t.soundOn : t.soundOff].filter(Boolean).join(' · ');
+    const summary = [lookLabel(app, app.lookNow()), app.sizeLabel(b), pl && pl.city, b.sound ? t.soundOn : t.soundOff].filter(Boolean).join(' · ');
     // a new device: what this account last put on a screen, as a suggestion (0.10.1)
     const last = app.setting('last'), li = last ? app.boards.findIndex(x => x.id === last.pl) : -1;
     const suggest = li >= 0 && app.boards[li].id !== b.id && getFlag('sf_chosen') !== '1' ? h('section', { class: 'sf-box sf-last', 'data-k': 'last-shown' },
@@ -337,6 +342,8 @@ export class Editor {
       row('add-in-turn', many ? t.another : t.anotherOne, t.anotherSub, () => { this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'boards' }); this.E.sheet = { kind: 'add', tab: app.blueprints.length > b.pages.length ? 'my' : 'tpl' }; app.render(); }),
       h('section', { class: 'sf-field ruled' }, h('h3', { class: 'sf-eyebrow' }, t.thisScreen),
         h('span', { class: 'sf-hint' }, summary),
+        // 0.11: this screen's look, a pin over every board, or each board's own
+        lookRow(this, t.lk.look, app.pin() ? t.lk.pinnedRow(lookLabel(app, app.pin())) : t.lk.followsEach, app.pin() || { id: 'follow' }, onPage, { kind: 'screen' }, app.pin() ? t.lk.pinNote(lookLabel(app, app.pin())) : t.lk.unpinNote),
         h('div', { class: 'sf-row wrap' },
           h('button', { class: 'sf-btn', 'data-k': 'put-on', onclick: () => { if (this.phone()) app.toggleEdit(); app.openShare(false, b); } }, t.putOn),
           h('button', { class: 'sf-btn', 'data-k': 'screen-settings', onclick: () => this.go({ sec: 'sb', lv: 'sb', sb: b.id, view: 'display' }) }, t.settings))),
@@ -358,7 +365,7 @@ export class Editor {
     const p0 = b.pages.find(p => !p.missing) || b.pages[0], id = newId('p'), solo = !!b.solo, first = p0.name || this.t.page;
     app.look = null;
     app.upd(bb => { bb.pages.push(Object.assign({ id, name: this.t.myMessage, layout: 'full', dur: 10, wins: [], hue: nextHue(bb), zones: [{ ch: 'message', o: { lines: ['', this.lang === 'sv' ? 'HEJ' : 'HELLO'] } }] },
-      p0.size ? { size: p0.size, rows: p0.rows, cols: p0.cols, theme: p0.theme } : {})); if (solo) { delete bb.solo; bb.name = this.t.inTurnName(first, this.t.myMessage); } }, true);
+      p0.size ? { size: p0.size, rows: p0.rows, cols: p0.cols, theme: p0.theme } : {}, lookCopy(p0))); if (solo) { delete bb.solo; bb.name = this.t.inTurnName(first, this.t.myMessage); } }, true);
     app.say(this.t.nowInTurn(first, this.t.myMessage));
     this.go({ sec: 'sb', lv: 'board', sb: app.shown().id, bd: id, from: 'boards' }, { silent: false, zone: { zone: 0, zoneOpen: true } });
   }
@@ -369,6 +376,7 @@ export class Editor {
   sbVerbs(i) {
     const app = this.app;
     return { open: () => this.openStoryboard(i), rename: () => { this.openStoryboard(i); this.startRename(); }, duplicate: () => app.duplicateBoard(i),
+      sameLook: () => { const b = app.boards[i]; if (!b) return; if (this.E.sec !== 'sb' || this.E.sb !== b.id) this.openStoryboard(i, 'boards'); openLook(this, { kind: 'playlist', id: b.id }); },
       // on a phone the board area is too small to hold the share panel, so the editor closes first
       share: () => { const bd = app.boards[i]; if (this.phone()) app.toggleEdit(); app.openShare(false, bd); },
       export: () => app.exportJson(i), delete: app.boards.length > 1 ? () => app.deleteBoard(i) : 'off' };
@@ -392,7 +400,8 @@ export class Editor {
           h('span', { class: 'sf-pl-text' },
             h('span', { class: 'sf-pl-name' }, p.missing ? t.notHereYet2 : p.name || `${t.page} ${i + 1}`),
             h('span', { class: 'sf-pl-meta' }, when, p.alone && wins.length ? h('span', { class: 'sf-tag' }, t.aloneTag) : null),
-            h('span', { class: 'sf-pl-meta' }, `${p.dur} s` + (mixed ? ` · ${this.app.sizeLabel(p)}` : '')))),
+            h('span', { class: 'sf-pl-meta' }, `${p.dur} s` + (mixed ? ` · ${this.app.sizeLabel(p)}` : '')),
+            p.missing ? null : h('span', { class: 'sf-pl-meta sf-pl-look' }, swatchEl(this.app, ownLook(p), p), lookLabel(this.app, ownLook(p))))),
         h('button', { class: 'sf-handle', 'data-handle': i, 'data-k': 'handle-' + i, 'aria-label': t.moveNamed(p.name || `${t.page} ${i + 1}`), title: t.reorderHint,
           onpointerdown: e => this.dragStart(e, i), onkeydown: e => this.handleKey(e, i) }, '⋮⋮'),
         this.more('pg-' + i, this.pageVerbs(i)));
@@ -408,7 +417,9 @@ export class Editor {
   }
   boardsView() {
     const t = this.t;
+    const pin = this.app.pin();
     return h('div', { class: 'sf-field' },
+      pin ? h('p', { class: 'sf-hint', 'data-k': 'pin-swatches' }, t.lk.pinSwatches(lookLabel(this.app, pin))) : null,   // decision 14
       h('ol', { class: 'sf-pls' }, this.pageItems()),
       h('button', { class: 'sf-add big', 'data-k': 'add-page', onclick: () => { this.E.sheet = { kind: 'add', tab: this.app.blueprints.length > this.app.cur().pages.length ? 'my' : 'tpl' }; this.app.render(); } }, '+ ' + t.addPage));
   }
@@ -421,6 +432,7 @@ export class Editor {
   sheet() {
     const t = this.t, S = this.E.sheet, app = this.app;
     if (S.kind === 'add') return this.addSheet();
+    if (S.kind === 'look') return lookSheet(this);
     if (S.kind === 'import') return this.importSheet();
     // Add a board to a playlist (0.10.1): the playlist then points at it. A new playlist starts with it.
     if (S.kind === 'pickSb') return h('div', { class: 'sf-level sf-sheet' },
@@ -451,7 +463,7 @@ export class Editor {
   newPlaylistWith(id) {
     const app = this.app, lb = app.blueprints.find(x => x.id === id); if (!lb || app.plCount() >= MAX_PL) return;
     const nb = { id: newId('b'), name: this.t.newPlaylistName, size: sizeOf(lb), rows: lb.rows, cols: lb.cols, theme: lb.theme, transition: 'classic', speed: 'fast', sound: false,
-      quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, pages: [Object.assign(clone(lb.page), { id: lb.id, name: lb.page.name || lb.name, wins: [], size: sizeOf(lb), rows: lb.rows, cols: lb.cols, theme: lb.theme })] };
+      quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, pages: [Object.assign(clone(lb.page), { id: lb.id, name: lb.page.name || lb.name, wins: [], size: sizeOf(lb), rows: lb.rows, cols: lb.cols, theme: lb.theme }, lookCopy(lb))] };
     if (app.newPlace()) nb.loc = app.newPlace();
     app.boards.push(nb); app.save(); this.E.sheet = null;
     app.say(this.t.newPlaylistMade(lb.name));
@@ -465,7 +477,7 @@ export class Editor {
     this.lastSave = { id: page.id, at: now };
     const d = dims || app.dims(), c = clone(page);
     delete c.wins; delete c.win; delete c.alone; delete c.size; delete c.rows; delete c.cols; delete c.theme; c.id = newId('p');
-    const bp = { id: newId('m'), name: page.name || this.t.page, size: d.size || sizeOf(d), rows: d.rows, cols: d.cols, theme: theme || app.themeNow(), from, page: c };
+    const bp = { id: newId('m'), name: page.name || this.t.page, size: d.size || sizeOf(d), rows: d.rows, cols: d.cols, theme: theme || 'black', ...lookCopy(page), from, page: c };
     app.blueprints.unshift(bp); app.saveMy(); app.flash(this.t.savedToMy(bp.name)); app.render();
     return bp;
   }
@@ -489,13 +501,13 @@ export class Editor {
   // A board on its own, in the shape a link carries, never stored.
   oneBoard(bp) {
     return { id: newId('b'), name: bp.name, size: sizeOf(bp), rows: bp.rows, cols: bp.cols, theme: bp.theme, transition: 'classic', speed: 'fast', sound: false, quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' },
-      pages: [Object.assign(clone(bp.page), { id: bp.id, name: bp.page.name || bp.name, wins: [], size: sizeOf(bp), rows: bp.rows, cols: bp.cols, theme: bp.theme })] };
+      pages: [Object.assign(clone(bp.page), { id: bp.id, name: bp.page.name || bp.name, wins: [], size: sizeOf(bp), rows: bp.rows, cols: bp.cols, theme: bp.theme }, lookCopy(bp))] };
   }
   // A new board in your Boards, at the size of the board on the screen, opened to pick its tile.
   newLibBoard() {
     const app = this.app; if (app.blueprints.length >= MAX_MY) { app.say(this.t.myFull, { fail: true }); return; }
     const d = app.dimsOf(app.shown().pages[0] && app.shown().pages[0].size ? app.shown().pages[0] : app.shown()), id = newId('p');
-    const bp = { id, name: this.t.newBoard, size: sizeOf(app.shown().pages[0] || app.shown()), rows: d.rows, cols: d.cols, theme: app.shown().theme, page: { id, name: this.t.newBoard, layout: 'full', dur: 10, zones: [{ ch: 'message', o: {} }] } };
+    const bp = { id, name: this.t.newBoard, size: sizeOf(app.shown().pages[0] || app.shown()), rows: d.rows, cols: d.cols, theme: 'black', look: 'default', page: { id, name: this.t.newBoard, layout: 'full', dur: 10, zones: [{ ch: 'message', o: {} }] } };
     app.blueprints.unshift(bp); app.saveMy();
     this.go({ sec: 'my', lv: 'bp', bp: id }, { zone: { zone: 0, zoneOpen: true, picking: true, fresh: true } });
   }
@@ -522,8 +534,8 @@ export class Editor {
       const d = app.dimsOf(bp), on = onNow && onNow.id === bp.id, inPl = app.usedIn(bp.id);
       return h('div', { class: 'sf-bcell' + (on ? ' on' : ''), 'data-bp': bp.id },
         h('button', { class: 'sf-bcell-open', 'data-k': 'bp-' + bp.id, onclick: () => this.go({ sec: 'my', lv: 'bp', bp: bp.id }) },
-          h('span', { class: 'sf-well' }, this.thumb('bp-' + bp.id, d.rows, d.cols, () => compose(bp.page, d.rows, d.cols, now, this.lang, app.live.data), bp.theme)),
-          h('span', { class: 'sf-bcell-text' }, h('strong', null, bp.name), h('span', { class: 'sf-mono' }, app.sizeLabel(bp)),
+          h('span', { class: 'sf-well' }, this.thumb('bp-' + bp.id, d.rows, d.cols, () => compose(bp.page, d.rows, d.cols, now, this.lang, app.live.data), app.themeOf(bp))),
+          h('span', { class: 'sf-bcell-text' }, h('strong', null, bp.name), h('span', { class: 'sf-mono sf-bcell-look' }, app.sizeLabel(bp), swatchEl(app, ownLook(bp), bp)),
             on ? h('span', { class: 'sf-tag on-now' }, t.onNowTag) : inPl.length ? h('span', { class: 'sf-meta' }, t.inN(inPl.length)) : null)),
         this.more('bp-' + bp.id, this.bpVerbs(bp)));
     });
@@ -555,11 +567,11 @@ export class Editor {
     let body;
     if (S.tab === 'my') {
       const mine = app.blueprints;
-      body = mine.length ? mine.map(x => { const d = app.dimsOf(x); return row({ kind: 'blueprint', id: x.id }, x.name, d.rows, d.cols, x.theme, x.page, here.has(x.id), here.has(x.id) ? t.alreadyHere : app.sizeLabel(x)); })
+      body = mine.length ? mine.map(x => { const d = app.dimsOf(x); return row({ kind: 'blueprint', id: x.id }, x.name, d.rows, d.cols, app.themeOf(x), x.page, here.has(x.id), here.has(x.id) ? t.alreadyHere : app.sizeLabel(x)); })
         : h('p', { class: 'sf-note big' }, t.myEmptyBody);
     } else {
       body = TEMPLATES.map(tp => { const nb = this.tplBoard(tp.id), td = app.dimsOf(nb);
-        return h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, tp.name[this.lang]), nb.pages.map((p, i) => row({ kind: 'template', id: tp.id, i }, p.name || `${t.page} ${i + 1}`, td.rows, td.cols, nb.theme, p))); });
+        return h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, tp.name[this.lang]), nb.pages.map((p, i) => row({ kind: 'template', id: tp.id, i }, p.name || `${t.page} ${i + 1}`, td.rows, td.cols, app.themeOf(p), p))); });
     }
     const name = S.src && this.E.preview ? this.E.preview.name || t.page : '';
     return h('div', { class: 'sf-level sf-sheet' },
@@ -576,12 +588,12 @@ export class Editor {
     if (src.kind === 'blueprint') {
       const bp = app.blueprints.find(x => x.id === src.id); if (!bp) return { page: null, lost: 0 };
       const d = app.dimsOf(bp);
-      return { page: Object.assign(clone(bp.page), { id: bp.id, name: bp.page.name || bp.name, dur: bp.page.dur || 10, wins: [], hue: nextHue(app.cur()), size: sizeOf(bp), rows: d.rows, cols: d.cols, theme: bp.theme }, bp.from ? { from: clone(bp.from) } : {}), lost: 0 };
+      return { page: Object.assign(clone(bp.page), { id: bp.id, name: bp.page.name || bp.name, dur: bp.page.dur || 10, wins: [], hue: nextHue(app.cur()), size: sizeOf(bp), rows: d.rows, cols: d.cols, theme: bp.theme }, lookCopy(bp), bp.from ? { from: clone(bp.from) } : {}), lost: 0 };
     }
     const nb = this.tplBoard(src.id), page = nb.pages[src.i]; if (!page) return { page: null, lost: 0 };
     const d = app.dimsOf(nb), c = clone(page);
     c.id = newId('p'); c.wins = []; delete c.win; delete c.alone; c.from = { kind: 'template', id: src.id }; c.hue = nextHue(app.cur());
-    Object.assign(c, { size: sizeOf(nb), rows: d.rows, cols: d.cols, theme: nb.theme });
+    Object.assign(c, { size: sizeOf(nb), rows: d.rows, cols: d.cols, theme: c.theme || nb.theme });
     return { page: c, lost: 0 };
   }
   previewAdd() { const S = this.E.sheet; this.E.preview = S && S.src ? this.addCopy(S.src).page : null; this.app.tick(true); }
@@ -671,7 +683,7 @@ export class Editor {
         left: ((g.pad + z.c * (GEOM.tileW + GEOM.gapX) - GEOM.gapX / 2) / g.uw * 100).toFixed(3) + '%', top: ((g.pad + z.r * (1 + GEOM.gapY) - GEOM.gapY / 2) / g.uh * 100).toFixed(3) + '%',
         width: ((z.w * GEOM.tileW + z.w * GEOM.gapX) / g.uw * 100).toFixed(3) + '%', height: ((z.h + z.h * GEOM.gapY) / g.uh * 100).toFixed(3) + '%' });
       diagram = h('div', { class: 'sf-diagram' },
-        this.thumb('diag', d.rows, d.cols, this.pageGrid(p, b), b.theme),
+        this.thumb('diag', d.rows, d.cols, this.pageGrid(p, b), this.app.themeNow()),
         zs.map((z, k) => { const bx = box(z), tile = tileFor(p.zones[k]);
           return h('button', { class: 'sf-zone-box', 'data-zone': k, tabIndex: -1, 'aria-hidden': 'true', style: `left:${bx.left};top:${bx.top};width:${bx.width};height:${bx.height}`,
             onclick: () => this.openZone(k), onmouseenter: () => this.hover(k), onmouseleave: () => this.hover(null) },
@@ -717,7 +729,8 @@ export class Editor {
       cur === 'custom' ? h('div', { class: 'sf-row' },
         h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.rows), h('input', { type: 'number', class: 'sf-input num', min: 1, max: 24, value: own.rows, 'data-k': 'rows', onchange: e => set(o => { o.rows = Math.max(1, Math.min(24, +e.target.value || 6)); }) })),
         h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.cols), h('input', { type: 'number', class: 'sf-input num', min: 4, max: 60, value: own.cols, 'data-k': 'cols', onchange: e => set(o => { o.cols = Math.max(4, Math.min(60, +e.target.value || 22)); }) }))) : null,
-      h('div', { class: 'sf-row wrap', role: 'group', 'aria-label': t.theme }, seg(Object.values(THEMES).map(th => [th.id, th.label]), own.theme || app.themeNow(), v => set(o => { o.theme = v; }), 'btheme')),
+      // 0.11: the board's look, with its swatch and Change (replaces the theme buttons)
+      lookRow(this, t.lk.look, lookLabel(app, ownLook(own)), ownLook(own), own, { kind: 'board', id: this.bp() ? this.bp().id : own.id }),
       cur === 'fill' ? h('span', { class: 'sf-hint', 'data-k': 'fill-note' }, app.fillSeen() ? t.fillSeen(d.rows, d.cols) : t.fillNote(d.rows, d.cols)) : null,
       h('span', { class: 'sf-hint' }, t.sizeOwn));
   }
@@ -1141,12 +1154,11 @@ export class Editor {
     const t = this.t, app = this.app, b = app.cur();
     const seg = (items, cur, pick, key) => items.map(([id, label]) => h('button', { class: 'sf-seg', 'aria-pressed': String(id === cur), 'data-k': key + '-' + id, onclick: () => pick(id) }, label));
     const sample = (T, d) => { const g = blank(d.rows, d.cols), txt = [...'HEJ ÅÄÖ']; txt.forEach((c, i) => { if (g[1] && i < d.cols) g[1][i + 1] = c; }); ['r', 'o', 'y', 'g', 'b', 'v'].forEach((k, i) => { if (g[2] && i + 1 < d.cols) g[2][i + 1] = k; }); return g; };
-    const themes = h('div', { class: 'sf-themes' }, Object.values(THEMES).map(th => h('button', { class: 'sf-theme', 'aria-pressed': String(b.pages.every(p => (p.theme || b.theme) === th.id)), 'data-k': 'theme-' + th.id, onclick: () => app.setPlaylistTheme(th.id) },
-      this.thumb('th-' + th.id, 4, 9, () => sample(th, { rows: 4, cols: 9 }), th.id), h('span', null, th.label))));
     const loc = b.loc;
     return h('div', { class: 'sf-level' },
       h('p', { class: 'sf-note' }, t.displayNote),
-      h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.theme), themes, h('span', { class: 'sf-hint' }, t.themeAll)),
+      h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.lk.look),
+        h('div', null, h('button', { class: 'sf-btn', 'data-k': 'same-look', onclick: () => openLook(this, { kind: 'playlist', id: b.id }) }, t.lk.sameForAll)), h('span', { class: 'sf-hint' }, t.themeAll)),
       h('p', { class: 'sf-hint' }, t.sizeOnBoard),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.transition),
         h('div', { class: 'sf-row' }, seg(Object.entries(t.transitions), b.transition, v => { app.upd(bb => { bb.transition = v; }); app.previewTransition(); }, 'tr')),
@@ -1203,7 +1215,7 @@ export class Editor {
   tplCard(tp, section, muted) {
     const t = this.t, app = this.app, now = Date.now(), nb = this.tplBoard(tp.id), d = app.dimsOf(nb);
     return h('button', { class: 'sf-template', 'data-k': 'tpl-' + tp.id, onclick: () => this.go({ sec: 'ex', lv: 'tpl', tpl: tp.id, section: section || tp.section }) },
-      this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(Object.assign({}, app.live.data, { loc: nb.loc || app.live.data.loc }), now)), nb.theme),
+      this.thumb('tpl-' + tp.id, d.rows, d.cols, () => compose(nb.pages[0], d.rows, d.cols, now, this.lang, previewLive(Object.assign({}, app.live.data, { loc: nb.loc || app.live.data.loc }), now)), app.themeOf(nb.pages[0])),
       h('span', { class: 'sf-tile-text' }, h('strong', null, tp.name[this.lang], app.shown().from === tp.id ? h('span', { class: 'sf-tag on-now' }, t.onNowTag) : null), h('span', null, `${tp.desc[this.lang]} · ${t.boardsCount(nb.pages.length)}`)));
   }
   // The templates of a section that can work for this place, and the ones that cannot yet.
@@ -1225,16 +1237,17 @@ export class Editor {
     const t = this.t, app = this.app, tp = TEMPLATES.find(x => x.id === this.E.tpl), nb = this.tplBoard(tp.id), d = app.dimsOf(nb), now = Date.now();
     return h('div', { class: 'sf-level' },
       h('p', { class: 'sf-note big' }, tp.desc[this.lang]),
+      lookRow(this, t.lk.look, lookLabel(app, ctxValue(this, { kind: 'template', id: tp.id })), ctxValue(this, { kind: 'template', id: tp.id }), nb.pages[0], { kind: 'template', id: tp.id }),
       h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'use-tpl', disabled: app.plCount() >= MAX_PL, onclick: () => app.useTemplate(tp.id) }, t.showOn)),
       h('p', { class: 'sf-hint' }, t.tplCopyNote),
       this.tplSizeEl(tp),
       h('ol', { class: 'sf-pls' }, nb.pages.map((p, i) => h('li', { class: 'sf-pl tpl-row', style: `--hue:${hueOf(nb, i)}` },
         h('div', { class: 'sf-pl-open static' },
-          this.thumb(`tp-${tp.id}-${i}`, d.rows, d.cols, () => compose(p, d.rows, d.cols, now, this.lang, previewLive(app.live.data, now)), nb.theme),
+          this.thumb(`tp-${tp.id}-${i}`, d.rows, d.cols, () => compose(p, d.rows, d.cols, now, this.lang, previewLive(app.live.data, now)), app.themeOf(p)),
           h('span', { class: 'sf-pl-text' }, h('span', { class: 'sf-pl-name' }, p.name || `${t.page} ${i + 1}`), h('span', { class: 'sf-pl-meta' }, `${p.dur} s`))),
         h('div', { class: 'sf-row' },
           h('button', { class: 'sf-small-btn', 'data-k': `tpl-save-${i}`, disabled: app.blueprints.length >= MAX_MY, onclick: () => this.saveToMy(p, { kind: 'template', id: tp.id }, Object.assign({ size: sizeOf(nb) }, d), nb.theme) }, t.mSave),
-          h('button', { class: 'sf-small-btn', 'data-k': `tpl-copy-${i}`, onclick: () => { this.E.sheet = { kind: 'copy', tplPage: Object.assign(clone(p), { size: sizeOf(nb), rows: d.rows, cols: d.cols, theme: nb.theme }) }; app.render(); } }, t.addToSb))))));
+          h('button', { class: 'sf-small-btn', 'data-k': `tpl-copy-${i}`, onclick: () => { this.E.sheet = { kind: 'copy', tplPage: Object.assign(clone(p), { size: sizeOf(nb), rows: d.rows, cols: d.cols, theme: p.theme || nb.theme }) }; app.render(); } }, t.addToSb))))));
   }
   // The template's size in its preview: its own, marked Recommended, or another, which Show on
   // this screen then uses (0.10.3)
@@ -1315,12 +1328,13 @@ export class Editor {
   }
   accountLevel() {
     const t = this.t, a = this.app.account, privacy = h('a', { href: this.privacyHref(), 'data-k': 'acc-privacy' }, t.accPrivacy);
-    if (!a.available) return h('div', { class: 'sf-level' }, this.homeEl(), this.langField('ruled'), this.accountFoot());
+    if (!a.available) return h('div', { class: 'sf-level' }, this.defaultLookEl(), this.homeEl(), this.langField('ruled'), this.accountFoot());
     if (!a.signedIn()) return h('div', { class: 'sf-level' },
       a.status === 'signedout'
         ? h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accSignedOutBody(a.unsyncedCount())))
         : h('div', { class: 'sf-field' }, h('p', { class: 'sf-note big' }, t.accGuestBody), h('p', { class: 'sf-note big' }, t.accSignInBody)),
       h('div', null, h('button', { class: 'sf-btn primary big', 'data-k': 'acc-signin', onclick: () => a.signIn() }, t.signInGoogle)),
+      this.defaultLookEl(),
       this.homeEl(),
       this.langField('ruled'),
       this.accountFoot(),
@@ -1336,6 +1350,7 @@ export class Editor {
       h('div', { class: 'sf-row' },
         h('button', { class: 'sf-btn', 'data-k': 'acc-export', onclick: () => a.exportAll() }, t.exportAll),
         this.confirmBtn('signout', t.signOut, a.unsyncedCount() ? t.signOutAnyway : t.signOutAgain, a.unsyncedCount() ? t.confirmSignOutUnsynced(a.unsyncedCount()) : t.confirmSignOut, () => a.signOut())),
+      this.defaultLookEl(),
       this.homeEl(),
       this.langField('ruled'),
       this.accountFoot(),
@@ -1358,6 +1373,14 @@ export class Editor {
         h('button', { class: 'sf-btn primary', 'data-k': 'offer-keep', disabled: !n, onclick: () => a.answerOffer(true) }, all.length > 1 ? t.offerKeepN(n) : t.offerKeep),
         h('button', { class: 'sf-btn', 'data-k': 'offer-leave', onclick: () => a.answerOffer(false) }, t.offerLeave(all.length))));
   }
+  // 0.11: the account's default look, which new boards start as and every Default board follows.
+  defaultLookEl() {
+    const t = this.t, app = this.app, d = defaultOf(app.lookSetting());
+    return h('section', { class: 'sf-field ruled', 'data-k': 'default-look' },
+      lookRow(this, t.lk.defaultLook, lookLabel(app, d), d, app.shown().pages[0], { kind: 'default' }, t.lk.followCount(app.followCount())),
+      h('span', { class: 'sf-hint' }, t.lk.defaultNote));
+  }
+  tplInfo(id) { return TEMPLATES.find(x => x.id === id) || null; }
   // Home (0.10.1): the city, stops and currency new tiles start from. Kept with the account,
   // or in this browser for a guest. This screen's own place (picked on the first visit) wins.
   homeEl() {

@@ -13,6 +13,7 @@ import { validTz, FX_CURRENCIES } from './place.js';
 import { COINS } from './content.js';
 import { STOP_ID } from './transit.js';
 import { feedUrl } from './feeds.js';
+import { LOOKS, sanitizeParts } from './looks.js';
 
 // Before 0.10.1: storyboards (sf_boards, sf_active) and My boards (sf_myboards). They are
 // read once, by the migration, and never written again, so a tab still running 0.10.0
@@ -186,8 +187,17 @@ function sanitizePage(p, withTimes = true) {
   // without them is at its storyboard's size, as before.
   if (p && SIZES.includes(p.size)) Object.assign(extra, { size: p.size, rows: int(p.rows, 1, 24, 6), cols: int(p.cols, 4, 60, 22) });
   if (p && THEMES.includes(p.theme)) extra.theme = p.theme;
+  Object.assign(extra, lookFields(p));   // 0.11: a board's look travels in a link too
   const wins = sanitizeWins(p);
   return Object.assign(base, { wins, win: legacyWin(wins) }, p && p.alone === true && wins.length ? { alone: true } : {}, extra, { zones });
+}
+// A board's look (0.11): 'default', a look's id, or 'custom' with its parts, checked against
+// looks.js. A board with none is read by the fixed rule in looks.js lookOf (theme black is
+// Default, white Paper, solari Solari), so nothing is written until the board is changed.
+function lookFields(x) {
+  if (!x || typeof x !== 'object' || typeof x.look !== 'string') return {};
+  if (x.look === 'custom') { const p = sanitizeParts(x.lookParts); return p ? { look: 'custom', lookParts: p } : {}; }
+  return x.look === 'default' || Object.prototype.hasOwnProperty.call(LOOKS, x.look) ? { look: x.look } : {};
 }
 // A blueprint in My boards (0.7.1): one board with the size and theme it was made at.
 // From 0.10.1 every board is one of these, in your Boards, and may say its size by name
@@ -196,7 +206,7 @@ export function sanitizeBlueprint(x) {
   if (!x || typeof x !== 'object' || !x.page || typeof x.page !== 'object') return null;
   return { id: str(x.id, 40) || newId('m'), name: str(x.name, 80) || str(x.page.name, 80) || 'Board',
     ...(SIZES.includes(x.size) ? { size: x.size } : {}),
-    rows: int(x.rows, 1, 24, 6), cols: int(x.cols, 4, 60, 22), theme: pick(x.theme, THEMES, 'black'),
+    rows: int(x.rows, 1, 24, 6), cols: int(x.cols, 4, 60, 22), theme: pick(x.theme, THEMES, 'black'), ...lookFields(x),
     ...origin(x.from), page: sanitizePage(x.page, false) };
 }
 // A board's size by name: the one it says, else the preset its rows and columns match.
@@ -246,6 +256,11 @@ export function sanitizeSettings(x) {
     }).filter(Boolean);
     return Object.assign({ id: 'home' }, x.place && typeof x.place === 'object' && place(x.place) ? { place: place(x.place) } : {},
       { stops }, FX_CURRENCIES.includes(x.cur) ? { cur: x.cur } : {});
+  }
+  // the account's default look (0.11): a look's id, or custom with its parts
+  if (x.id === 'look') {
+    if (x.look === 'custom') { const p = sanitizeParts(x.parts); return p ? { id: 'look', look: 'custom', parts: p } : null; }
+    return typeof x.look === 'string' && Object.prototype.hasOwnProperty.call(LOOKS, x.look) && x.look !== 'custom' ? { id: 'look', look: x.look } : null;
   }
   if (x.id === 'last') {
     const pl = str(x.pl, 40);

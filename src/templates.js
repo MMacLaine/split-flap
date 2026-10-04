@@ -11,6 +11,7 @@
 //   needs   the tiles it uses that depend on an outside source
 
 import { newId } from './content.js';
+import { templateLook, LOOKS } from './looks.js';
 import { formatsFor, priceMark } from './place.js';
 import { bankFor as bankOf } from './rates.js';
 
@@ -266,7 +267,12 @@ export const sectionOf = id => SECTIONS.find(x => x.id === id) || null;
 // size: the size picked in the template's preview, else the template's own (fit, 0.10.3).
 export function fromTemplate(id, lang, home, place, size) {
   const t = TEMPLATES.find(x => x.id === id) || TEMPLATES[0];
-  return Object.assign(t.make({ sv: lang === 'sv', home: !!(home && home.sites && home.sites.length), place: place || null }), sizeFields(size || t.fit), { from: t.id });
+  const b = Object.assign(t.make({ sv: lang === 'sv', home: !!(home && home.sites && home.sites.length), place: place || null }), sizeFields(size || t.fit), { from: t.id });
+  // 0.11: a template comes in its own look once that look has shipped (looks.js TEMPLATE_LOOKS);
+  // until then on its 0.10 theme, which reads as Default, Paper or Solari
+  const look = templateLook(t.id);
+  if (look) b.pages.forEach(p => { p.look = look; p.theme = LOOKS[look].legacy; });
+  return b;
 }
 // Each template's recommended size (0.10.3), judged by what it shows: 6 x 22 for messages and the
 // tour, 12 x 40 where the tiles have a big layout, the station board at 10 x 32, and so on.

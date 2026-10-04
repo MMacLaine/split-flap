@@ -11,6 +11,17 @@
 //   - a frame budget: if animation frames run long, the canvas drops to 1x density
 //   - from the editor handoff (design/editor/flap-renderer.js): the zone highlight and
 //     renderStatic, which draws one still frame of any grid for thumbnails and images
+//
+// 0.11.0, the look handover's hunks (_local/plans/0.11/handoff/flap-renderer-11.js), taken one
+// by one, marked with their letters. fillGrid, the animated regrid and roll() stay as 0.10's.
+//   [B] lit letters, glass sheen and rim, baked into the atlas
+//   [C] a translucent flap is solid while it moves; opaque materials draw as 0.10, exactly
+//   [D] the atlas keeps the last four looks; a look change no longer clears it
+//   [E] onLayout: the board's rectangle after every refit, for the plate under it
+//   [F] two transitions, ripple and shimmer
+//   [G] the canvas always has alpha; the room wall is painted only when a look has one
+//   [H] refont(), once a look's face has loaded
+//   [I] renderStatic takes a theme object and a wall to draw on
 
 import { CHIPS, DRUM, HALVES, cellChar, drumPath, isDim, baseChar } from './charset.js';
 
@@ -78,8 +89,12 @@ export const STAGGER = {
   classic: (r, c) => c * 22 + Math.random() * 30,
   wave:    (r, c) => (r + c) * 28,
   drift:   () => Math.random() * 1200,
-  curtain: (r, c) => r * 140 + c * 6
+  curtain: (r, c) => r * 140 + c * 6,
+  ripple:  (r, c, R, C) => Math.hypot((c - (C - 1) / 2) * 0.79, (r - (R - 1) / 2) * 1.17) * 46,   // [F] from the centre, in tile units
+  shimmer: (r, c) => (c + r * 0.6) * 12 + Math.random() * 90                                // [F] a quick diagonal sweep
 };
+// [D] a composed look's theme, from looks.js themeFor, so a board can be drawn in it by id
+export function register(T) { if (T && T.id) THEMES[T.id] = T; return T && T.id; }
 
 // A cell is heading to dest (the end of its queue, else what it is animating to, else
 // what it shows) and now wants the same letter faint or lit (the letter clock). No drum
@@ -143,7 +158,9 @@ function paintFace(ctx, ch, x, y, w, h, T) {
       const fs = h * GEOM.capHeight / T.capRatio;
       ctx.font = `${T.weight} ${fs}px ${T.font}, "DM Mono", ui-monospace, monospace`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = T.glyph;
+      if (T.glow && !dim) { ctx.shadowColor = T.glow; ctx.shadowBlur = h * (T.glowR || 0.18); ctx.fillText(ch, x + w / 2, y + h * GEOM.baseline); ctx.shadowBlur = h * (T.glowR || 0.18) * 0.4; }   // [B] lit letters
       ctx.fillText(ch, x + w / 2, y + h * GEOM.baseline);
+      if (T.glow) { ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; }
     }
     ctx.globalAlpha = 1;
   }
@@ -162,21 +179,34 @@ function paintFace(ctx, ch, x, y, w, h, T) {
   const nw = Math.max(1, Math.round(w * GEOM.notchW)), nh = Math.max(2, Math.round(h * GEOM.notchH));
   ctx.fillStyle = T.housing;
   ctx.fillRect(x, Math.round(hinge - nh / 2), nw, nh); ctx.fillRect(x + w - nw, Math.round(hinge - nh / 2), nw, nh);
+  if (T.sheen) {   // [B] glass: a highlight from the top left, and a fine rim
+    const sg = ctx.createLinearGradient(x, y, x + w * 0.9, y + h * 0.55);
+    sg.addColorStop(0, `rgba(255,255,255,${T.sheen})`); sg.addColorStop(0.45, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sg; ctx.fillRect(x, y, w, hinge - y);
+    ctx.lineWidth = Math.max(1, h * 0.014); ctx.strokeStyle = T.rim || 'rgba(255,255,255,0.22)';
+    rr(ctx, x + ctx.lineWidth / 2, y + ctx.lineWidth / 2, w - ctx.lineWidth, h - ctx.lineWidth, r); ctx.stroke();
+  }
   ctx.restore();
 }
 
+// [D] keyed by look; keeps the glyphs of the last `keep` looks, capped in entries.
 class Atlas {
-  constructor() { this.m = new Map(); }
+  constructor(keep = 4, cap = 6000) { this.m = new Map(); this.looks = []; this.keep = keep; this.cap = cap; }
   get(ch, w, h, T) {
     const k = T.id + '|' + ch + '|' + w + 'x' + h;
     let c = this.m.get(k);
     if (!c) {
+      if (this.looks[this.looks.length - 1] !== T.id) {
+        this.looks = this.looks.filter(id => id !== T.id); this.looks.push(T.id);
+        if (this.looks.length > this.keep) { const gone = this.looks.shift(); for (const key of this.m.keys()) if (key.startsWith(gone + '|')) this.m.delete(key); }
+      }
+      if (this.m.size > this.cap) this.clear();
       c = document.createElement('canvas'); c.width = w; c.height = h;
       paintFace(c.getContext('2d'), ch, 0, 0, w, h, T); this.m.set(k, c);
     }
     return c;
   }
-  clear() { this.m.clear(); }
+  clear() { this.m.clear(); this.looks = []; }
 }
 
 // theta: 0 = old char flat, PI/2 = top flap edge-on, PI = new char flat.
@@ -185,6 +215,7 @@ function drawFold(ctx, A, x, y, w, h, T, from, to, th, under) {
   const af = A.get(from, w, h, T), at = A.get(to, w, h, T), au = A.get(under || from, w, h, T);
   if (th <= 0) { ctx.drawImage(af, x, y); return; }
   if (th >= Math.PI) { ctx.drawImage(at, x, y); return; }
+  if (T.body) { drawFoldBody(ctx, af, at, au, x, y, w, h, T, th); return; }   // [C] translucent: its own path
   ctx.save(); rr(ctx, x, y, w, h, h * GEOM.radius); ctx.clip();
   ctx.drawImage(at, 0, 0, w, hh, x, y, w, hh);                 // next char, top half (revealed)
   ctx.drawImage(au, 0, hh, w, h - hh, x, hinge, w, h - hh);    // previous char, bottom half
@@ -203,6 +234,41 @@ function drawFold(ctx, A, x, y, w, h, T, from, to, th, under) {
     ctx.fillStyle = `rgba(255,255,255,${(T.riseLight * s).toFixed(3)})`; ctx.fillRect(x, hinge, w, fh);
   }
   if (s > 0.85) {                                              // flap edge catching the light near edge-on
+    const e = Math.max(1, Math.round(h * 0.012));
+    ctx.globalAlpha = (s - 0.85) / 0.15; ctx.fillStyle = T.edge; ctx.fillRect(x, hinge - e, w, e); ctx.globalAlpha = 1;
+  }
+  const cr = Math.max(1, Math.round(h * GEOM.crease));
+  ctx.fillStyle = T.crease; ctx.fillRect(x, Math.round(hinge - cr / 2), w, cr);
+  ctx.restore();
+}
+
+// [C] A translucent flap (glass, smoke) mid-fold: each half only where the moving flap does
+// not cover it, and the moving flap filled with the material's body, so the next letter never
+// shows through. Opaque materials never come here, so they draw exactly as 0.10 did.
+function drawFoldBody(ctx, af, at, au, x, y, w, h, T, th) {
+  const hh = Math.round(h / 2), hinge = y + hh;
+  ctx.save(); rr(ctx, x, y, w, h, h * GEOM.radius); ctx.clip();
+  const s = Math.sin(th), c = Math.cos(th);
+  const cov = th < Math.PI / 2 ? Math.max(1, hh * c) : Math.max(1, hh * -c);
+  const topH = th < Math.PI / 2 ? hh - Math.round(cov) : hh, botY = th < Math.PI / 2 ? 0 : Math.round(cov);
+  if (topH > 0) ctx.drawImage(at, 0, 0, w, topH, x, y, w, topH);
+  if (h - hh - botY > 0) ctx.drawImage(au, 0, hh + botY, w, h - hh - botY, x, hinge + botY, w, h - hh - botY);
+  if (th < Math.PI / 2) {
+    ctx.fillStyle = `rgba(0,0,0,${(T.cast * c).toFixed(3)})`; if (topH > 0) ctx.fillRect(x, y, w, topH);
+    const fh = Math.max(1, hh * c);
+    ctx.fillStyle = T.body; ctx.fillRect(x, hinge - fh, w, fh);
+    ctx.drawImage(af, 0, 0, w, hh, x, hinge - fh, w, fh);
+    ctx.fillStyle = `rgba(0,0,0,${(T.fallDark * s).toFixed(3)})`; ctx.fillRect(x, hinge - fh, w, fh);
+  } else {
+    const fh = Math.max(1, hh * -c), sh = h * 0.12;
+    const g = ctx.createLinearGradient(0, hinge + fh, 0, hinge + fh + sh);
+    g.addColorStop(0, `rgba(0,0,0,${(T.cast * s).toFixed(3)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(x, hinge + fh, w, Math.min(sh, hh - fh));
+    ctx.fillStyle = T.body; ctx.fillRect(x, hinge, w, fh);
+    ctx.drawImage(at, 0, hh, w, h - hh, x, hinge, w, fh);
+    ctx.fillStyle = `rgba(255,255,255,${(T.riseLight * s).toFixed(3)})`; ctx.fillRect(x, hinge, w, fh);
+  }
+  if (s > 0.85) {
     const e = Math.max(1, Math.round(h * 0.012));
     ctx.globalAlpha = (s - 0.85) / 0.15; ctx.fillStyle = T.edge; ctx.fillRect(x, hinge - e, w, e); ctx.globalAlpha = 1;
   }
@@ -240,10 +306,10 @@ export function fillGrid(w, h) {
 
 export class Board {
   constructor(canvas, o) {
-    // transparent (for OBS and other overlays) needs an alpha canvas, which cannot be
-    // switched later, so it is read here. The frame is drawn on nothing.
+    // [G] the canvas always has alpha: a look whose wall is CSS shows through it. transparent
+    // (OBS and other overlays) draws the frame on nothing, whatever the look.
     this.clear = !!(o && o.transparent);
-    this.cv = canvas; this.ctx = canvas.getContext('2d', { alpha: this.clear });
+    this.cv = canvas; this.ctx = canvas.getContext('2d', { alpha: true });
     this.A = new Atlas(); this.bg = document.createElement('canvas');
     this.o = Object.assign({
       rows: 6, cols: 22, theme: 'black', speed: 'fast', transition: 'classic', maxDpr: 2,
@@ -254,7 +320,7 @@ export class Board {
     this._build();
     this.ro = new ResizeObserver(() => this.resize()); this.ro.observe(canvas);
     this.resize();
-    if (document.fonts) document.fonts.ready.then(() => { this.A.clear(); this._full(); });
+    if (document.fonts) document.fonts.ready.then(() => this.refont());
   }
   _build() {
     const old = this.cells; this.cells = [];
@@ -275,6 +341,8 @@ export class Board {
     if (regrid || retheme) this.resize();
     if (this.target && regrid) this.setGrid(this.target);
   }
+  // [H] once a look's face has loaded: its glyphs are drawn again in it
+  refont() { this.A.clear(); this._sizeKey = null; this.resize(); this._full(); }
   resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, this.o.maxDpr);
     const r = this.cv.getBoundingClientRect(); if (!r.width || !r.height) return;
@@ -282,10 +350,14 @@ export class Board {
     if (W < 1 || H < 1) return;   // a canvas a fraction of a pixel tall mid-layout: wait for the real size
     const key = W + 'x' + H + '|' + this.o.theme + '|' + this.o.rows + 'x' + this.o.cols;
     if (key === this._sizeKey) return;
-    this.cv.width = W; this.cv.height = H; this.W = W; this.H = H;
-    this.A.clear();
+    const sized = this._dims !== W + 'x' + H;
+    this.cv.width = W; this.cv.height = H; this.W = W; this.H = H; this._dims = W + 'x' + H;
+    if (sized) this.A.clear();   // [D] a size change clears the atlas; a look change keeps it
     this._layout(); this._paintBg(); this._full();
     this._sizeKey = key;   // only once painted, so a failed paint is tried again at the same size
+    // [E] the board's rectangle in CSS px of the canvas box (k corrects for a scaled ancestor)
+    if (this.o.onLayout) { const k = this.cv.offsetWidth ? r.width / this.cv.offsetWidth : 1, s = dpr * k, T = THEMES[this.o.theme];
+      this.o.onLayout({ x: this.bx / s, y: this.by / s, w: this.bw / s, h: this.bh / s, r: this.th * T.frameRadius / s, tile: this.th / s }); }
   }
   _layout() {
     const T = THEMES[this.o.theme], G = GEOM, rows = this.o.rows, cols = this.o.cols, pad = T.framePad;
@@ -301,8 +373,9 @@ export class Board {
     const T = THEMES[this.o.theme], b = this.bg; b.width = this.W; b.height = this.H;
     const x = b.getContext('2d'), W = this.W, H = this.H, bx = this.bx, by = this.by, bw = this.bw, bh = this.bh, th = this.th;
     const g = x.createRadialGradient(W / 2, H * 0.46, 0, W / 2, H * 0.46, Math.hypot(W, H) * 0.6);
-    if (!this.clear) { g.addColorStop(0, T.backdrop[0]); g.addColorStop(1, T.backdrop[1]); x.fillStyle = g; x.fillRect(0, 0, W, H); }
-    for (let i = 1; i <= 6 && !this.clear; i++) {      // static contact shadow, painted once
+    const room = T.backdrop && !this.clear;   // [G] the room wall only for a look that has one
+    if (room) { g.addColorStop(0, T.backdrop[0]); g.addColorStop(1, T.backdrop[1]); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+    for (let i = 1; i <= 6 && room; i++) {      // static contact shadow, painted once
       const s = i * th * 0.07; x.fillStyle = `rgba(0,0,0,${(T.shadow / 12).toFixed(3)})`;
       rr(x, bx - s * 0.4, by + s * 0.9, bw + s * 0.8, bh + s * 0.5, th * T.frameRadius + s); x.fill();
     }
@@ -329,7 +402,7 @@ export class Board {
   }
   _full() {
     if (!this.W || !this.H || !this.bg.width || !this.bg.height) return;
-    if (this.clear) this.ctx.clearRect(0, 0, this.W, this.H);
+    this.ctx.clearRect(0, 0, this.W, this.H);   // [G]
     this.ctx.drawImage(this.bg, 0, 0);
     const now = performance.now();
     for (let r = 0; r < this.o.rows; r++) for (let c = 0; c < this.o.cols; c++) this._drawCell(r, c, now);
@@ -359,7 +432,7 @@ export class Board {
   }
   _drawCellInner(r, c, now) {
     const p = this.cellXY(r, c), x = p[0], y = p[1], tw = this.tw, th = this.th, ctx = this.ctx, T = THEMES[this.o.theme], A = this.A;
-    if (this.clear) ctx.clearRect(x, y, tw, th);
+    if (this.clear || !T.backdrop) ctx.clearRect(x, y, tw, th);   // [G] a CSS wall shows through
     ctx.drawImage(this.bg, x, y, tw, th, x, y, tw, th);
     const cell = this.cells[r][c], a = cell.a;
     if (!a) { ctx.drawImage(A.get(cell.cur, tw, th, T), x, y); return; }
@@ -378,7 +451,7 @@ export class Board {
   }
   setGrid(lines, opt) {
     opt = opt || {}; this.target = lines;
-    const now = performance.now(), st = STAGGER[this.o.transition] || STAGGER.classic, sp = FOLD[this.o.speed] || FOLD.fast;
+    const now = performance.now(), st = STAGGER[this.o.transition] || STAGGER.classic, sp = FOLD[this.o.speed] || FOLD.fast, R = this.o.rows, C = this.o.cols;
     let any = false;
     for (let r = 0; r < this.o.rows; r++) {
       const row = lines[r] ? (Array.isArray(lines[r]) ? lines[r] : [...lines[r]]) : [];
@@ -388,9 +461,9 @@ export class Board {
         const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
         if (want === dest) continue;
         // Only faint to lit or back: never a turn of the drum (see retargetFaint).
-        if (retargetFaint(cell, want, now + st(r, c) * 0.5)) { any = true; continue; }
+        if (retargetFaint(cell, want, now + st(r, c, R, C) * 0.5)) { any = true; continue; }
         cell.q = this.o.reduced ? [want] : this._path(dest, want, sp.maxSteps); cell.sp = null;
-        if (!cell.a) cell.due = now + st(r, c);
+        if (!cell.a) cell.due = now + st(r, c, R, C);
         any = true;
       }
     }
@@ -412,7 +485,7 @@ export class Board {
       const cell = this.cells[r][c];
       const dest = cell.q.length ? cell.q[cell.q.length - 1] : (cell.a && cell.a.kind !== 'settle' ? cell.a.to : cell.cur);
       cell.q = this._path(dest, dest, Infinity); cell.sp = FOLD.authentic;
-      if (!cell.a) cell.due = now + st(r, c);
+      if (!cell.a) cell.due = now + st(r, c, this.o.rows, this.o.cols);
     }
     this._kick();
   }
@@ -464,13 +537,23 @@ export class Board {
 // and Save as image. One atlas shared by every thumbnail; float geometry, so HTML
 // overlays line up with staticGeom() percentages. No animation and no wall.
 // Size comes from the canvas's CSS box, or o.width and o.height in device pixels.
-const SHARED = new Atlas();
+const SHARED = new Atlas(8, 5000);   // [D] thumbnails keep eight looks, apart from the board's four
 export function staticGeom(rows, cols, pad) {
   const p = pad == null ? 0.35 : pad, G = GEOM;
   return { pad: p, uw: cols * G.tileW + (cols - 1) * G.gapX + 2 * p, uh: rows + (rows - 1) * G.gapY + 2 * p };
 }
+// [I] theme: an id or a theme object. bg: the wall to draw on, a colour or { a, b, c, base }
+// (a composed look's wall is CSS on the screen; on a thumbnail it is painted here).
+function paintWall(x, W, H, bg) {
+  if (typeof bg === 'string') { x.fillStyle = bg; x.fillRect(0, 0, W, H); return; }
+  if (bg.kind === 'still') { x.fillStyle = bg.base; x.fillRect(0, 0, W, H); return; }
+  const g = x.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, bg.a); g.addColorStop(0.55, bg.b); g.addColorStop(1, bg.c);
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.globalAlpha = 0.35; x.fillStyle = bg.base; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
+}
 export function renderStatic(canvas, o) {
-  const T = THEMES[o.theme] || THEMES.black;
+  const T = (typeof o.theme === 'object' && o.theme) || THEMES[o.theme] || THEMES.black, bg = o.bg !== undefined ? o.bg : T.wallBg;
   let W = o.width, H = o.height;
   if (!W || !H) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2), r = canvas.getBoundingClientRect();
@@ -482,7 +565,8 @@ export function renderStatic(canvas, o) {
   if (SHARED.m.size > 5000) SHARED.clear();
   const x = canvas.getContext('2d'), g = staticGeom(o.rows, o.cols, o.pad), G = GEOM;
   const h = Math.min(W / g.uw, H / g.uh), ox = (W - g.uw * h) / 2, oy = (H - g.uh * h) / 2;
-  x.fillStyle = T.frame; x.fillRect(0, 0, W, H);
+  if (bg) { x.clearRect(0, 0, W, H); paintWall(x, W, H, bg); x.fillStyle = T.frame; rr(x, ox, oy, g.uw * h, g.uh * h, h * Math.min(g.pad, T.frameRadius)); x.fill(); }
+  else { x.fillStyle = T.frame; x.fillRect(0, 0, W, H); }
   const bp = h * 0.08;
   x.fillStyle = T.housing; rr(x, ox + g.pad * h - bp, oy + g.pad * h - bp, (g.uw - 2 * g.pad) * h + 2 * bp, (g.uh - 2 * g.pad) * h + 2 * bp, h * 0.06); x.fill();
   const th = Math.max(2, Math.round(h)), tw = Math.max(2, Math.round(h * G.tileW));

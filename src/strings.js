@@ -3,6 +3,27 @@
 
 export const STR = {
   en: {
+    // 0.11.0: looks. From the design handover's strings (_local/plans/0.11/handoff/strings-0.11.en.json).
+    lk: {
+      look: 'Look', looks: 'Looks', useLook: 'Use this look', makeOwn: 'Make your own', yourOwn: 'Your own',
+      deflt: 'Default', defaultIs: l => `Default (${l})`, followBoards: 'Follow the boards', followsEach: 'Follows each board', eachOwn: 'Each board’s own look',
+      pinned: 'Pinned', pinnedTo: l => `Pinned · ${l}`, pinnedRow: l => `${l}, pinned`, sameForAll: 'Same look for all', previewing: 'Previewing', previewLook: (l, b) => `${l} for ${b}`,
+      previewDefault: l => `${l} as the default`, previewAll: (l, p) => `${l} for every board in ${p}`, previewScreen: l => `${l} on this screen`,
+      forBoard: b => `For ${b}`, forDefault: 'New boards, and every board on Default', forScreen: 'This screen only. A pin wins over every board.', forTemplate: b => `The look ${b} comes in`,
+      forPlaylist: p => `Every board in ${p}. Each board keeps the look from now on, and you can undo it.`,
+      defaultLook: 'Default look', followCount: n => n === 0 ? 'No board follows the default yet' : n === 1 ? '1 board follows the default' : `${n} boards follow the default`,
+      defaultNote: 'On this account’s screens. A screen opened from a link keeps the look the link gave it.',
+      material: 'Material', type: 'Type', letters: 'Letters', litLetters: 'Lit letters', motion: 'Motion', wall: 'Wall', motionPlaylist: 'The playlist’s',
+      walls: { room: 'Shaded', still: 'Plain', fields: 'Moving colour' }, lettersIn: c => `Letters in ${c}`, onNow: 'On now', inkOf: (m, t) => `${m}, ${t}`,
+      pinNote: l => `Every board on this screen shows ${l}. Other screens show each board in its own look.`, unpinNote: 'Pin one look to keep this screen the same whatever the playlist shows.',
+      pinSwatches: l => `This screen is pinned to ${l}. The swatches show each board’s own look, which other screens see.`,
+      stPreview: l => `Previewing ${l}. Use this look keeps it.`, stOnBoard: (l, b) => `${l} is on for ${b}`, stBack: l => `Back to ${l}`, stAlready: l => `${l} is already on`,
+      stDefault: (l, n) => n ? `New boards start as ${l}. ${n === 1 ? '1 board follows' : n + ' boards follow'} the default` : `New boards start as ${l}`,
+      stTemplate: (b, l) => `${b} will come in ${l}`, stAdded: (b, l) => `Added ${b}, in ${l}`, stSame: (l, bs) => `${l} is on for ${bs}`,
+      stSameElsewhere: n => n === 1 ? 'One of them is in another playlist too, and changes there as well.' : `${n} of them are in other playlists too, and change there as well.`,
+      stPin: l => `This screen always shows ${l}`, stUnpin: 'This screen follows each board’s look', stStaysPinned: l => `This screen stays pinned to ${l}`,
+      stLitPaper: 'Lit letters need a dark material', stCustom: 'Your own look, changed', stUndone: 'Back as it was', ownFrom: l => `Make your own starts from ${l}`
+    },
     // 0.10.1: one Boards list, playlists that point at boards, a board's own size, Home.
     fillNote: (r, c) => `Fill screen is worked out by the wall that shows it. Until a wall here has run it full screen, the editor shows it at ${r} × ${c}.`, fillSeen: (r, c) => `Fill screen is worked out by the wall that shows it. The editor shows it at ${r} × ${c}, the size a wall in this browser last filled.`,
     compScroll: 'The board is wider than the phone. Swipe sideways in Type mode to reach the rest.', typeOwnNew: 'Adds a message board, shown in turn with this', mixedSizes: 'Mixed sizes', boardSize: 'Size and theme', sizeOwn: 'This board keeps its own size and theme in every playlist it is in.',
@@ -166,6 +187,27 @@ export const STR = {
     today: 'Today', yesterday: 'Yesterday', drafts: 'Earlier messages', draftsNote: 'Kept in this browser. A message is kept here when you leave the composer after changing it.', noDrafts: 'Nothing yet. A message is kept here when you leave the composer after changing it.', use: 'Use',
   },
   sv: {
+    // 0.11.0: utseenden.
+    lk: {
+      look: 'Utseende', looks: 'Utseenden', useLook: 'Använd det här utseendet', makeOwn: 'Gör ditt eget', yourOwn: 'Ditt eget',
+      deflt: 'Standard', defaultIs: l => `Standard (${l})`, followBoards: 'Följ tavlorna', followsEach: 'Följer varje tavla', eachOwn: 'Varje tavlas eget utseende',
+      pinned: 'Fäst', pinnedTo: l => `Fäst · ${l}`, pinnedRow: l => `${l}, fäst`, sameForAll: 'Samma utseende för alla', previewing: 'Förhandsvisar', previewLook: (l, b) => `${l} för ${b}`,
+      previewDefault: l => `${l} som standard`, previewAll: (l, p) => `${l} för varje tavla i ${p}`, previewScreen: l => `${l} på den här skärmen`,
+      forBoard: b => `För ${b}`, forDefault: 'Nya tavlor, och varje tavla på Standard', forScreen: 'Bara den här skärmen. Ett fäst utseende går före varje tavla.', forTemplate: b => `Utseendet ${b} kommer i`,
+      forPlaylist: p => `Varje tavla i ${p}. Varje tavla behåller utseendet från och med nu, och du kan ångra det.`,
+      defaultLook: 'Standardutseende', followCount: n => n === 0 ? 'Ingen tavla följer standard än' : n === 1 ? '1 tavla följer standard' : `${n} tavlor följer standard`,
+      defaultNote: 'På det här kontots skärmar. En skärm som öppnats från en länk behåller utseendet länken gav den.',
+      material: 'Material', type: 'Typsnitt', letters: 'Bokstäver', litLetters: 'Lysande bokstäver', motion: 'Rörelse', wall: 'Vägg', motionPlaylist: 'Spellistans',
+      walls: { room: 'Skuggad', still: 'Enkel', fields: 'Rörlig färg' }, lettersIn: c => `Bokstäver i ${c}`, onNow: 'Visas nu', inkOf: (m, t) => `${m}, ${t}`,
+      pinNote: l => `Varje tavla på den här skärmen visas i ${l}. Andra skärmar visar varje tavla i sitt eget utseende.`, unpinNote: 'Fäst ett utseende för att hålla skärmen likadan vad spellistan än visar.',
+      pinSwatches: l => `Den här skärmen är fäst vid ${l}. Rutorna visar varje tavlas eget utseende, som andra skärmar ser.`,
+      stPreview: l => `Förhandsvisar ${l}. Använd det här utseendet behåller det.`, stOnBoard: (l, b) => `${l} gäller nu för ${b}`, stBack: l => `Tillbaka till ${l}`, stAlready: l => `${l} gäller redan`,
+      stDefault: (l, n) => n ? `Nya tavlor börjar som ${l}. ${n === 1 ? '1 tavla följer' : n + ' tavlor följer'} standard` : `Nya tavlor börjar som ${l}`,
+      stTemplate: (b, l) => `${b} kommer i ${l}`, stAdded: (b, l) => `${b} är tillagd, i ${l}`, stSame: (l, bs) => `${l} gäller nu för ${bs}`,
+      stSameElsewhere: n => n === 1 ? 'En av dem finns också i en annan spellista och ändras där också.' : `${n} av dem finns också i andra spellistor och ändras där också.`,
+      stPin: l => `Den här skärmen visar alltid ${l}`, stUnpin: 'Den här skärmen följer varje tavlas utseende', stStaysPinned: l => `Den här skärmen förblir fäst vid ${l}`,
+      stLitPaper: 'Lysande bokstäver behöver ett mörkt material', stCustom: 'Ditt eget utseende, ändrat', stUndone: 'Tillbaka som det var', ownFrom: l => `Gör ditt eget utgår från ${l}`
+    },
     // 0.10.1: en lista med tavlor, spellistor som pekar på tavlor, tavlans egen storlek, Hem.
     fillNote: (r, c) => `Fyll skärmen räknas ut av väggen som visar den. Tills en vägg här har visat den i helskärm visar redigeraren den i ${r} × ${c}.`, fillSeen: (r, c) => `Fyll skärmen räknas ut av väggen som visar den. Redigeraren visar den i ${r} × ${c}, storleken en vägg i den här webbläsaren senast fyllde.`,
     compScroll: 'Tavlan är bredare än telefonen. Svep åt sidan i läget Skriv för att nå resten.', typeOwnNew: 'Lägger till en meddelandetavla, som visas i tur med den här', mixedSizes: 'Blandade storlekar', boardSize: 'Storlek och tema', sizeOwn: 'Tavlan behåller sin storlek och sitt tema i varje spellista den finns i.',

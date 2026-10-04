@@ -1,0 +1,1840 @@
+{
+  "version": "0.11",
+  "materials": {
+    "flap": {
+      "label": "Flap",
+      "hint": "Today’s board",
+      "release": "0.11.0",
+      "light": false,
+      "translucent": false,
+      "lit": true,
+      "types": [
+        "mono",
+        "grotesk",
+        "round",
+        "serif"
+      ],
+      "glowA": 0.85,
+      "glowR": 0.2,
+      "inks": [
+        [
+          "warm",
+          "Warm white",
+          "#EDE6D6"
+        ],
+        [
+          "white",
+          "White",
+          "#FFFFFF"
+        ],
+        [
+          "amber",
+          "Amber",
+          "#F2B01E"
+        ],
+        [
+          "ice",
+          "Ice",
+          "#BFE3FF"
+        ]
+      ],
+      "theme": {
+        "face": "#1C1C1E",
+        "faceHi": "#232326",
+        "faceB": "#1A1A1C",
+        "faceLo": "#121213",
+        "housing": "#070708",
+        "crease": "#020202",
+        "lip": "rgba(255,255,255,0.06)",
+        "stack": "#2B2B2E",
+        "pin": "#3A3A3D",
+        "frame": "#0F0F10",
+        "frameEdge": "#26262A",
+        "frameShade": "#050505",
+        "framePad": 0.5,
+        "frameRadius": 0.12,
+        "backdrop": [
+          "#141518",
+          "#0A0A0C"
+        ],
+        "shadow": 0.6,
+        "occl": 0.28,
+        "cast": 0.35,
+        "fallDark": 0.55,
+        "riseLight": 0.1,
+        "edge": "#4A4A4F",
+        "dim": 0.16
+      }
+    },
+    "solari": {
+      "label": "Solari",
+      "hint": "Station rails and screws",
+      "release": "0.11.0",
+      "light": false,
+      "translucent": false,
+      "lit": true,
+      "types": [
+        "grotesk",
+        "mono"
+      ],
+      "glowA": 0.8,
+      "glowR": 0.2,
+      "inks": [
+        [
+          "amber",
+          "Amber",
+          "#F2B01E"
+        ],
+        [
+          "warm",
+          "Warm white",
+          "#EDE6D6"
+        ],
+        [
+          "white",
+          "White",
+          "#FFFFFF"
+        ]
+      ],
+      "theme": {
+        "face": "#2A2B2D",
+        "faceHi": "#313235",
+        "faceB": "#28292B",
+        "faceLo": "#1E1F21",
+        "housing": "#0C0D0E",
+        "crease": "#050506",
+        "lip": "rgba(255,255,255,0.08)",
+        "stack": "#3B3C40",
+        "pin": "#55575C",
+        "frame": "#1C1D1F",
+        "frameEdge": "#3A3C40",
+        "frameShade": "#0A0A0B",
+        "framePad": 0.9,
+        "frameRadius": 0.06,
+        "rail": "#161719",
+        "screws": true,
+        "screw": "#6A6D72",
+        "backdrop": [
+          "#303236",
+          "#1B1C1F"
+        ],
+        "shadow": 0.5,
+        "occl": 0.3,
+        "cast": 0.35,
+        "fallDark": 0.5,
+        "riseLight": 0.1,
+        "edge": "#5A5C61",
+        "dim": 0.16
+      }
+    },
+    "paper": {
+      "label": "Paper",
+      "hint": "Light, matte",
+      "release": "0.11.0",
+      "light": true,
+      "translucent": false,
+      "lit": false,
+      "types": [
+        "mono",
+        "grotesk",
+        "serif"
+      ],
+      "inks": [
+        [
+          "ink",
+          "Ink",
+          "#18181B"
+        ],
+        [
+          "navy",
+          "Navy",
+          "#1E3355"
+        ],
+        [
+          "oxblood",
+          "Oxblood",
+          "#7A2230"
+        ]
+      ],
+      "theme": {
+        "face": "#F0EDE6",
+        "faceHi": "#F7F5F0",
+        "faceB": "#ECE9E2",
+        "faceLo": "#DEDAD2",
+        "housing": "#B9B4AB",
+        "crease": "#7F7A72",
+        "lip": "rgba(255,255,255,0.7)",
+        "stack": "#D3CEC5",
+        "pin": "#9C978F",
+        "frame": "#E7E3DB",
+        "frameEdge": "#FAF8F4",
+        "frameShade": "#BDB8AF",
+        "framePad": 0.5,
+        "frameRadius": 0.12,
+        "backdrop": [
+          "#D5D1C9",
+          "#C3BEB5"
+        ],
+        "shadow": 0.28,
+        "occl": 0.16,
+        "cast": 0.22,
+        "fallDark": 0.3,
+        "riseLight": 0.18,
+        "edge": "#FFFFFF",
+        "dim": 0.13
+      }
+    },
+    "glass": {
+      "label": "Glass",
+      "hint": "Clear, over the wall",
+      "release": "0.11.0",
+      "light": false,
+      "translucent": true,
+      "lit": true,
+      "types": [
+        "mono",
+        "grotesk",
+        "round",
+        "serif"
+      ],
+      "glowA": 0.85,
+      "glowR": 0.22,
+      "inks": [
+        [
+          "white",
+          "White",
+          "#FFFFFF"
+        ],
+        [
+          "warm",
+          "Warm white",
+          "#F6EDDC"
+        ],
+        [
+          "ice",
+          "Ice",
+          "#D2EEFF"
+        ],
+        [
+          "rose",
+          "Rose",
+          "#FFC9DA"
+        ]
+      ],
+      "theme": {
+        "face": "rgba(255,255,255,0.10)",
+        "faceHi": "rgba(255,255,255,0.17)",
+        "faceB": "rgba(255,255,255,0.075)",
+        "faceLo": "rgba(255,255,255,0.045)",
+        "housing": "rgba(0,0,0,0.14)",
+        "crease": "rgba(0,0,0,0.30)",
+        "lip": "rgba(255,255,255,0.22)",
+        "stack": "rgba(255,255,255,0.10)",
+        "pin": "rgba(255,255,255,0.14)",
+        "frame": "rgba(255,255,255,0.05)",
+        "frameEdge": "rgba(255,255,255,0.40)",
+        "frameShade": "rgba(0,0,0,0.12)",
+        "framePad": 0.45,
+        "frameRadius": 0.22,
+        "backdrop": null,
+        "shadow": 0,
+        "sheen": 0.16,
+        "rim": "rgba(255,255,255,0.20)",
+        "body": "rgba(40,50,68,0.90)",
+        "occl": 0.14,
+        "cast": 0.18,
+        "fallDark": 0.22,
+        "riseLight": 0.1,
+        "edge": "rgba(255,255,255,0.7)",
+        "dim": 0.18
+      },
+      "smoked": {
+        "face": "rgba(10,14,22,0.50)",
+        "faceHi": "rgba(24,30,42,0.54)",
+        "faceB": "rgba(8,12,20,0.52)",
+        "faceLo": "rgba(4,6,12,0.58)",
+        "body": "rgba(14,18,28,0.94)",
+        "housing": "rgba(0,0,0,0.30)"
+      }
+    },
+    "smoke": {
+      "label": "Smoke",
+      "hint": "Dark glass",
+      "release": "0.11.0",
+      "light": false,
+      "translucent": true,
+      "lit": true,
+      "types": [
+        "mono",
+        "grotesk",
+        "round",
+        "serif"
+      ],
+      "glowA": 0.9,
+      "glowR": 0.24,
+      "inks": [
+        [
+          "white",
+          "White",
+          "#FFFFFF"
+        ],
+        [
+          "rose",
+          "Rose",
+          "#FF8DB4"
+        ],
+        [
+          "lime",
+          "Lime",
+          "#CBFF6E"
+        ],
+        [
+          "ice",
+          "Ice",
+          "#A8ECFF"
+        ],
+        [
+          "amber",
+          "Amber",
+          "#FFB547"
+        ]
+      ],
+      "theme": {
+        "face": "rgba(14,14,20,0.62)",
+        "faceHi": "rgba(30,30,40,0.66)",
+        "faceB": "rgba(10,10,14,0.64)",
+        "faceLo": "rgba(4,4,8,0.70)",
+        "housing": "rgba(0,0,0,0.30)",
+        "crease": "rgba(0,0,0,0.6)",
+        "lip": "rgba(255,255,255,0.10)",
+        "stack": "rgba(255,255,255,0.06)",
+        "pin": "rgba(255,255,255,0.10)",
+        "frame": "rgba(8,8,12,0.35)",
+        "frameEdge": "rgba(255,255,255,0.08)",
+        "frameShade": "rgba(0,0,0,0.3)",
+        "framePad": 0.45,
+        "frameRadius": 0.22,
+        "backdrop": null,
+        "shadow": 0,
+        "sheen": 0.07,
+        "rim": "rgba(255,255,255,0.10)",
+        "body": "rgba(10,10,14,0.94)",
+        "occl": 0.28,
+        "cast": 0.35,
+        "fallDark": 0.5,
+        "riseLight": 0.08,
+        "edge": "rgba(255,255,255,0.5)",
+        "dim": 0.16
+      },
+      "smoked": {
+        "face": "rgba(6,6,10,0.80)",
+        "faceHi": "rgba(16,16,22,0.82)",
+        "faceB": "rgba(4,4,8,0.82)",
+        "faceLo": "rgba(2,2,4,0.86)",
+        "body": "rgba(6,6,10,0.97)",
+        "housing": "rgba(0,0,0,0.45)"
+      }
+    },
+    "metal": {
+      "label": "Metal",
+      "hint": "Brushed, engraved",
+      "release": "later",
+      "light": true,
+      "translucent": false,
+      "lit": false,
+      "types": [
+        "mono",
+        "grotesk"
+      ],
+      "inks": [
+        [
+          "graphite",
+          "Graphite",
+          "#1C1E22"
+        ],
+        [
+          "navy",
+          "Navy",
+          "#1E3355"
+        ]
+      ],
+      "theme": {
+        "face": "#A7ABB1",
+        "faceHi": "#B9BDC3",
+        "faceB": "#9DA1A7",
+        "faceLo": "#888C92",
+        "housing": "#2B2D31",
+        "crease": "#4A4D52",
+        "lip": "rgba(255,255,255,0.45)",
+        "stack": "#5C6066",
+        "pin": "#C9CDD2",
+        "frame": "#3A3D42",
+        "frameEdge": "#8A8E94",
+        "frameShade": "#1A1B1E",
+        "framePad": 0.5,
+        "frameRadius": 0.08,
+        "backdrop": [
+          "#24262A",
+          "#121315"
+        ],
+        "shadow": 0.6,
+        "brush": 0.06,
+        "occl": 0.22,
+        "cast": 0.3,
+        "fallDark": 0.45,
+        "riseLight": 0.22,
+        "edge": "#E6E9EC",
+        "dim": 0.14
+      }
+    },
+    "ceramic": {
+      "label": "Ceramic",
+      "hint": "Glazed tile",
+      "release": "later",
+      "light": true,
+      "translucent": false,
+      "lit": false,
+      "types": [
+        "serif",
+        "grotesk",
+        "mono"
+      ],
+      "inks": [
+        [
+          "cobalt",
+          "Cobalt",
+          "#1F3A8A"
+        ],
+        [
+          "ink",
+          "Ink",
+          "#18181B"
+        ]
+      ],
+      "theme": {
+        "face": "#F4F1EA",
+        "faceHi": "#FBF9F5",
+        "faceB": "#EFEBE3",
+        "faceLo": "#E2DDD3",
+        "housing": "#CFC9BE",
+        "crease": "#9C968C",
+        "lip": "rgba(255,255,255,0.85)",
+        "stack": "#E0DBD1",
+        "pin": "#B5AFA5",
+        "frame": "#F2EEE7",
+        "frameEdge": "#FFFFFF",
+        "frameShade": "#C9C3B8",
+        "framePad": 0.55,
+        "frameRadius": 0.2,
+        "backdrop": [
+          "#3A4A5A",
+          "#1E2730"
+        ],
+        "shadow": 0.45,
+        "sheen": 0.38,
+        "rim": "rgba(255,255,255,0.7)",
+        "occl": 0.14,
+        "cast": 0.2,
+        "fallDark": 0.28,
+        "riseLight": 0.25,
+        "edge": "#FFFFFF",
+        "dim": 0.12
+      }
+    },
+    "eink": {
+      "label": "E-ink",
+      "hint": "Matte, no light",
+      "release": "later",
+      "light": true,
+      "translucent": false,
+      "lit": false,
+      "types": [
+        "mono",
+        "grotesk",
+        "serif"
+      ],
+      "inks": [
+        [
+          "ink",
+          "Ink",
+          "#232323"
+        ]
+      ],
+      "theme": {
+        "face": "#D6D4CC",
+        "faceHi": "#DAD8D0",
+        "faceB": "#D3D1C9",
+        "faceLo": "#CBC9C1",
+        "housing": "#A9A7A0",
+        "crease": "#8E8C86",
+        "lip": "rgba(255,255,255,0.3)",
+        "stack": "#BDBBB4",
+        "pin": "#8E8C86",
+        "frame": "#2C2D2F",
+        "frameEdge": "#45464A",
+        "frameShade": "#151517",
+        "framePad": 0.6,
+        "frameRadius": 0.05,
+        "backdrop": [
+          "#3A3B3E",
+          "#222325"
+        ],
+        "shadow": 0.5,
+        "occl": 0.08,
+        "cast": 0.15,
+        "fallDark": 0.2,
+        "riseLight": 0.05,
+        "edge": "#E8E6DF",
+        "dim": 0.12
+      }
+    },
+    "dots": {
+      "label": "Dot matrix",
+      "hint": "Letters in LED dots",
+      "release": "later",
+      "light": false,
+      "translucent": false,
+      "lit": true,
+      "alwaysLit": true,
+      "types": [
+        "mono"
+      ],
+      "glowA": 0.9,
+      "glowR": 0.1,
+      "inks": [
+        [
+          "amber",
+          "Amber",
+          "#FFB000"
+        ],
+        [
+          "white",
+          "White",
+          "#F4F4F0"
+        ],
+        [
+          "green",
+          "Green",
+          "#6CFF7A"
+        ],
+        [
+          "red",
+          "Red",
+          "#FF5242"
+        ]
+      ],
+      "theme": {
+        "face": "#0B0B0C",
+        "faceHi": "#0E0E10",
+        "faceB": "#0B0B0C",
+        "faceLo": "#08080A",
+        "housing": "#030303",
+        "crease": "#000000",
+        "lip": "rgba(255,255,255,0.03)",
+        "stack": "#1A1A1C",
+        "pin": "#222224",
+        "frame": "#0A0A0B",
+        "frameEdge": "#1E1E21",
+        "frameShade": "#000000",
+        "framePad": 0.5,
+        "frameRadius": 0.1,
+        "backdrop": [
+          "#121214",
+          "#070708"
+        ],
+        "shadow": 0.6,
+        "dots": {
+          "pitch": 0.054,
+          "r": 0.36,
+          "off": "rgba(255,255,255,0.05)"
+        },
+        "occl": 0.2,
+        "cast": 0.3,
+        "fallDark": 0.5,
+        "riseLight": 0.06,
+        "edge": "#333336",
+        "dim": 0.16
+      }
+    }
+  },
+  "types": {
+    "mono": {
+      "label": "Mono",
+      "font": "\"DM Mono\"",
+      "weight": 500,
+      "capRatio": 0.7,
+      "file": "dm-mono-500.woff2",
+      "licence": "SIL OFL 1.1"
+    },
+    "grotesk": {
+      "label": "Grotesk",
+      "font": "\"Schibsted Grotesk\"",
+      "weight": 700,
+      "capRatio": 0.703,
+      "file": "schibsted-grotesk.woff2",
+      "licence": "SIL OFL 1.1"
+    },
+    "round": {
+      "label": "Round",
+      "font": "\"Plus Jakarta Sans\"",
+      "weight": 600,
+      "capRatio": 0.745,
+      "file": "plus-jakarta-sans.woff2",
+      "licence": "SIL OFL 1.1"
+    },
+    "serif": {
+      "label": "Serif",
+      "font": "\"Cormorant Garamond\"",
+      "weight": 500,
+      "capRatio": 0.625,
+      "file": "cormorant-garamond-normal.woff2",
+      "licence": "SIL OFL 1.1"
+    }
+  },
+  "motion": {
+    "classic": {
+      "label": "Classic",
+      "speed": "fast",
+      "transition": "classic"
+    },
+    "gentle": {
+      "label": "Gentle",
+      "speed": "gentle",
+      "transition": "drift"
+    },
+    "wave": {
+      "label": "Wave",
+      "speed": "fast",
+      "transition": "wave"
+    },
+    "curtain": {
+      "label": "Curtain",
+      "speed": "gentle",
+      "transition": "curtain"
+    },
+    "ripple": {
+      "label": "Ripple",
+      "speed": "fast",
+      "transition": "ripple",
+      "isNew": true
+    },
+    "shimmer": {
+      "label": "Shimmer",
+      "speed": "fast",
+      "transition": "shimmer",
+      "isNew": true
+    }
+  },
+  "ring": {
+    "effects": {
+      "off": {
+        "label": "Off"
+      },
+      "glow": {
+        "label": "Glow",
+        "level": 1
+      },
+      "breathe": {
+        "label": "Breathe",
+        "min": 0.4,
+        "max": 1,
+        "period": {
+          "slow": 9000,
+          "medium": 6000,
+          "quick": 3500
+        },
+        "ease": "sine"
+      },
+      "chase": {
+        "label": "Chase",
+        "level": 1,
+        "turn": {
+          "slow": 40000,
+          "medium": 20000,
+          "quick": 9000
+        }
+      },
+      "flash": {
+        "label": "Flash on change",
+        "rest": 0.25,
+        "peak": 1,
+        "rise": 300,
+        "fall": 1200,
+        "ease": "exp"
+      },
+      "music": {
+        "label": "Music",
+        "rest": 0.3,
+        "gain": 0.9,
+        "decay": 170
+      }
+    },
+    "palettes": {
+      "warm": {
+        "label": "Warm white",
+        "c": [
+          "#FFE7C2",
+          "#FFD39A",
+          "#FFF3DE",
+          "#FFC98A"
+        ]
+      },
+      "amber": {
+        "label": "Amber",
+        "c": [
+          "#F2B01E",
+          "#FFCF66",
+          "#C98A10",
+          "#FFE0A0"
+        ]
+      },
+      "ember": {
+        "label": "Ember",
+        "c": [
+          "#FF7A1A",
+          "#C2381E",
+          "#FFB347",
+          "#8A2A12"
+        ]
+      },
+      "rose": {
+        "label": "Rose",
+        "c": [
+          "#FF5E9A",
+          "#C74BFF",
+          "#FF8DB4",
+          "#8F2C7B"
+        ]
+      },
+      "ocean": {
+        "label": "Ocean",
+        "c": [
+          "#19D3FF",
+          "#2B6FC4",
+          "#3DE0FF",
+          "#5A7CFF"
+        ]
+      },
+      "mint": {
+        "label": "Mint",
+        "c": [
+          "#5CFFB0",
+          "#1FC48A",
+          "#B6FFD9",
+          "#0E8F6A"
+        ]
+      },
+      "rainbow": {
+        "label": "Rainbow",
+        "c": [
+          "#FF3D7F",
+          "#7B5CFF",
+          "#19D3FF",
+          "#FFC53D"
+        ]
+      },
+      "board": {
+        "label": "From the board",
+        "live": true
+      },
+      "sky": {
+        "label": "From the sky",
+        "live": true
+      }
+    },
+    "stops": {
+      "speed": {
+        "slow": "Slow",
+        "medium": "Medium",
+        "quick": "Quick"
+      },
+      "bright": {
+        "low": 0.45,
+        "medium": 0.75,
+        "high": 1
+      },
+      "size": {
+        "close": 0.6,
+        "medium": 1,
+        "wide": 1.5
+      }
+    },
+    "spread": 0.16,
+    "maskBlur": 0.11,
+    "storm": {
+      "every": [
+        6000,
+        20000
+      ],
+      "flash": 120
+    }
+  },
+  "sky": {
+    "phases": [
+      "night",
+      "dawn",
+      "day",
+      "golden",
+      "dusk"
+    ],
+    "phaseLabel": {
+      "night": "Night",
+      "dawn": "Dawn",
+      "day": "Day",
+      "golden": "Golden hour",
+      "dusk": "Dusk"
+    },
+    "weather": [
+      "clear",
+      "cloud",
+      "rain",
+      "snow",
+      "fog",
+      "storm"
+    ],
+    "weatherLabel": {
+      "clear": "Clear",
+      "cloud": "Cloud",
+      "rain": "Rain",
+      "snow": "Snow",
+      "fog": "Fog",
+      "storm": "Storm"
+    },
+    "timeline": [
+      [
+        "night",
+        "R-70"
+      ],
+      [
+        "dawn",
+        "R"
+      ],
+      [
+        "day",
+        "R+70"
+      ],
+      [
+        "day",
+        "S-80"
+      ],
+      [
+        "golden",
+        "S-15"
+      ],
+      [
+        "dusk",
+        "S+25"
+      ],
+      [
+        "night",
+        "S+80"
+      ]
+    ],
+    "strength": {
+      "hint": {
+        "label": "A hint",
+        "k": 0.35
+      },
+      "room": {
+        "label": "The room",
+        "k": 0.7
+      },
+      "weather": {
+        "label": "The weather",
+        "k": 1
+      }
+    },
+    "layers": {
+      "cloud": {
+        "label": "A veil drifting",
+        "period": 90000
+      },
+      "rain": {
+        "label": "Streaks at 104°, near and far",
+        "near": 600,
+        "far": 1100,
+        "angle": 104
+      },
+      "snow": {
+        "label": "Flakes, two depths",
+        "near": 7000,
+        "far": 12000
+      },
+      "fog": {
+        "label": "Two bands drifting",
+        "period": 60000
+      },
+      "storm": {
+        "label": "Heavy rain and lightning on the ring",
+        "near": 420,
+        "far": 800
+      }
+    },
+    "contrastTarget": 4.5,
+    "rules": [
+      "Quiet hours win over the sky.",
+      "Reduced motion stops the drift, the rain and the snow, and keeps the colour.",
+      "Weather up to 3 hours old holds. Older, the sky falls back to the sun alone (clear).",
+      "With no place set, the sky follows this device’s clock with a 06:30 sunrise and 18:30 sunset, and says so.",
+      "A board that travels by link follows the sky of the place it carries.",
+      "Paper never takes the sky’s letter tint, and its wall takes the sky at most as A hint."
+    ],
+    "states": {
+      "night": {
+        "clear": {
+          "a": "#0E1C46",
+          "b": "#1E1550",
+          "c": "#082A36",
+          "base": "#03050C",
+          "ring": [
+            "#2B3F8F",
+            "#5A3FA0",
+            "#1B6F8F",
+            "#3A2C7A"
+          ],
+          "ink": "#D6E2FF",
+          "layer": null,
+          "layerOpacity": 0
+        },
+        "cloud": {
+          "a": "#323D5A",
+          "b": "#3B395F",
+          "c": "#2F4551",
+          "base": "#242831",
+          "ring": [
+            "#394A87",
+            "#5B4A94",
+            "#2D6D87",
+            "#443C78"
+          ],
+          "ink": "#D6E2FF",
+          "layer": "cloud",
+          "layerOpacity": 0.5
+        },
+        "rain": {
+          "a": "#202D4A",
+          "b": "#272A4F",
+          "c": "#1D3343",
+          "base": "#161D29",
+          "ring": [
+            "#2C3E7A",
+            "#4B3E85",
+            "#215E7A",
+            "#36316B"
+          ],
+          "ink": "#D6E2FF",
+          "layer": "rain",
+          "layerOpacity": 0.55
+        },
+        "snow": {
+          "a": "#1F3A72",
+          "b": "#2C3470",
+          "c": "#18466A",
+          "base": "#0A1430",
+          "ring": [
+            "#BFD8FF",
+            "#7FA8FF",
+            "#E6F0FF",
+            "#5A7CFF"
+          ],
+          "ink": "#EAF2FF",
+          "layer": "snow",
+          "layerOpacity": 0.95
+        },
+        "fog": {
+          "a": "#515B72",
+          "b": "#585876",
+          "c": "#4F616B",
+          "base": "#3E424B",
+          "ring": [
+            "#49588F",
+            "#67589A",
+            "#3F778F",
+            "#524C82"
+          ],
+          "ink": "#E4E8F0",
+          "layer": "fog",
+          "layerOpacity": 0.6
+        },
+        "storm": {
+          "a": "#121B30",
+          "b": "#171933",
+          "c": "#101F2B",
+          "base": "#0D111B",
+          "ring": [
+            "#212F63",
+            "#3D2F6D",
+            "#184B63",
+            "#2A2457"
+          ],
+          "ink": "#D6E2FF",
+          "layer": "storm",
+          "layerOpacity": 0.8
+        }
+      },
+      "dawn": {
+        "clear": {
+          "a": "#E9876A",
+          "b": "#6D58A6",
+          "c": "#2B4B8C",
+          "base": "#191530",
+          "ring": [
+            "#FF9A7A",
+            "#C77DFF",
+            "#6FA8FF",
+            "#FFC59A"
+          ],
+          "ink": "#FFE6D6",
+          "layer": null,
+          "layerOpacity": 0
+        },
+        "cloud": {
+          "a": "#AA786E",
+          "b": "#665E8F",
+          "c": "#425780",
+          "base": "#323248",
+          "ring": [
+            "#D48C78",
+            "#AB77D9",
+            "#6A96D9",
+            "#D4AB8F"
+          ],
+          "ink": "#FFE6D6",
+          "layer": "cloud",
+          "layerOpacity": 0.5
+        },
+        "rain": {
+          "a": "#825D5B",
+          "b": "#4A4876",
+          "c": "#2D426A",
+          "base": "#22263D",
+          "ring": [
+            "#BA7B6B",
+            "#9567C5",
+            "#5A84C5",
+            "#BA9781"
+          ],
+          "ink": "#FFE6D6",
+          "layer": "rain",
+          "layerOpacity": 0.55
+        },
+        "snow": {
+          "a": "#D1A69E",
+          "b": "#938EBC",
+          "c": "#7288AF",
+          "base": "#595B71",
+          "ring": [
+            "#EAA794",
+            "#C392F2",
+            "#85B0F2",
+            "#EAC5AB"
+          ],
+          "ink": "#FFE6D6",
+          "layer": "snow",
+          "layerOpacity": 0.85
+        },
+        "fog": {
+          "a": "#A98680",
+          "b": "#777398",
+          "c": "#5D6E8E",
+          "base": "#494B5E",
+          "ring": [
+            "#D19282",
+            "#AD80D7",
+            "#749BD7",
+            "#D1AE96"
+          ],
+          "ink": "#F7EBE4",
+          "layer": "fog",
+          "layerOpacity": 0.6
+        },
+        "storm": {
+          "a": "#543B3A",
+          "b": "#2F2D4C",
+          "c": "#1B2945",
+          "base": "#16182A",
+          "ring": [
+            "#9C6457",
+            "#7C53A4",
+            "#496CA4",
+            "#9C7D69"
+          ],
+          "ink": "#FFE6D6",
+          "layer": "storm",
+          "layerOpacity": 0.8
+        }
+      },
+      "day": {
+        "clear": {
+          "a": "#4E9BE0",
+          "b": "#8CC8F2",
+          "c": "#2F72C4",
+          "base": "#1E4E86",
+          "ring": [
+            "#7FD3FF",
+            "#FFFFFF",
+            "#4EA8FF",
+            "#BFE8FF"
+          ],
+          "ink": "#FFFFFF",
+          "layer": null,
+          "layerOpacity": 0
+        },
+        "cloud": {
+          "a": "#5583AF",
+          "b": "#779CB8",
+          "c": "#446D9F",
+          "base": "#35577F",
+          "ring": [
+            "#76B6D9",
+            "#D4D6D9",
+            "#5296D9",
+            "#A5C5D9"
+          ],
+          "ink": "#FFFFFF",
+          "layer": "cloud",
+          "layerOpacity": 0.5
+        },
+        "rain": {
+          "a": "#3C6690",
+          "b": "#587A98",
+          "c": "#2E5483",
+          "base": "#25466D",
+          "ring": [
+            "#64A1C5",
+            "#BABEC5",
+            "#4384C5",
+            "#8FAFC5"
+          ],
+          "ink": "#FFFFFF",
+          "layer": "rain",
+          "layerOpacity": 0.55
+        },
+        "snow": {
+          "a": "#83B0D9",
+          "b": "#A2C6E2",
+          "c": "#749BCB",
+          "base": "#5C7DA4",
+          "ring": [
+            "#90CFF2",
+            "#EAEDF2",
+            "#6EB0F2",
+            "#BDDDF2"
+          ],
+          "ink": "#FFFFFF",
+          "layer": "snow",
+          "layerOpacity": 0.85
+        },
+        "fog": {
+          "a": "#6B8EAF",
+          "b": "#84A0B7",
+          "c": "#5E7DA4",
+          "base": "#4C688A",
+          "ring": [
+            "#7FB7D7",
+            "#D1D3D7",
+            "#5F9BD7",
+            "#A8C4D7"
+          ],
+          "ink": "#FFFFFF",
+          "layer": "fog",
+          "layerOpacity": 0.6
+        },
+        "storm": {
+          "a": "#25415E",
+          "b": "#384E63",
+          "c": "#1C3455",
+          "base": "#183150",
+          "ring": [
+            "#5285A4",
+            "#9C9FA4",
+            "#366CA4",
+            "#7791A4"
+          ],
+          "ink": "#FFFFFF",
+          "layer": "storm",
+          "layerOpacity": 0.8
+        }
+      },
+      "golden": {
+        "clear": {
+          "a": "#F2A13A",
+          "b": "#E2583A",
+          "c": "#8A3F86",
+          "base": "#3A1E24",
+          "ring": [
+            "#FFB347",
+            "#FF7A1A",
+            "#FF5E7A",
+            "#FFD27A"
+          ],
+          "ink": "#FFE6BF",
+          "layer": null,
+          "layerOpacity": 0
+        },
+        "cloud": {
+          "a": "#AF8653",
+          "b": "#A75E53",
+          "c": "#76517D",
+          "base": "#473840",
+          "ring": [
+            "#D49E53",
+            "#D47532",
+            "#D46078",
+            "#D4B578"
+          ],
+          "ink": "#FFE6BF",
+          "layer": "cloud",
+          "layerOpacity": 0.5
+        },
+        "rain": {
+          "a": "#866945",
+          "b": "#7F4845",
+          "c": "#573D67",
+          "base": "#352B36",
+          "ring": [
+            "#BA8B49",
+            "#BA652B",
+            "#BA526B",
+            "#BAA06B"
+          ],
+          "ink": "#FFE6BF",
+          "layer": "rain",
+          "layerOpacity": 0.55
+        },
+        "snow": {
+          "a": "#D5B386",
+          "b": "#CD8E86",
+          "c": "#A182AC",
+          "base": "#6C606A",
+          "ring": [
+            "#EAB871",
+            "#EA9051",
+            "#EA7D94",
+            "#EACE94"
+          ],
+          "ink": "#FFE6BF",
+          "layer": "snow",
+          "layerOpacity": 0.85
+        },
+        "fog": {
+          "a": "#AC906D",
+          "b": "#A6736D",
+          "c": "#83698B",
+          "base": "#5B4F57",
+          "ring": [
+            "#D1A261",
+            "#D17E44",
+            "#D16C82",
+            "#D1B682"
+          ],
+          "ink": "#F7EBD9",
+          "layer": "fog",
+          "layerOpacity": 0.6
+        },
+        "storm": {
+          "a": "#57432C",
+          "b": "#522D2C",
+          "c": "#372543",
+          "base": "#251C25",
+          "ring": [
+            "#FF8A3A",
+            "#8A3A2A",
+            "#FFB070",
+            "#5A2A30"
+          ],
+          "ink": "#FFE6BF",
+          "layer": "storm",
+          "layerOpacity": 0.8
+        }
+      },
+      "dusk": {
+        "clear": {
+          "a": "#B9467A",
+          "b": "#41307D",
+          "c": "#15295A",
+          "base": "#110D22",
+          "ring": [
+            "#FF5E9A",
+            "#7B5CFF",
+            "#3D6BFF",
+            "#C74BFF"
+          ],
+          "ink": "#FFDCEB",
+          "layer": null,
+          "layerOpacity": 0
+        },
+        "cloud": {
+          "a": "#905476",
+          "b": "#4E4878",
+          "c": "#364465",
+          "base": "#2D2D3F",
+          "ring": [
+            "#D4608F",
+            "#735FD9",
+            "#466AD9",
+            "#AB52D9"
+          ],
+          "ink": "#FFDCEB",
+          "layer": "cloud",
+          "layerOpacity": 0.5
+        },
+        "rain": {
+          "a": "#7A3A64",
+          "b": "#3A2E6A",
+          "c": "#1A2850",
+          "base": "#170F22",
+          "ring": [
+            "#FF7AA8",
+            "#9A6BFF",
+            "#FF9AC0",
+            "#6A4CC8"
+          ],
+          "ink": "#FFDCEB",
+          "layer": "rain",
+          "layerOpacity": 0.6
+        },
+        "snow": {
+          "a": "#B985A6",
+          "b": "#7D7AA8",
+          "c": "#677796",
+          "base": "#545668",
+          "ring": [
+            "#EA7DAB",
+            "#8D7BF2",
+            "#6286F2",
+            "#C36FF2"
+          ],
+          "ink": "#FFDCEB",
+          "layer": "snow",
+          "layerOpacity": 0.85
+        },
+        "fog": {
+          "a": "#966C87",
+          "b": "#666388",
+          "c": "#54607A",
+          "base": "#454756",
+          "ring": [
+            "#D16C96",
+            "#7C6BD7",
+            "#5474D7",
+            "#AD60D7"
+          ],
+          "ink": "#F7E6EF",
+          "layer": "fog",
+          "layerOpacity": 0.6
+        },
+        "storm": {
+          "a": "#46273F",
+          "b": "#222140",
+          "c": "#141F36",
+          "base": "#131424",
+          "ring": [
+            "#9C4169",
+            "#5040A4",
+            "#2C49A4",
+            "#7C36A4"
+          ],
+          "ink": "#FFDCEB",
+          "layer": "storm",
+          "layerOpacity": 0.8
+        }
+      }
+    }
+  },
+  "meter": {
+    "styles": {
+      "mixer": "Mixer",
+      "bars": "Bars",
+      "mirror": "Mirror"
+    },
+    "colours": {
+      "green": "#2C9A5A",
+      "amber": "#F2BE2E",
+      "red": "#D5352B"
+    },
+    "zones": {
+      "green": 0.6,
+      "amber": 0.85
+    },
+    "halves": {
+      "amber": [
+        "",
+        ""
+      ]
+    },
+    "tick": 90,
+    "step": 1,
+    "peakHold": 700,
+    "peakFall": 0.5,
+    "quietAfter": 4000,
+    "stoppedFor": 2500,
+    "fold": {
+      "step": 40,
+      "final": 50,
+      "settle": 1,
+      "maxSteps": 1
+    },
+    "grid": {
+      "rows": 12,
+      "cols": 40
+    },
+    "bandCols": 2,
+    "bandGap": 1,
+    "sound": false
+  },
+  "looks": {
+    "classic": {
+      "label": "Classic",
+      "hint": "Today’s board",
+      "digital": "Nothing. It is the hardware, and it must stay exactly that.",
+      "parts": {
+        "material": "flap",
+        "type": "mono",
+        "ink": "warm",
+        "lit": false,
+        "motion": "classic",
+        "ring": {
+          "fx": "off",
+          "pal": "warm",
+          "speed": "medium",
+          "bright": "medium",
+          "size": "medium"
+        },
+        "wall": {
+          "kind": "room"
+        },
+        "sky": {
+          "on": false,
+          "wall": true,
+          "ring": true,
+          "ink": true,
+          "strength": "room"
+        }
+      },
+      "chrome": {
+        "mode": "dark",
+        "accent": "#C8974A"
+      },
+      "legacy": "black"
+    },
+    "backlit": {
+      "label": "Backlit",
+      "hint": "Light when it changes",
+      "digital": "Light from behind the frame that rises each time the board changes, so you notice from across the room.",
+      "parts": {
+        "material": "flap",
+        "type": "mono",
+        "ink": "warm",
+        "lit": false,
+        "motion": "classic",
+        "ring": {
+          "fx": "flash",
+          "pal": "warm",
+          "speed": "medium",
+          "bright": "medium",
+          "size": "medium"
+        },
+        "wall": {
+          "kind": "still",
+          "base": "#060608"
+        },
+        "sky": {
+          "on": false,
+          "wall": true,
+          "ring": true,
+          "ink": true,
+          "strength": "room"
+        }
+      },
+      "chrome": {
+        "mode": "dark",
+        "accent": "#E8C48A"
+      },
+      "legacy": "black"
+    },
+    "signal": {
+      "label": "Signal",
+      "hint": "The light reads the board",
+      "digital": "The ring takes the colour of the board’s own chips: red when a train is cancelled, green when all is well.",
+      "parts": {
+        "material": "solari",
+        "type": "grotesk",
+        "ink": "amber",
+        "lit": true,
+        "motion": "classic",
+        "ring": {
+          "fx": "flash",
+          "pal": "board",
+          "speed": "medium",
+          "bright": "medium",
+          "size": "close"
+        },
+        "wall": {
+          "kind": "room"
+        },
+        "sky": {
+          "on": false,
+          "wall": true,
+          "ring": true,
+          "ink": true,
+          "strength": "room"
+        }
+      },
+      "chrome": {
+        "mode": "dark",
+        "accent": "#F2B01E"
+      },
+      "legacy": "solari"
+    },
+    "calm": {
+      "label": "Calm",
+      "hint": "Glass over slow light",
+      "digital": "Clear flaps over colour that moves too slowly to notice, with letters that glow.",
+      "parts": {
+        "material": "glass",
+        "type": "serif",
+        "ink": "white",
+        "lit": true,
+        "motion": "gentle",
+        "ring": {
+          "fx": "off",
+          "pal": "ocean",
+          "speed": "medium",
+          "bright": "medium",
+          "size": "medium"
+        },
+        "wall": {
+          "kind": "fields",
+          "base": "#060A12",
+          "c": [
+            "#1D3B6B",
+            "#2C2457",
+            "#0E4A4E"
+          ]
+        },
+        "sky": {
+          "on": false,
+          "wall": true,
+          "ring": true,
+          "ink": true,
+          "strength": "room"
+        }
+      },
+      "chrome": {
+        "mode": "dark",
+        "accent": "#9FD3FF"
+      },
+      "legacy": "black"
+    },
+    "outside": {
+      "label": "Outside",
+      "hint": "Your sky, live",
+      "digital": "The wall, the ring and the letters follow the sun and the weather where you are.",
+      "parts": {
+        "material": "glass",
+        "type": "grotesk",
+        "ink": "white",
+        "lit": true,
+        "motion": "gentle",
+        "ring": {
+          "fx": "glow",
+          "pal": "sky",
+          "speed": "medium",
+          "bright": "low",
+          "size": "medium"
+        },
+        "wall": {
+          "kind": "fields",
+          "base": "#07080B",
+          "c": [
+            "#1B2A4A",
+            "#3B2357",
+            "#0F3B3F"
+          ]
+        },
+        "sky": {
+          "on": true,
+          "wall": true,
+          "ring": true,
+          "ink": true,
+          "strength": "weather"
+        }
+      },
+      "chrome": {
+        "mode": "dark",
+        "accent": "#FFFFFF"
+      },
+      "legacy": "black"
+    },
+    "sunday": {
+      "label": "Sunday",
+      "hint": "Paper in daylight",
+      "digital": "Paper whose wall warms at golden hour and goes dusky at night, as daylight moves round a room.",
+      "parts": {
+        "material": "paper",
+        "type": "serif",
+        "ink": "ink",
+        "lit": false,
+        "motion": "curtain",
+        "ring": {
+          "fx": "off",
+          "pal": "warm",
+          "speed": "medium",
+          "bright": "medium",
+          "size": "medium"
+        },
+        "wall": {
+          "kind": "still",
+          "base": "#D5D1C9"
+        },
+        "sky": {
+          "on": true,
+          "wall": true,
+          "ring": false,
+          "ink": false,
+          "strength": "hint"
+        }
+      },
+      "chrome": {
+        "mode": "light",
+        "accent": "#8C6222"
+      },
+      "legacy": "white"
+    },
+    "party": {
+      "label": "Party",
+      "hint": "Lights to the music",
+      "digital": "Smoked glass, neon letters and a ring that moves with the room’s music.",
+      "parts": {
+        "material": "smoke",
+        "type": "round",
+        "ink": "rose",
+        "lit": true,
+        "motion": "wave",
+        "ring": {
+          "fx": "music",
+          "pal": "rose",
+          "speed": "quick",
+          "bright": "high",
+          "size": "wide"
+        },
+        "wall": {
+          "kind": "fields",
+          "base": "#05040A",
+          "c": [
+            "#3A0F4F",
+            "#0B2D5C",
+            "#4D0F2E"
+          ]
+        },
+        "sky": {
+          "on": false,
+          "wall": true,
+          "ring": true,
+          "ink": true,
+          "strength": "room"
+        }
+      },
+      "chrome": {
+        "mode": "dark",
+        "accent": "#FF8DB4"
+      },
+      "legacy": "black"
+    }
+  },
+  "order": [
+    "classic",
+    "backlit",
+    "signal",
+    "calm",
+    "outside",
+    "sunday",
+    "party"
+  ],
+  "templateLooks": {
+    "departures": "signal",
+    "weather": "outside",
+    "clock": "calm",
+    "markets": "backlit",
+    "message": "classic",
+    "meter": "party"
+  },
+  "matrix": {
+    "types": {
+      "flap": [
+        "mono",
+        "grotesk",
+        "round",
+        "serif"
+      ],
+      "solari": [
+        "grotesk",
+        "mono"
+      ],
+      "paper": [
+        "mono",
+        "grotesk",
+        "serif"
+      ],
+      "glass": [
+        "mono",
+        "grotesk",
+        "round",
+        "serif"
+      ],
+      "smoke": [
+        "mono",
+        "grotesk",
+        "round",
+        "serif"
+      ],
+      "metal": [
+        "mono",
+        "grotesk"
+      ],
+      "ceramic": [
+        "serif",
+        "grotesk",
+        "mono"
+      ],
+      "eink": [
+        "mono",
+        "grotesk",
+        "serif"
+      ],
+      "dots": [
+        "mono"
+      ]
+    },
+    "inks": {
+      "flap": [
+        "warm",
+        "white",
+        "amber",
+        "ice"
+      ],
+      "solari": [
+        "amber",
+        "warm",
+        "white"
+      ],
+      "paper": [
+        "ink",
+        "navy",
+        "oxblood"
+      ],
+      "glass": [
+        "white",
+        "warm",
+        "ice",
+        "rose"
+      ],
+      "smoke": [
+        "white",
+        "rose",
+        "lime",
+        "ice",
+        "amber"
+      ],
+      "metal": [
+        "graphite",
+        "navy"
+      ],
+      "ceramic": [
+        "cobalt",
+        "ink"
+      ],
+      "eink": [
+        "ink"
+      ],
+      "dots": [
+        "amber",
+        "white",
+        "green",
+        "red"
+      ]
+    },
+    "lit": {
+      "flap": true,
+      "solari": true,
+      "paper": false,
+      "glass": true,
+      "smoke": true,
+      "metal": false,
+      "ceramic": false,
+      "eink": false,
+      "dots": true
+    },
+    "walls": {
+      "flap": [
+        "room",
+        "still",
+        "fields"
+      ],
+      "solari": [
+        "room",
+        "still"
+      ],
+      "paper": [
+        "still"
+      ],
+      "glass": [
+        "fields"
+      ],
+      "smoke": [
+        "fields"
+      ],
+      "metal": [
+        "room"
+      ],
+      "ceramic": [
+        "room"
+      ],
+      "eink": [
+        "room"
+      ],
+      "dots": [
+        "room",
+        "still"
+      ]
+    },
+    "sky": {
+      "paper": {
+        "strength": [
+          "hint"
+        ],
+        "ink": false
+      }
+    },
+    "notes": [
+      "Lit letters only on dark materials. Paper, Metal, Ceramic and E-ink never glow.",
+      "No serif or round face on Solari: its rails and screws are a station board’s.",
+      "Glass and Smoke always have a moving wall behind them, or the glass has nothing to show.",
+      "Paper takes the sky on its wall only, and only as A hint.",
+      "The rainbow is a named palette, never a default."
+    ]
+  },
+  "quality": [
+    {
+      "id": "full",
+      "label": "Everything"
+    },
+    {
+      "id": "still",
+      "label": "The wall holds still"
+    },
+    {
+      "id": "noweather",
+      "label": "No rain or snow on the wall"
+    },
+    {
+      "id": "noring",
+      "label": "No ring"
+    },
+    {
+      "id": "lowres",
+      "label": "The board at 1× density (renderer budget)"
+    }
+  ]
+}
