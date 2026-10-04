@@ -26,3 +26,6 @@ _local/
 # Worker: local secrets and wrangler state, never committed
 .dev.vars
 .wrangler/
+
+# a symlinked node_modules is a file, not a folder
+node_modules
