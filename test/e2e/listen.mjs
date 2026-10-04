@@ -79,7 +79,8 @@ try {
   await A.ev(`(() => { window.__errs = 0; addEventListener('error', () => window.__errs++); const a = splitFlap; a.S.pageIdx = 0; a.S.pageStart = Date.now(); a.refresh(); })()`); await sleep(1200);
   await A.ev(`document.querySelector('[data-k=bar-listen]').click()`); await sleep(2500);
   check('Mirror on an 11 x 15 board: no errors, and the middle row moves', (await A.ev('window.__errs')) === 0 && (await A.ev('splitFlap.board.o.rows')) === 11 && (await A.ev(`splitFlap.board.snapshot()[5].filter(c => c === 'f').length`)) > 0, `${await A.ev('window.__errs')} ${await A.ev('splitFlap.board.o.rows')}`);
-  await A.ev(`splitFlap.upd(x => { x.pages[0].zones = [{ ch: 'meter', o: { style: 'bars' } }]; })`); await sleep(1500);
+  await A.ev(`splitFlap.upd(x => { x.pages[0].zones = [{ ch: 'meter', o: { style: 'bars' } }]; })`);
+  await A.ev(`(() => { const a = splitFlap; a.S.pageIdx = 0; a.S.pageStart = Date.now(); a.tick(true); })()`); await sleep(1500);   // the demo playlist turns on its own
   check('Bars: one colour, filled flaps only', (await A.ev('window.__errs')) === 0 && (await A.ev(`splitFlap.board.snapshot().flat().filter(c => /^[gyr]$/.test(c)).length`)) === 0 && (await A.ev(`splitFlap.board.snapshot().flat().filter(c => c === 'f').length`)) > 0);
   // the Showing row's button
   await A.ev('splitFlap.toggleEdit()'); await A.ev(`splitFlap.editor.go({ sec: 'sb', lv: 'showing' })`); await sleep(500);
