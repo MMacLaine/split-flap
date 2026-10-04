@@ -306,7 +306,7 @@ html, body { margin: 0; background: #13151A; }
 .sf-help-toc li { break-inside: avoid; color: var(--muted); font-size: 13px; }
 .sf-help-toc .sf-link-btn { text-align: left; }
 @media (max-width: 480px) { .sf-help-toc ol { columns: 1; } }
-.sf-help-sec h3:focus { outline: none; }
+.sf-help-sec h3:focus:not(:focus-visible) { outline: none; }
 .sf-head-help { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border-2); background: transparent; color: var(--pale); font: 600 15px var(--sans); cursor: pointer; }
 .sf-head-help:hover { color: var(--text); border-color: var(--accent-line); }
 .sf-head-help:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

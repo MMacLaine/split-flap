@@ -906,7 +906,7 @@ export class App {
     if (this.S.editing && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !typing && this.editor.composer.els) {
       e.preventDefault(); if (e.shiftKey) this.editor.composer.redo(); else this.editor.composer.undo(); return;
     }
-    if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (typing || e.metaKey || e.ctrlKey || (e.altKey && e.key !== '?')) return;   // ? is on AltGr on some layouts
     this.wake();
     const k = e.key.toLowerCase();
     if (k === 'r') { this.announce(); return; }   // read the board aloud, kiosk or not
