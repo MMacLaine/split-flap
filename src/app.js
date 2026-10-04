@@ -27,6 +27,7 @@ import { nowShowing, playlistPanel } from './week.js';
 import { h, clone } from './dom.js';
 import { VERSION, versionIn, shouldReload } from './changelog.js';
 import { Listen } from './meter.js';
+import { Track, deviceOf, band, errText } from './track.js';
 
 const LOOK_MS = 180000;   // three minutes untouched ends a preview (0.10)
 export const MAX_PL = 100, MAX_LIB = 500;   // playlists, and boards in your Boards (0.10.1)
@@ -107,6 +108,12 @@ export class App {
     this.snapFresh();
     if (!boards.length) { this.save(); setFlag('sf_fresh', this.boards[0].id); setFlag('sf_words_070', '1'); }
     this.connections = loadConns();       // your own sources (0.9.2), kept in this browser and synced
+    // anonymous usage counts (0.11.5): on the live site only, never on a copy or in the tests
+    this.track = new Track({ off: location.hostname !== 'maclaine.se' && !params.has('track'), ctx: () => ({
+      d: deviceOf(innerWidth, innerHeight, this.kioskStrict || this.S.isFull), l: this.S.lang, v: VERSION,
+      k: this.kioskStrict ? 'yes' : 'no', a: this.account && this.account.user ? 'yes' : 'no' }) });
+    addEventListener('error', e => this.ev('error', errText(e.message), String(e.filename || '').split('/').pop().split('?')[0] + ':' + (e.lineno || 0)));
+    addEventListener('unhandledrejection', e => this.ev('error', errText(e.reason && e.reason.message || e.reason), 'promise'));
     this.editor = new Editor(this);
     this.account = new Account(this);
     // ?template=home (the SL map links here): open that template's board, creating it
@@ -147,7 +154,10 @@ export class App {
       else if (parseRoute(location.hash) && !this.kioskStrict) { this.S.editing = true; this.dismissCue(false); this.editor.open(); }   // a reload lands where it was
       this.refresh();
       this.wake(this.S.cue ? 12000 : 3000);
-      if (this.signInError) setTimeout(() => this.flash(this.t.signInNotFinished, 10000), 400);
+      if (this.signInError) { this.ev('signin_error', this.signInError); setTimeout(() => this.flash(this.t.signInNotFinished, 10000), 400); }
+      // one count a visit: what is on, how much there is, and how it is shown
+      { const l = this.lookNow(); this.ev('open', this.firstRun ? 'first' : 'again', l.id, this.transparent ? 'obs' : this.kioskStrict ? 'kiosk' : 'page');
+        this.ev('library', band(this.playlists.filter(p => !p.solo).length), band(this.blueprints.length), (this.shown().rows || 6) + 'x' + (this.shown().cols || 22)); }
       this.iv = setInterval(() => this.tick(), 500);
       // Accounts: only where the Worker answers, never on a wall screen.
       if (!this.kioskStrict) this.account.init().then(() => { if (this.account.offerCount()) { Object.assign(this.S, { editing: true }); this.editor.go({ sec: 'acc', lv: 'main' }); this.refresh(); } });
@@ -204,6 +214,7 @@ export class App {
   }
   // The one button that makes a preview real: Show on this screen.
   showHere() {
+    this.ev('show_here', this.lookPreview() ? 'look' : this.editor.E.sec + ':' + this.editor.E.lv);
     const t = this.t, E = this.editor.E, bp = this.editor.bp();
     if (this.lookPreview()) { commitLook(this.editor); return; }   // the look sheet's preview: Use this look
     if (E.preview && E.sheet && E.sheet.kind === 'add') { this.editor.confirmAdd(); return; }
@@ -298,6 +309,7 @@ export class App {
   // Playlists against the cap: the one-board playlists made to show a board are not counted (0.10.1 review).
   plCount() { return this.playlists.filter(p => !p.solo).length; }
   showBoard(id, o = {}) {
+    this.ev('show_board');
     const t = this.t, lb = this.blueprints.find(x => x.id === id); if (!lb) return;
     let i = this.boards.findIndex(b => b.solo && b.pages.length === 1 && b.pages[0].id === id);
     if (i < 0) {
@@ -357,6 +369,7 @@ export class App {
   // A board's own look (0.11): 'default', a look, or custom with its parts. Its theme is written
   // for 0.10 readers: its own look's, or black for Default. Returns the look it had, for Undo.
   setBoardLook(id, l) {
+    this.ev('look_used', l && l.id || 'default');
     const i = this.blueprints.findIndex(b => b.id === id); if (i < 0) return null;
     const b = JSON.parse(JSON.stringify(this.blueprints[i])), o = lookOf(b), prev = { id: o.look, parts: o.lookParts };
     if (!l || l.id === 'default') { b.look = 'default'; delete b.lookParts; b.theme = 'black'; }
@@ -484,12 +497,14 @@ export class App {
   }
   selIdx(b = this.cur()) { return Math.max(0, Math.min(this.S.sel, b.pages.length - 1)); }
   flash(msg, ms) { this.say(msg, ms ? { ms } : {}); }
+  ev(...a) { if (this.track) this.track.ev(...a); }
   // The status line (0.9.4): every press answers in words, in one place. In the editor it
   // sits under the panel's title; with the editor closed it floats above the control bar.
   // A line lasts 7 s, or 12 s with an action (Undo, Show it now, Try again). The newest is on
   // top and the one before stays below, fainter, until its time is up. A line with the same
   // key replaces the older one, so a run of saves never stacks.
   say(msg, o = {}) {
+    if (o.fail) this.ev('fail', o.key || 'line');   // a press that didn't work: where people get stuck
     if (o.key !== 'save') clearTimeout(this.savedT);   // a line that says what happened stands in for "Saved"
     const now = Date.now(), ms = o.ms || (o.action ? 12000 : 7000);
     const line = { id: ++this.lineN, msg, fail: !!o.fail, action: o.action || null, key: o.key || null, until: now + ms };
@@ -533,7 +548,7 @@ export class App {
   // this screen's pin, the board's own look, the account's default, Classic.
   lookSetting() { return this.setting('look'); }
   pin() { try { const v = JSON.parse(getFlag('sf_look_pin') || 'null'); if (!v || !v.id) return null; if (v.id === 'custom') { const p = sanitizeParts(v.parts); return p ? { id: 'custom', parts: p } : null; } return LOOKS[v.id] ? { id: v.id } : null; } catch { return null; } }
-  setPin(l) { setFlag('sf_look_pin', l ? JSON.stringify(l) : ''); }
+  setPin(l) { this.ev('look_pinned', l ? l.id : 'none'); setFlag('sf_look_pin', l ? JSON.stringify(l) : ''); }
   lookPage() { const bp = this.editor && this.editor.bp(); if (bp) return bp; const p = this.editor && this.currentPage(); return p || this.cur().pages[0]; }
   lookNow() { return lookFor(this.lookPage(), this.pin(), this.lookSetting(), this.lookPreview()); }
   // the look being previewed in the look sheet, if any
@@ -589,6 +604,7 @@ export class App {
     if (this.ambient) this.ambient.music();
   }
   listenChanged(st, line) {
+    this.ev('listen', st);
     if (line) this.say(this.t.lk[line]);
     if (this.isMeter() && !this.previewing) this.board.setGrid(this.grid());
     if (this.ambient) { this.ambient.key = null; this.ambient.paint(); }
@@ -897,6 +913,7 @@ export class App {
     if (!editing) { this.wake(); const edit = this.root.querySelector('[data-k="bar-edit"]'); if (edit && (!document.activeElement || document.activeElement === document.body)) edit.focus({ preventScroll: true }); }
   }
   toggleFull() {
+    this.ev('fullscreen', document.fullscreenElement ? 'off' : 'on');
     if (document.fullscreenElement) document.exitFullscreen();
     else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
   }
@@ -1190,6 +1207,7 @@ export class App {
   // editor lands on its board (one board) or its boards (several). Never the week view.
   useTemplate(id) {
     if (!TEMPLATES.some(x => x.id === id)) return;
+    this.ev('template_used', id, (this.editor && this.editor.tplSize(id)) || 'fit');
     if (this.plCount() >= MAX_PL && !(this.startPending() && this.freshId === this.shown().id)) { this.say(this.t.sbFull, { fail: true }); return; }
     // at the template's own size, or the one picked in its preview (0.10.3)
     const t = this.t, nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace(), this.editor && this.editor.tplSize(id)), prev = this.active;

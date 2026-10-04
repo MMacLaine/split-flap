@@ -208,3 +208,14 @@ test('the default look: a valid one is kept, parts MATRIX does not allow are ref
   r = await call(c, 'GET', '/blueprints');
   assert.deepEqual([r.body.blueprints[0].board.look, r.body.blueprints[0].board.theme], ['calm', 'black']);
 });
+
+test('usage counts: no sign-in needed, the app origin only, junk refused', async () => {
+  const body = { c: { d: 'desktop', l: 'en', v: '0.11.5' }, e: [{ n: 'open', a: 'first' }] };
+  const post = (b, origin = ORIGIN) => fetch(API + '/e', { method: 'POST', headers: Object.assign({ 'content-type': 'text/plain' }, origin ? { origin } : {}), body: typeof b === 'string' ? b : JSON.stringify(b) });
+  assert.equal((await post(body)).status, 204);
+  assert.equal((await post(body, 'https://evil.example')).status, 403);
+  assert.equal((await post(body, null)).status, 403);
+  assert.equal((await post('not json')).status, 400);
+  assert.equal((await post({ e: 'x' })).status, 400);
+  assert.equal((await post('x'.repeat(20000))).status, 413);
+});

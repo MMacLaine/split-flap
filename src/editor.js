@@ -80,6 +80,7 @@ export class Editor {
     if (typeof r === 'string') r = { account: { sec: 'acc', lv: 'main' }, help: { sec: 'acc', lv: 'help' }, log: { sec: 'acc', lv: 'log' }, start: { sec: 'ex', lv: 'list' },
       settings: { sec: 'sb', lv: 'sb', sb: this.app.cur().id, view: 'display' } }[r] || { sec: 'sb', lv: 'list' };   // named levels, from Help's links
     r = this.resolve(Object.assign({}, r));
+    this.app.ev('view', r.sec + ':' + r.lv, r.sec === 'ex' && r.lv === 'tpl' ? r.tpl : r.sec === 'sb' && r.view ? r.view : null);   // where people go, and where they stop
     // 0.10: a template's level shows the template on the screen; a level that is about no
     // storyboard, board or template puts the screen back, and says so
     if (r.sec === 'ex' && r.lv === 'tpl') { if (!this.app.lookTpl || this.app.lookTpl.from !== r.tpl) this.app.lookAtTemplate(this.tplBoard(r.tpl)); }
