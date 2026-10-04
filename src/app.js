@@ -3,7 +3,8 @@
 // structural changes (a click, a select); typing edits the board in place so inputs
 // keep focus and the phone keyboard stays up.
 
-import { Board, THEMES, fillGrid, renderStatic, staticGeom } from './renderer.js';
+import { Board, THEMES, fillGrid, renderStatic, staticGeom, register, resetStatic } from './renderer.js';
+import { lookFor, drawFor, accentOf, isLight, motionOf, lookOf, legacyOf, defaultOf, LOOKS, sanitizeParts } from './looks.js';
 import { isChip, isDim } from './charset.js';
 import { compose, FALLBACK_PAGE, newId, blank } from './content.js';
 import { TEMPLATES, fromTemplate } from './templates.js';
@@ -17,6 +18,7 @@ import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
 import { Editor } from './editor.js';
+import { commitLook, barLine, lookLabel } from './lookSheet.js';
 import { Account, loadState, loadMyState } from './account.js';
 import { loadConns, saveConns, sanitizeConnection } from './connections.js';
 import { parseRoute } from './route.js';
@@ -114,7 +116,14 @@ export class App {
       this.save();
     }
 
-    this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent,
+    // the wall behind a look whose wall is CSS (0.11), inside the quiet-hours wrapper so quiet
+    // hours dim it too; a plate under an opaque board on it; and a canvas to crossfade a look
+    this.wallEl = h('div', { class: 'sf-wall', 'aria-hidden': 'true' },
+      h('div', { class: 'sf-wall-fields' }, h('i'), h('i'), h('i')));
+    this.plate = h('div', { class: 'sf-plate', 'aria-hidden': 'true' });
+    this.fadeCv = h('canvas', { class: 'sf-fade', 'aria-hidden': 'true' });
+    this.wrap.prepend(this.wallEl, this.plate); this.wrap.append(this.fadeCv);
+    this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent, onLayout: r => this.placePlate(r),
       onFlip: (f, pan) => { const b = this.cur(); if (b.sound && !this.quietMode()) sound.play(f, b.soundStyle, pan); }
     }));
     this.chromeTheme();
@@ -154,7 +163,7 @@ export class App {
   looking() {
     if (!this.S.editing || this.kioskStrict) return false;
     const E = this.editor && this.editor.E;
-    return !!(this.lookTpl || (this.look != null && this.look !== this.active) || (this.editor && this.editor.onBlueprint() && !this.bpOnScreen()) || (E && E.preview));
+    return !!(this.lookPreview() || this.lookTpl || (this.look != null && this.look !== this.active) || (this.editor && this.editor.onBlueprint() && !this.bpOnScreen()) || (E && E.preview));
   }
   // A board of your Boards that this screen shows on its own is not being looked at.
   bpOnScreen() { const b = this.shown(), E = this.editor && this.editor.E; return !!(E && b && b.solo && b.pages[0] && b.pages[0].id === E.bp); }
@@ -182,6 +191,7 @@ export class App {
   // The one button that makes a preview real: Show on this screen.
   showHere() {
     const t = this.t, E = this.editor.E, bp = this.editor.bp();
+    if (this.lookPreview()) { commitLook(this.editor); return; }   // the look sheet's preview: Use this look
     if (E.preview && E.sheet && E.sheet.kind === 'add') { this.editor.confirmAdd(); return; }
     if (this.lookTpl) { this.useTemplate(this.lookTpl.from, { kept: true }); return; }
     if (bp) { this.showBoard(bp.id); return; }
@@ -322,8 +332,25 @@ export class App {
   // The playlists a board is in, for "In Morning and Office".
   usedIn(id) { return usedIn(id, this.playlists); }
   soloOf(id) { return soloOf(id, this.playlists); }
-  // Every board of a playlist in one theme, from its Display settings.
-  setPlaylistTheme(th) { this.upd(bb => { bb.theme = th; bb.pages.forEach(p => { p.theme = th; }); }); }
+  // A board's own look (0.11): 'default', a look, or custom with its parts. Its theme is written
+  // for 0.10 readers: its own look's, or black for Default. Returns the look it had, for Undo.
+  setBoardLook(id, l) {
+    const i = this.blueprints.findIndex(b => b.id === id); if (i < 0) return null;
+    const b = JSON.parse(JSON.stringify(this.blueprints[i])), o = lookOf(b), prev = { id: o.look, parts: o.lookParts };
+    if (!l || l.id === 'default') { b.look = 'default'; delete b.lookParts; b.theme = 'black'; }
+    else { b.look = l.id; if (l.id === 'custom') b.lookParts = JSON.parse(JSON.stringify(l.parts)); else delete b.lookParts; b.theme = legacyOf(l.id, l.parts); }
+    this.blueprints[i] = sanitizeBlueprint(b) || b;
+    return prev;
+  }
+  // How many boards follow the account's default look.
+  followCount() { return this.blueprints.filter(b => lookOf(b).look === 'default').length; }
+  // A link carries each board's look resolved: a Default board travels as the sender's default,
+  // with the nearest 0.10 theme for older readers (0.11).
+  linkLooks(b) {
+    const c = JSON.parse(JSON.stringify(b)), d = defaultOf(this.lookSetting());
+    c.pages.forEach(p => { if (lookOf(p).look === 'default') { p.look = d.id; if (d.id === 'custom') p.lookParts = d.parts; else delete p.lookParts; p.theme = legacyOf(d.id, d.parts); } });
+    return c;
+  }
   // A guest has made something: ask the browser not to clear this site's storage on its
   // own (Chrome and recent Safari honour it). Once per page.
   keepStorage() {
@@ -477,10 +504,54 @@ export class App {
   }
   // The last size a wall in this browser filled, as rows x columns, or null.
   fillSeen() { const m = /^(\d{1,2})x(\d{1,2})$/.exec(getFlag('sf_fill') || ''); return m && +m[1] >= 1 && +m[1] <= 24 && +m[2] >= 4 && +m[2] <= 60 ? { rows: +m[1], cols: +m[2] } : null; }
-  themeNow() { const bp = this.editor && this.editor.bp(); if (bp) return bp.theme; const p = this.editor && this.currentPage(); return (p && p.theme) || this.cur().theme; }
-  boardOpts() { const b = this.cur(), d = this.dims(); return { rows: d.rows, cols: d.cols, theme: this.themeNow(), transition: this.transitionNow(), speed: b.speed }; }
+  // ---------- looks (0.11) ----------
+  // What the screen shows, first match wins (looks.js lookFor): a preview under the gold bar,
+  // this screen's pin, the board's own look, the account's default, Classic.
+  lookSetting() { return this.setting('look'); }
+  pin() { try { const v = JSON.parse(getFlag('sf_look_pin') || 'null'); if (!v || !v.id) return null; if (v.id === 'custom') { const p = sanitizeParts(v.parts); return p ? { id: 'custom', parts: p } : null; } return LOOKS[v.id] ? { id: v.id } : null; } catch { return null; } }
+  setPin(l) { setFlag('sf_look_pin', l ? JSON.stringify(l) : ''); }
+  lookPage() { const bp = this.editor && this.editor.bp(); if (bp) return bp; const p = this.editor && this.currentPage(); return p || this.cur().pages[0]; }
+  lookNow() { return lookFor(this.lookPage(), this.pin(), this.lookSetting(), this.lookPreview()); }
+  // the look being previewed in the look sheet, if any
+  lookPreview() { const S = this.editor && this.editor.E.sheet; return this.S.editing && S && S.kind === 'look' && S.prev ? S.prev : null; }
+  // A board's look with no pin and no preview, for its thumbnail and its swatch.
+  lookOfBoard(x) { return lookFor(x, null, this.lookSetting(), null); }
+  // The renderer's theme for a look: 0.10's own for Classic, Paper and Solari, else composed.
+  drawOf(l) { const d = drawFor(l); if (d.theme && !THEMES[d.id]) register(d.theme); return d; }
+  themeOf(x) { return this.drawOf(this.lookOfBoard(x)).id; }
+  themeNow() { return this.drawOf(this.lookNow()).id; }
+  accentNow() { return accentOf(this.lookNow()); }
+  // A look's motion wins over the playlist's; a page's own transition wins over both.
+  speedNow() { const m = motionOf(this.lookNow()); return (m && m.speed) || this.cur().speed; }
+  boardOpts() { const d = this.dims(); return { rows: d.rows, cols: d.cols, theme: this.themeNow(), transition: this.transitionNow(), speed: this.speedNow() }; }
+  // The wall for a look whose wall is CSS: a flat colour or three slow colour fields. Classic's
+  // room is painted on the canvas, so the wall layer is off. Quiet hours hold the fields still.
+  paintWall() {
+    const d = this.drawOf(this.lookNow()), w = d.wall, el = this.wallEl, on = !!(w && w.kind !== 'room' && !this.transparent);
+    const quiet = this.quietMode(), still = quiet || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const key = [d.id, on, still].join('|'); if (key === this.wallKey) return; this.wallKey = key;
+    el.classList.toggle('on', on); el.classList.toggle('still', !!still);
+    if (on) { el.style.backgroundColor = w.base; el.classList.toggle('fields', w.kind === 'fields'); [w.a, w.b, w.c].forEach((c, i) => { el.firstChild.children[i].style.backgroundColor = c; }); }
+    const T = THEMES[d.id], mat = T && !T.body;
+    this.plate.classList.toggle('on', on && !!mat);
+    if (T) this.plate.style.boxShadow = `0 18px 40px rgba(0,0,0,${((T.shadow || 0.5) * 0.8).toFixed(2)}), 0 4px 10px rgba(0,0,0,${((T.shadow || 0.5) * 0.5).toFixed(2)})`;
+  }
+  placePlate(r) { Object.assign(this.plate.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', borderRadius: r.r + 'px' }); }
+  // A look change on the screen is never a cut: the old frame fades out over the new (0.11).
+  crossfade() {
+    const b = this.board, f = this.fadeCv;
+    if (!b.W || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    f.width = b.W; f.height = b.H; f.getContext('2d').drawImage(this.canvas, 0, 0);
+    f.style.transition = 'none'; f.style.opacity = '1'; void f.offsetWidth; f.style.transition = 'opacity 0.9s ease'; f.style.opacity = '0';
+  }
+  // Load a look's face before it is drawn, and redraw once it is in (renderer [H]).
+  loadFace(id) {
+    const T = THEMES[id]; if (!T || !document.fonts) return;
+    this.faces = this.faces || {}; const k = T.weight + ' ' + T.font; if (this.faces[k]) return; this.faces[k] = 1;
+    document.fonts.load(`${T.weight} 40px ${T.font}`).then(() => { this.board.refont(); resetStatic(); if (this.editor) this.editor.refreshThumbs(); }).catch(() => {});
+  }
   // The page showing (or being edited) may pick its own transition; else the board's.
-  transitionNow() { const p = this.currentPage(); return (p && p.tr) || this.cur().transition; }
+  transitionNow() { const p = this.currentPage(), m = motionOf(this.lookNow()); return (p && p.tr) || (m && m.transition) || this.cur().transition; }
   quietMode() { const b = this.cur(); return !this.S.editing && inQuiet(b.quiet, Date.now()) ? b.quiet.mode : null; }
   // The big board holds the board being edited; anywhere else in the editor it plays on.
   holding() { return this.S.editing && (this.editor.onBoard() || this.editor.onBlueprint() || !!this.editor.E.card || !!this.editor.E.preview); }
@@ -521,7 +592,10 @@ export class App {
     // a board arrives at its own size and theme (0.10.1), and with its own transition, so they
     // are set before the new grid
     const d = this.dims(), th = this.themeNow(), o = this.board.o;
-    if (!this.previewing && (o.rows !== d.rows || o.cols !== d.cols || o.theme !== th)) { this.board.setOptions({ rows: d.rows, cols: d.cols, theme: th }); this.chromeTheme(); }
+    if (!this.previewing && o.theme !== th && o.theme) this.crossfade();
+    if (!this.previewing && (o.rows !== d.rows || o.cols !== d.cols || o.theme !== th)) { this.board.setOptions({ rows: d.rows, cols: d.cols, theme: th }); this.loadFace(th); this.chromeTheme(); }
+    if (!this.previewing && o.speed !== this.speedNow()) this.board.setOptions({ speed: this.speedNow() });
+    this.paintWall();
     const g = this.grid();
     if (!this.previewing && this.board.o.transition !== this.transitionNow()) this.board.setOptions({ transition: this.transitionNow() });
     if (!this.previewing) this.board.setGrid(g);
@@ -533,7 +607,8 @@ export class App {
     if (this.S.editing && now - (this.lastThumbs || 0) > 3000) { this.lastThumbs = now; this.editor.refreshThumbs(); }
     this.rolls(now);
     this.maybeReload(now);
-    this.wrap.style.opacity = this.quietMode() === 'dim' ? '0.22' : '1';
+    // dim, or blank on a CSS wall: glass over drifting colour must not run at full brightness all night (0.11)
+    this.wrap.style.opacity = this.quietMode() === 'dim' || (this.quietMode() === 'blank' && this.wallEl.classList.contains('on')) ? '0.22' : '1';
     const text = g.map(r => r.map(c => isChip(c) || isDim(c) ? ' ' : c).join('').trim()).filter(Boolean).join('\n');
     if (text !== this.lastAria) { this.lastAria = text; this.twin.textContent = text; }
     const pageKey = [b.id, this.holding() ? 'e' + this.selIdx() : this.S.pageIdx, this.S.lang].join(':');
@@ -576,7 +651,7 @@ export class App {
   // The zone being edited, outlined on the big board in the chrome's accent.
   paintHighlight() {
     const rect = this.S.editing ? this.editor.hlRect() : null;
-    this.board.setHighlight(rect, this.themeNow() === 'white' ? '#8C6222' : '#C8974A');
+    this.board.setHighlight(rect, this.accentNow());
   }
 
   // The home station starred on the maclaine.se SL map (same site, same storage).
@@ -716,6 +791,9 @@ export class App {
   }
   toggleEdit(fromHistory) {
     const editing = !this.S.editing;
+    // a newer version is out: a tab that knows reloads as its editor closes, so an old tab never
+    // writes boards without their looks (0.11, plan review 2.3)
+    if (!editing && this.reloadPending) { this.leaveEditor(); this.editor.close(); setFlag('sf_reload_for', this.reloadPending); location.reload(); return; }
     if (!editing) this.leaveEditor();
     if (editing) this.dismissCue(false); else { this.editor.composer.leave(); if (!fromHistory) this.editor.close(); }
     const b = this.cur();
@@ -799,9 +877,10 @@ export class App {
     const E = this.editor.E, adding = E.preview && E.sheet && E.sheet.kind === 'add';
     const tpl = this.lookTpl && TEMPLATES.find(x => x.id === this.lookTpl.from);
     const name = adding ? E.preview.name || t.page : this.editor.bp() ? this.editor.bp().name : tpl ? tpl.name[this.S.lang] : this.cur().name;
-    const label = adding ? (this.cur().solo ? t.showBoth : t.addTo(this.cur().name)) : t.showOn;
+    // a look previewed in the look sheet: one bar, saying the look (0.11, plan review 6.2)
+    const lk = this.lookPreview(), label = lk ? t.lk.useLook : adding ? (this.cur().solo ? t.showBoth : t.addTo(this.cur().name)) : t.showOn;
     const bar = h('div', { class: 'sf-look-bar', role: 'region', 'aria-label': t.previewing },
-      h('span', { class: 'sf-look-kicker' }, t.lookKicker), h('strong', { class: 'sf-look-name' }, name),
+      h('span', { class: 'sf-look-kicker' }, t.lookKicker), h('strong', { class: 'sf-look-name' }, lk ? barLine(this.editor) : name),
       h('button', { class: 'sf-look-go', 'data-k': 'look-show', onclick: () => this.showHere() }, label));
     if (this.lookBar) this.lookBar.replaceWith(bar); else this.stage.append(bar);
     this.lookBar = bar;
@@ -825,7 +904,7 @@ export class App {
   renderOverlay() {
     const S = this.S, t = this.t, b = this.cur();
     const kids = [];
-    if (this.lastStale > 0) kids.push(h('div', { class: 'sf-offline', role: 'status', style: `color:${b.theme === 'white' ? 'rgba(24,24,27,0.55)' : 'rgba(237,230,214,0.45)'}` }, t.offline(this.lastStale)));
+    if (this.lastStale > 0) kids.push(h('div', { class: 'sf-offline', role: 'status', style: `color:${isLight(this.lookNow()) ? 'rgba(24,24,27,0.55)' : 'rgba(237,230,214,0.45)'}` }, t.offline(this.lastStale)));
     this.barWrap = null;
     if (!S.editing && !this.kioskStrict) {
       const wrap = h('div', {
@@ -869,6 +948,9 @@ export class App {
       const line = nowShowing(this.cur(), Date.now(), t);
       if (line) { this.nowEl = h('div', { class: 'sf-nowline' + (S.bar ? ' on' : ''), 'aria-hidden': 'true' }, h('span', { class: 'sf-eyebrow' }, t.todaysPlaylist), h('span', null, line)); kids.push(this.nowEl); }
     } else this.nowEl = null;
+    // a pinned screen says so, in its look's accent (0.11, decision 14); never on a wall or in OBS
+    const pin = this.pin();
+    if (pin && !this.kioskStrict && !this.transparent && !S.editing) kids.push(h('div', { class: 'sf-pinned', 'data-k': 'pinned-chip', style: `color:${accentOf(pin.id === 'custom' ? pin : { id: pin.id })}` }, t.lk.pinnedTo(lookLabel(this, pin))));
     this.overlay.replaceChildren(...kids);
     const inPop = focusKey == null && this.popWas && document.activeElement === document.body;
     if (focusKey) { const el = this.overlay.querySelector(`[data-k="${focusKey}"]`); if (el) el.focus({ preventScroll: true }); }
@@ -884,7 +966,7 @@ export class App {
   async openShare(keepOpen, board) {
     if (this.S.share && !keepOpen) { this.set({ share: false, qrBig: false }); return; }
     if (!keepOpen) this.shareBoard = board || this.shown();   // the storyboard asked for, else what is on the screen
-    const code = await encodeBoard(this.shareBoard || this.shown());
+    const code = await encodeBoard(this.linkLooks(this.shareBoard || this.shown()));
     const kiosk = this.S.shareKiosk !== false;   // on unless unticked: the link is usually for a wall
     const url = location.origin + location.pathname + (kiosk ? '?kiosk=1' : '') + '#b=' + code;
     let svg = null, n = 0;
@@ -1029,10 +1111,14 @@ export class App {
     }
     else { this.boards.push(nb); this.active = this.boards.length - 1; }
     if (nb.pages.length === 1) nb.solo = true;   // one board shows as that board (0.10.1)
+    // the look picked for the template in its preview (0.11), on each of its boards
+    const tl = this.editor && (this.editor.E.tplLooks || {})[id];
+    if (tl) nb.pages.forEach(p => { if (tl.id === 'default') { p.look = 'default'; delete p.lookParts; p.theme = 'black'; } else { p.look = tl.id; if (tl.id === 'custom') p.lookParts = JSON.parse(JSON.stringify(tl.parts)); p.theme = legacyOf(tl.id, tl.parts); } });
     this.look = null; this.lookTpl = null;
     this.freshId = null; this.markStarted(); this.save(); this.markShown();
     Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), cz: -1, editing: true });
-    this.say(t.sNowKept(nb.name), replace ? {} : { action: { label: t.undo, fn: () => this.undoShow(prev) } });
+    const o = lookOf(nb.pages[0]), inLook = o.look === 'default' ? null : lookLabel(this, { id: o.look, parts: o.lookParts });
+    this.say(inLook ? t.lk.stAdded(nb.name, inLook) : t.sNowKept(nb.name), replace ? {} : { action: { label: t.undo, fn: () => this.undoShow(prev) } });
     if (nb.pages.length === 1) this.editor.go({ sec: 'sb', lv: 'board', sb: this.shown().id, bd: this.shown().pages[0].id, from: 'boards' });
     else this.editor.go({ sec: 'sb', lv: 'sb', sb: this.shown().id, view: 'boards' });
     this.refresh();
@@ -1071,7 +1157,7 @@ export class App {
     const card = blank(d.rows, d.cols);
     for (let r = 0; r < d.rows; r++) for (let c = 0; c < d.cols; c++) card[r][c] = RAINBOW[(r + c) % 6];
     const tr = this.transitionNow(); this.board.setOptions({ transition: tr });
-    const label = [...`${t.transitions[tr]} ${t.speeds[b.speed]}`.toUpperCase()].slice(0, d.cols);
+    const label = [...`${t.transitions[tr] || tr} ${t.speeds[this.speedNow()]}`.toUpperCase()].slice(0, d.cols);
     const mid = Math.floor(d.rows / 2), off = Math.floor((d.cols - label.length) / 2);
     for (let c = 0; c < d.cols; c++) card[mid][c] = ' ';
     label.forEach((ch, i) => { card[mid][off + i] = ch; });

@@ -195,3 +195,16 @@ test('settings: home and last only, kept per account', async () => {
   r = await call(c, 'GET', '/settings');
   assert.deepEqual(r.body.settings.map(x => [x.id, x.board.cur]), [['home', 'GBP']]);
 });
+
+// 0.11.0: a default look in the account's settings, checked against MATRIX; a board's look stored as sent
+test('the default look: a valid one is kept, parts MATRIX does not allow are refused, and a board keeps its look', async () => {
+  const c = await session(`lk-${run}@example.com`);
+  assert.equal((await call(c, 'PUT', '/settings/look', { board: { id: 'look', look: 'calm' }, baseRev: 0 })).status, 200);
+  assert.equal((await call(c, 'PUT', '/settings/look', { board: { id: 'look', look: 'custom', parts: { material: 'metal' } }, baseRev: 1 })).status, 400);
+  let r = await call(c, 'GET', '/settings');
+  assert.deepEqual(r.body.settings.map(x => [x.id, x.board.look]), [['look', 'calm']]);
+  const bp = { id: 'lk1', name: 'Dep', rows: 6, cols: 22, theme: 'black', look: 'calm', page: { id: 'lk1', name: 'Dep', layout: 'full', dur: 10, zones: [{ ch: 'clock', o: {} }] } };
+  assert.equal((await call(c, 'PUT', '/blueprints/lk1', { board: bp, baseRev: 0 })).status, 200);
+  r = await call(c, 'GET', '/blueprints');
+  assert.deepEqual([r.body.blueprints[0].board.look, r.body.blueprints[0].board.theme], ['calm', 'black']);
+});

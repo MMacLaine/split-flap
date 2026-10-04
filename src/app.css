@@ -6,7 +6,7 @@
 @font-face { font-family: 'DM Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fonts/dm-mono-500.woff2') format('woff2'); }
 @font-face { font-family: 'Schibsted Grotesk'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('../fonts/schibsted-grotesk.woff2') format('woff2'); }
 @font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 400 600; font-display: swap; src: url('../fonts/plus-jakarta-sans.woff2') format('woff2'); }
-@font-face { font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 300 500; font-display: swap; src: url('../fonts/cormorant-garamond-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 300 500; font-display: swap; src: url('../fonts/cormorant-garamond-lnum.woff2') format('woff2'); }
 
 .sf {
   --bg: #13151A; --bg-2: #1A1D24; --surface: #1C1F27; --text: #EDE6D6; --muted: #868991; --pale: #A3A8B0;
@@ -633,3 +633,46 @@ strong > .sf-tag.on-now { margin-left: 8px; vertical-align: 2px; }
 .sf-playlist.sf-playlist-fold { padding-top: 8px; padding-bottom: 8px; gap: 8px; }
 /* 0.10.3: the composer's instruction, greyed over an empty grid, never on the board */
 .sf-comp-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px; color: var(--muted); font-size: 13px; pointer-events: none; }
+
+/* 0.11.0: the wall behind a look whose wall is CSS, inside the quiet-hours wrapper. Three
+   masked colour fields drift over 38 to 52 s, transform only, no blur filter. The canvas has
+   alpha and sits above; a plate shades an opaque board on a CSS wall; a canvas crossfades. */
+.sf-canvas-wrap canvas { position: relative; }
+.sf-wall { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1.2s ease, background-color 1.6s ease; }
+.sf-wall.on { opacity: 1; }
+.sf-wall-fields { position: absolute; inset: -20%; opacity: 0; transition: opacity 1.6s ease; }
+.sf-wall.fields .sf-wall-fields { opacity: 1; }
+.sf-wall-fields i { position: absolute; width: 62%; aspect-ratio: 1; border-radius: 50%; will-change: transform; transition: background-color 2.4s ease;
+  mask-image: radial-gradient(closest-side, #000 0%, rgba(0,0,0,0.6) 45%, transparent 100%); -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0,0,0,0.6) 45%, transparent 100%); }
+.sf-wall-fields i:nth-child(1) { left: 4%; top: 8%; animation: sf11-d1 38s ease-in-out infinite alternate; }
+.sf-wall-fields i:nth-child(2) { left: 44%; top: 26%; animation: sf11-d2 46s ease-in-out infinite alternate; }
+.sf-wall-fields i:nth-child(3) { left: 22%; top: 48%; animation: sf11-d3 52s ease-in-out infinite alternate; }
+.sf-wall.still .sf-wall-fields i { animation-play-state: paused; }
+@keyframes sf11-d1 { to { transform: translate(24%, 16%) scale(1.2); } }
+@keyframes sf11-d2 { to { transform: translate(-28%, -10%) scale(0.85); } }
+@keyframes sf11-d3 { to { transform: translate(12%, -22%) scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .sf-wall-fields i { animation-play-state: paused; } }
+.sf-plate { position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.9s ease; }
+.sf-plate.on { opacity: 1; }
+.sf-fade { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
+html.sf-transparent .sf-wall, html.sf-transparent .sf-plate { display: none; }
+/* 0.11.0: the look sheet, its cards, the Look row, the swatch, and the pinned chip */
+.sf-lk-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.sf-lk-card { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 12px; border: 1px solid var(--border-2, var(--border)); background: transparent; color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.sf-lk-card.on { border-color: var(--accent); background: var(--accent-soft); }
+.sf-lk-card .sf-meta { color: var(--muted); font-size: 12px; }
+.sf-lk-well { display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 10; min-height: 64px; border-radius: 8px; background: #0b0b0c; overflow: hidden; }
+.sf-lk-well .sf-thumb { max-width: 100%; max-height: 100%; width: auto; height: 100%; object-fit: contain; border-radius: 0; }
+.sf-lk-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+.sf-lk-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sf-swatch-lk { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 28px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); vertical-align: middle; }
+.sf-swatch-lk > span { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 18px; border-radius: 3px; font-size: 11px; line-height: 1; }
+.sf-pl-look { display: inline-flex; align-items: center; gap: 6px; }
+.sf-pl-look .sf-swatch-lk { transform: scale(0.8); transform-origin: left center; }
+.sf-bcell-look { display: inline-flex; align-items: center; gap: 8px; }
+.sf-bcell-look .sf-swatch-lk { transform: scale(0.75); transform-origin: left center; }
+.sf-seg.sw { padding-left: 8px; padding-right: 8px; }
+.sf-ink-dot { display: inline-block; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(127,127,127,0.5); vertical-align: middle; }
+.sf-lk-own { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
+.sf-pinned { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; background: rgba(0,0,0,0.35); pointer-events: none; z-index: 4; }
+html.sf-transparent .sf-pinned { display: none; }

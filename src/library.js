@@ -20,6 +20,8 @@ import { sanitizeBlueprint, sanitizePlaylist, sizeOf, dimsOfSize } from './store
 import { newId } from './content.js';
 
 const clone = x => JSON.parse(JSON.stringify(x));
+// A board's look (0.11) goes everywhere its theme goes: resolved onto a page and back.
+const lookCopy = x => x && x.look ? Object.assign({ look: x.look }, x.look === 'custom' && x.lookParts ? { lookParts: clone(x.lookParts) } : {}) : {};
 
 // A short id from a string, the same in every browser and on the server: the migration
 // must name the same board the same way wherever it runs (FNV-1a, twice).
@@ -33,7 +35,7 @@ export function hid(prefix, s) {
 // Not the id, the times, the hue or where they came from.
 export function contentKey(lb) {
   const p = lb.page || {};
-  return JSON.stringify([lb.name || '', p.layout, p.zones, p.tr || '', sizeOf(lb), lb.rows, lb.cols, lb.theme]);
+  return JSON.stringify([lb.name || '', p.layout, p.zones, p.tr || '', sizeOf(lb), lb.rows, lb.cols, lb.theme, lb.look || '', lb.lookParts || null]);
 }
 
 // A board of the library from a resolved page (or a storyboard's page, before 0.10.1),
@@ -47,7 +49,7 @@ export function boardFromPage(p, sb, id, old) {
   const hue = old ? old.page.hue : p.hue; if (Number.isInteger(hue)) page.hue = hue;
   const from = old ? old.from : p.from || (sb && typeof sb.from === 'string' ? { kind: 'template', id: sb.from } : undefined);
   const lb = sanitizeBlueprint({ id, name: p.name || (old && old.name) || (sb && sb.name) || 'Board', size, rows: d.rows, cols: d.cols,
-    theme: p.theme || (sb && sb.theme) || 'black', from, page });
+    theme: p.theme || (sb && sb.theme) || 'black', ...lookCopy(p), from, page });
   if (lb && old && !old.size && sizeOf(old) === lb.size) delete lb.size;
   return lb;
 }
@@ -67,7 +69,7 @@ export function resolve(pl, lib) {
     const p = clone(lb.page), d = dimsOfSize(lb);
     delete p.wins; delete p.win; delete p.alone;
     return Object.assign(p, { id: lb.id, name: lb.page.name || lb.name, dur: it.dur, wins: clone(it.wins || []) }, it.alone ? { alone: true } : {},
-      Number.isInteger(it.hue) ? { hue: it.hue } : {}, { size: sizeOf(lb), rows: d.rows, cols: d.cols, theme: lb.theme }, lb.from ? { from: clone(lb.from) } : {});
+      Number.isInteger(it.hue) ? { hue: it.hue } : {}, { size: sizeOf(lb), rows: d.rows, cols: d.cols, theme: lb.theme }, lookCopy(lb), lb.from ? { from: clone(lb.from) } : {});
   });
   if (!pages.length) pages.push({ id: '_none', name: '', layout: 'full', dur: 10, wins: [], zones: [{ ch: 'message', o: {} }], missing: true, size: '6x22', rows: 6, cols: 22, theme: 'black' });
   const first = pages.find(p => !p.missing) || pages[0];
