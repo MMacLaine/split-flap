@@ -12,6 +12,9 @@
 //   DELETE /boards/:id   { baseRev }: a tombstone, so other devices remove it too
 //   GET    /blueprints, PUT and DELETE /blueprints/:id   My boards (0.7.1), the same rules
 //   GET    /connections, PUT and DELETE /connections/:id your own sources (0.9.2), values sealed
+//   GET    /playlists, PUT and DELETE /playlists/:id      playlists by reference (0.10.1); the first
+//          request moves the account's storyboards over, once, in one batch (migrate below)
+//   GET    /settings, PUT and DELETE /settings/:id        Home and what was last shown (0.10.1)
 //   GET    /export       the account, its boards and its blueprints as one JSON file
 //   DELETE /account      the account, its sessions, its boards and its blueprints
 //   GET    /data/*       live data for tiles, cached, no sign-in (0.8, see data.js)
@@ -19,7 +22,8 @@
 import { betterAuth } from 'better-auth';
 import { makeSignature } from 'better-auth/crypto';
 import { authOptions } from './auth.js';
-import { sanitizeBoard, sanitizeBlueprint } from '../../src/store.js';
+import { sanitizeBoard, sanitizeBlueprint, sanitizePlaylist, sanitizeSettings } from '../../src/store.js';
+import { migrateData } from '../../src/library.js';
 import { sanitizeConnection } from '../../src/connections.js';
 import { sealKey, seal, unseal } from './seal.js';
 import { beforeFeed, afterSave } from './feeds.js';
@@ -32,7 +36,10 @@ const MAX_BOARDS = 50, MAX_BYTES = 262144;
 // the check differ. A storyboard is a stored board; a blueprint is one board in My boards.
 const KINDS = {
   boards: { table: 'board', max: MAX_BOARDS, full: 'too_many_boards', ok: sanitizeBoard },
-  blueprints: { table: 'blueprint', max: 100, full: 'too_many_blueprints', ok: sanitizeBlueprint },
+  // from 0.10.1 every board of the account, once: the blueprint table is the library
+  blueprints: { table: 'blueprint', max: 500, full: 'too_many_blueprints', ok: sanitizeBlueprint },
+  playlists: { table: 'playlist', max: 100, full: 'too_many_playlists', ok: sanitizePlaylist },
+  settings: { table: 'settings', max: 10, full: 'too_many_settings', ok: sanitizeSettings },
   // Connections (0.9.2): the value is sealed before it is stored and opened for its owner
   connections: { table: 'connection', max: 50, full: 'too_many_connections', ok: sanitizeConnection, sealed: true, before: beforeFeed, after: afterSave }
 };
@@ -81,10 +88,10 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-const KNOWN = ['/', '/me', '/boards', '/blueprints', '/connections', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates', '/data/feed'];
+const KNOWN = ['/', '/me', '/boards', '/blueprints', '/playlists', '/settings', '/connections', '/export', '/account', '/dev/session', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates', '/data/feed'];
 // Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
 export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
-  : /^\/(boards|blueprints|connections)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints|connections)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
+  : /^\/(boards|blueprints|playlists|settings|connections)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints|playlists|settings|connections)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
 
 async function route(req, env, url) {
   const path = url.pathname.slice(API.length) || '/', auth = authFor(env);
@@ -101,14 +108,17 @@ async function route(req, env, url) {
   if (path === '/me' && req.method === 'GET') return json({ id: user.id, name: String(user.name || '').split(/\s+/)[0], email: user.email });
   if (path === '/boards' && req.method === 'GET') return json({ boards: await listBoards(env, user.id) });
   if (path === '/blueprints' && req.method === 'GET') return json({ blueprints: await listBoards(env, user.id, KINDS.blueprints) });
+  if (path === '/playlists' && req.method === 'GET') { await migrate(env, user.id); return json({ playlists: await listBoards(env, user.id, KINDS.playlists) }); }
+  if (path === '/settings' && req.method === 'GET') return json({ settings: await listBoards(env, user.id, KINDS.settings) });
   if (path.startsWith('/connections') && !(await sealKey(env))) return fail(503, 'not_configured');   // never stored in plain text
   if (path === '/connections' && req.method === 'GET') return json({ connections: await listBoards(env, user.id, KINDS.connections) });
   if (path === '/export' && req.method === 'GET') {
     const live = async k => (await listBoards(env, user.id, k)).filter(b => !b.deleted).map(b => b.board);
-    const boards = await live(KINDS.boards), blueprints = await live(KINDS.blueprints);
+    await migrate(env, user.id);
+    const boards = await live(KINDS.boards), blueprints = await live(KINDS.blueprints), playlists = await live(KINDS.playlists), settings = await live(KINDS.settings);
     // connections by name and kind only: an export is a file, and a key does not belong in one
     const connections = (await sealKey(env)) ? (await live(KINDS.connections)).map(c => ({ id: c.id, kind: c.kind, name: c.name })) : [];
-    return json({ app: 'split-flap', exported: new Date().toISOString(), account: { email: user.email, name: user.name, created: user.createdAt }, boards, blueprints, connections }, 200,
+    return json({ app: 'split-flap', exported: new Date().toISOString(), account: { email: user.email, name: user.name, created: user.createdAt }, playlists, boards: blueprints, settings, storyboards: boards, connections }, 200,
       { 'content-disposition': 'attachment; filename="split-flap-export.json"' });
   }
   if (path === '/account' && req.method === 'DELETE') {
@@ -123,10 +133,11 @@ async function route(req, env, url) {
     }
     return json({ deleted: true });
   }
-  const m = /^\/(boards|blueprints|connections)\/([A-Za-z0-9_-]{1,40})$/.exec(path);
+  const m = /^\/(boards|blueprints|playlists|settings|connections)\/([A-Za-z0-9_-]{1,40})$/.exec(path);
   if (m && (req.method === 'PUT' || req.method === 'DELETE')) {
     if (env.WRITES) { const { success } = await env.WRITES.limit({ key: user.id }); if (!success) return fail(429, 'too_many_writes'); }
     const kind = KINDS[m[1]];
+    if (m[1] === 'playlists' || m[1] === 'blueprints') await migrate(env, user.id);   // never a write before the move
     return req.method === 'PUT' ? putBoard(req, env, user.id, m[2], kind) : deleteBoard(req, env, user.id, m[2], kind);
   }
   return fail(404, 'not_found');
@@ -152,6 +163,29 @@ function withNoStore(res) {
   r.headers.set('cache-control', 'no-store');
   r.headers.set('x-content-type-options', 'nosniff');
   return r;
+}
+
+// The 0.10.1 move, once per account: its storyboards become playlists, and their boards
+// become boards of the library (blueprint rows), by migrateData in src/library.js, the same
+// function a guest's browser runs. One D1 batch, so it all happens or none of it does.
+// Every insert is OR IGNORE and every id comes from the input, so two requests at once
+// write the same rows and the second changes nothing. The board rows are not touched: an
+// old tab can keep writing them until it reloads, and they are the way back.
+const MIGRATION = '0.10.1';   // not exported: a Worker's module exports must all be handlers
+export async function migrate(env, userId) {
+  const done = await env.DB.prepare('SELECT 1 AS done FROM migration WHERE user_id = ? AND name = ?').bind(userId, MIGRATION).first();
+  if (done) return false;
+  const rows = async table => (await env.DB.prepare(`SELECT id, deleted, json FROM ${table} WHERE user_id = ?`).bind(userId).all()).results;
+  const sbRows = await rows('board'), bpRows = await rows('blueprint'), plRows = await rows('playlist');
+  const live = (list, ok) => list.filter(r => !r.deleted && r.json).map(r => { try { return ok(JSON.parse(r.json)); } catch { return null; } }).filter(Boolean);
+  const m = migrateData(live(sbRows, sanitizeBoard), live(bpRows, sanitizeBlueprint), bpRows.filter(r => r.deleted).map(r => r.id));
+  const now = Date.now(), have = new Set(plRows.map(r => r.id));
+  const stmts = [env.DB.prepare('INSERT OR IGNORE INTO migration (user_id, name, at) VALUES (?, ?, ?)').bind(userId, MIGRATION, now)];
+  const lib = new Map(m.library.map(b => [b.id, b]));
+  for (const id of m.added) stmts.push(env.DB.prepare('INSERT OR IGNORE INTO blueprint (user_id, id, rev, updated, deleted, json) VALUES (?, ?, 1, ?, 0, ?)').bind(userId, id, now, JSON.stringify(lib.get(id))));
+  for (const pl of m.playlists) if (!have.has(pl.id)) stmts.push(env.DB.prepare('INSERT OR IGNORE INTO playlist (user_id, id, rev, updated, deleted, json) VALUES (?, ?, 1, ?, 0, ?)').bind(userId, pl.id, now, JSON.stringify(pl)));
+  await env.DB.batch(stmts);
+  return true;
 }
 
 async function listBoards(env, userId, kind = KINDS.boards) {

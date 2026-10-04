@@ -27,6 +27,8 @@ try {
 
   // the first visit: Showing asks where the screen is, once, and picking a city ends it
   await go(URL0);
+  // 0.10.1 (walkthrough): before a place is picked the demo assumes no city
+  check('the demo before a place shows no Stockholm stops', (await ev(`JSON.stringify(splitFlap.cur().pages.flatMap(p => p.zones.map(z => z.ch)))`)).match(/"sl"|"departures"|"weather"/) === null, await ev(`JSON.stringify(splitFlap.cur().pages.map(p => p.name))`));
   await ev('splitFlap.toggleEdit()'); await sleep(500);
   check('a first Edit opens Showing with Where is this screen?', (await lv()) === 'sb:showing' && (await ev(`String(!!document.querySelector('[data-k=where]'))`)) === 'true');
   check('and no sign-in card on Explore', (await ev(`(splitFlap.editor.go({ sec: 'ex', lv: 'list' }), String(!!document.querySelector('[data-k=start-signin]')))`)) === 'false');
@@ -58,7 +60,7 @@ try {
 
   // another tab's save while previewing never switches the screen or moves the preview (0.10 review)
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${other}', view: 'boards' })`); await sleep(400);
-  await ev(`(() => { const list = JSON.parse(localStorage.getItem('sf_boards')); const extra = JSON.parse(JSON.stringify(list[0])); extra.id = 'b-other-tab'; extra.name = 'From another tab'; list.unshift(extra); localStorage.setItem('sf_boards', JSON.stringify(list)); splitFlap.fromOtherTab(); })()`); await sleep(500);
+  await ev(`(() => { const list = JSON.parse(localStorage.getItem('sf_playlists')); const extra = JSON.parse(JSON.stringify(list[0])); extra.id = 'b-other-tab'; extra.name = 'From another tab'; list.unshift(extra); localStorage.setItem('sf_playlists', JSON.stringify(list)); splitFlap.fromOtherTab(); })()`); await sleep(500);
   check("another tab's save keeps what the screen runs", (await ev('splitFlap.shown().id')) === shown0, await ev('splitFlap.shown().id'));
   check('and keeps the preview on the same playlist', (await ev('splitFlap.cur().id')) === other && (await ev('String(splitFlap.looking())')) === 'true', await ev('splitFlap.cur().id'));
 
@@ -94,6 +96,42 @@ try {
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${other}', view: 'boards' })`); await sleep(400);
   await ev('splitFlap.lastInput = Date.now() - 200000; splitFlap.tick()'); await sleep(400);
   check('a playlist preview that ends goes back to Showing with the screen', (await lv()) === 'sb:showing' && (await ev('String(splitFlap.looking())')) === 'false' && /ended after 3 minutes/i.test(await status()), `${await lv()} ${await status()}`);
+
+  // 0.10.1: a tap on a board on Showing previews it alone, and Show on this screen shows it alone
+  await ev(`(() => { splitFlap.pickBoard(splitFlap.boards.findIndex(b => b.id === '${shown0}')); splitFlap.editor.go({ sec: 'sb', lv: 'showing' }); })()`); await sleep(500);
+  const tapped = await ev(`splitFlap.shown().pages[1].id`);
+  await ev(`document.querySelector('[data-k=strip-1]').click()`); await sleep(500);
+  check('a tap on a board of what is on previews that board alone', (await lv()) === 'my:bp' && (await ev('String(splitFlap.looking())')) === 'true' && (await ev('splitFlap.currentPage().id')) === tapped, await lv());
+  await ev(`document.querySelector('[data-k=look-show]').click()`); await sleep(500);
+  check('and Show on this screen shows it alone, as a board', (await ev('String(!!splitFlap.shown().solo)')) === 'true' && (await ev('splitFlap.shown().pages.length')) === 1 && (await ev('splitFlap.shown().pages[0].id')) === tapped, await status());
+  check('one status line at a time', (await ev(`document.querySelectorAll('.sf-drawer .sf-status-line').length`)) === 1, String(await ev(`document.querySelectorAll('.sf-drawer .sf-status-line').length`)));
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'showing' })`); await sleep(400);
+  check('Showing names it a board', /^Board/.test(await ev(`document.querySelector('.sf-now-card .sf-meta').textContent`)), await ev(`document.querySelector('.sf-now-card .sf-meta').textContent`));
+  // Show another board in turn makes a playlist of two
+  await ev(`document.querySelector('[data-k=add-in-turn]').click()`); await sleep(500);
+  const second = await ev(`(() => { const b = [...document.querySelectorAll('[data-k^=add-blueprint-]')].find(x => !x.disabled); b.click(); return b.dataset.k.replace('add-blueprint-', ''); })()`); await sleep(400);
+  check('the bar offers Show both in turn', /show both in turn/i.test(await bar()), await bar());
+  await ev(`document.querySelector('[data-k=add-confirm]').click()`); await sleep(500);
+  check('which makes a playlist of the two, on the screen', (await ev('String(!!splitFlap.shown().solo)')) === 'false' && (await ev('splitFlap.shown().pages.map(p => p.id).join()')) === `${tapped},${second}` && /in turn/i.test(await status()), await status());
+  // your own words, whatever is on
+  await ev(`(() => { const b = splitFlap.shown(); splitFlap.upd(bb => { bb.pages.forEach(p => { p.layout = 'full'; p.zones = [{ ch: 'clock', o: {} }]; }); }); splitFlap.editor.go({ sec: 'sb', lv: 'showing' }); })()`); await sleep(500);
+  check('Type your own message is on Showing whatever is on', (await ev(`String(!!document.querySelector('[data-k=type-own]'))`)) === 'true');
+  await ev(`document.querySelector('[data-k=type-own]').click()`); await sleep(600);
+  check('and with no message board, it adds one in turn and opens it', (await lv()) === 'sb:board' && (await ev(`splitFlap.editor.page().zones[0].ch`)) === 'message' && (await ev('splitFlap.shown().pages.length')) === 3, await lv());
+  // what you make lands in Boards, and is there whatever is on
+  await ev(`splitFlap.editor.go({ sec: 'my', lv: 'list' })`); await sleep(300);
+  await ev(`document.querySelector('[data-k=new-board]').click()`); await sleep(500);
+  const made = await ev('splitFlap.editor.E.bp');
+  check('New board in Boards opens it, at its own address', (await lv()) === 'my:bp' && (await at()) === `#/my-boards/${made}`, await at());
+  await ev(`(() => { splitFlap.pickBoard(splitFlap.boards.findIndex(b => b.id === '${shown0}')); })()`); await sleep(300);
+  await go(URL0); await ev('splitFlap.toggleEdit()'); await sleep(400);
+  await ev(`document.querySelector('[data-k=tab-my]').click()`); await sleep(400);
+  check('after a reload with another playlist on, it is one press away in Boards', (await ev(`String(!!document.querySelector('[data-k="bp-${made}"]'))`)) === 'true');
+
+  // a first visit that picks a template: the demo leaves no boards behind
+  await go('about:blank'); await go(URL0); await ev('localStorage.clear()'); await go(URL0);
+  await ev(`splitFlap.useTemplate('cafe')`); await sleep(500);
+  check('a template picked on a first visit replaces the demo and its boards', (await ev('splitFlap.playlists.length')) === 1 && (await ev('splitFlap.blueprints.length')) === (await ev('splitFlap.shown().pages.length')), `${await ev('splitFlap.playlists.length')} playlists, ${await ev('splitFlap.blueprints.length')} boards`);
 
   // the phone: the bar is there too
   await ev(`splitFlap.editor.go({ sec: 'ex', lv: 'tpl', tpl: 'weather', section: 'start' })`); await sleep(400);

@@ -1,5 +1,5 @@
-// My boards (0.7.1), in a real browser: save, add a copy to storyboards of the same and of
-// another size, edit and delete apart, import a Vestaboard message, and the addresses.
+// Boards (0.10.1), in a real browser: every board once, playlists that point at them at
+// their own sizes, an edit that shows everywhere, Duplicate, Delete with Undo, an import, and the addresses.
 // Needs Chrome and `node _dev/serve.mjs` on 8801 (no Worker needed). npm run e2e:my
 import { spawn } from 'node:child_process';
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', PORT = 9300 + Math.floor(Math.random() * 90);
@@ -20,48 +20,67 @@ const at = () => ev('location.hash'), lv = () => ev(`(() => { const E = splitFla
 try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await go(URL0); await ev(`localStorage.setItem('sf_started','1'); localStorage.setItem('sf_cue_seen','1')`); await go(URL0);
-  // a second storyboard at 3 x 15, from the Café template
-  await ev(`splitFlap.useTemplate('cafe')`); await sleep(500);
-  await ev(`splitFlap.upd(b => { b.size = '3x15'; })`); await sleep(300);
-  const small = await ev('splitFlap.cur().id'), smallDims = await ev('JSON.stringify(splitFlap.dims())');
-  await ev(`splitFlap.pickBoard(0)`); await sleep(300);
   const demo = await ev('splitFlap.cur().id');
-  // a board with typed cells right to its edges, saved to My boards
-  await ev(`(() => { const app = splitFlap; app.S.sel = 0; app.updPage(p => { p.name = 'Edges'; p.layout = 'full'; const c = Array.from({ length: 6 }, () => Array(22).fill(' ')); c[0][0] = 'r'; c[5][21] = 'b'; 'HELLO'.split('').forEach((x, i) => { c[2][8 + i] = x; }); p.zones = [{ ch: 'message', o: { cells: c } }]; }); })()`); await sleep(300);
-  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: '${demo}', bd: splitFlap.cur().pages[0].id })`); await sleep(400);
-  await ev(`document.querySelector('[data-k=more-pg-open]').click()`); await sleep(200);   // 0.10: Save to my boards is in the more menu
-  await ev(`document.querySelector('.sf-more.open [data-k=more-save]').click()`); await sleep(400);
-  const bp = await ev('splitFlap.blueprints[0] && splitFlap.blueprints[0].id');
-  check('Save to my boards makes a blueprint', !!bp && (await ev('splitFlap.blueprints[0].page.wins')) === undefined, bp);
-  check('it records where it came from: its storyboard and itself, since it was made from scratch', (await ev('JSON.stringify(splitFlap.blueprints[0].from)')) === JSON.stringify({ kind: 'storyboard', id: demo, board: await ev('splitFlap.cur().pages[0].id') }), await ev('JSON.stringify(splitFlap.blueprints[0].from)'));
-  check('My boards is kept for a guest', (await ev(`JSON.parse(localStorage.getItem('sf_myboards')).length`)) === 1);
-
-  // add it to the demo (same size): no warning; then to the café (3 x 15): a warning
-  const addTo = async sb => {
-    await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${sb}', view: 'boards' })`); await sleep(400);
-    await ev(`document.querySelector('[data-k=add-page]').click()`); await sleep(300);
-    await ev(`document.querySelector('[data-k="add-blueprint-${bp}"]') ? document.querySelector('[data-k="add-blueprint-${bp}"]').click() : document.querySelector('[data-k=add-all-sizes]').click()`); await sleep(300);
-    if (!(await ev(`String(!!document.querySelector('[data-k="add-blueprint-${bp}"].on'))`) === 'true')) { await ev(`document.querySelector('[data-k="add-blueprint-${bp}"]').click()`); await sleep(300); }
-  };
-  await addTo(demo);
-  check('the copy is previewed on the big board before it is added', (await ev(`splitFlap.currentPage().from && splitFlap.currentPage().from.id`)) === bp);
-  check('no warning at the same size', (await ev(`String(!!document.querySelector('[data-k=cut-warn]'))`)) === 'false');
-  await ev(`document.querySelector('[data-k=add-confirm]').click()`); await sleep(400);
-  const demoCopy = await ev(`JSON.stringify(splitFlap.cur().pages.at(-1))`);
-  await addTo(small);
-  check('the other size is behind Show all sizes, then previewed at 3 x 15', (await ev('JSON.stringify(splitFlap.dims())')) === smallDims && (await ev(`splitFlap.currentPage().zones[0].o.cells.length`)) === 3);
-  check('with a warning that names the cut flaps', /2 typed or painted flaps/.test(await ev(`(document.querySelector('[data-k=cut-warn]') || {}).textContent || ''`)), await ev(`(document.querySelector('[data-k=cut-warn]') || {}).textContent || 'no warning'`));
-  await ev(`document.querySelector('[data-k=add-confirm]').click()`); await sleep(400);
-  const smallCopy = await ev(`JSON.stringify(splitFlap.cur().pages.at(-1))`);
-
-  // proof 1: edit one copy, the other stays; proof 2: delete the blueprint, both copies stay
-  await ev(`(() => { const app = splitFlap; app.S.sel = app.cur().pages.length - 1; app.updPage(p => { p.name = 'Edited in the café'; }); })()`); await sleep(300);
+  check('every board of the demo is in Boards', (await ev('splitFlap.blueprints.length')) === (await ev('splitFlap.cur().pages.length')) && (await ev(`splitFlap.cur().pages.every(p => splitFlap.blueprints.some(b => b.id === p.id))`)) === true);
+  // a second playlist at 3 x 15, from the Café template: its boards land in Boards too
+  await ev(`splitFlap.useTemplate('cafe')`); await sleep(500);
+  const cafe = await ev('splitFlap.shown().id'), cafeBoards = await ev('splitFlap.shown().pages.length');
+  await ev(`splitFlap.upd(b => { b.pages.forEach(p => { p.size = '3x15'; p.rows = 3; p.cols = 15; }); })`); await sleep(300);
+  check('a template shown keeps its boards in Boards', (await ev(`splitFlap.shown().pages.every(p => splitFlap.blueprints.some(b => b.id === p.id && b.size === '3x15'))`)) === true);
   await ev(`splitFlap.pickBoard(splitFlap.boards.findIndex(b => b.id === '${demo}'))`); await sleep(300);
-  check('editing the copy in one storyboard leaves the copy in the other unchanged', (await ev(`JSON.stringify(splitFlap.cur().pages.at(-1))`)) === demoCopy);
-  await ev(`splitFlap.deleteBlueprint('${bp}')`); await sleep(300);
-  check('deleting the blueprint leaves both copies', (await ev(`splitFlap.boards.map(b => b.pages.filter(p => p.from && p.from.id === '${bp}').length).join(',')`)) === '1,1', await ev(`splitFlap.boards.map(b => b.pages.filter(p => p.from && p.from.id === '${bp}').length).join(',')`));
+  // a board with typed cells to its edges, at 6 x 22, in the demo
+  await ev(`(() => { const app = splitFlap; app.S.sel = 0; app.updPage(p => { p.name = 'Edges'; p.layout = 'full'; const c = Array.from({ length: 6 }, () => Array(22).fill(' ')); c[0][0] = 'r'; c[5][21] = 'b'; 'HELLO'.split('').forEach((x, i) => { c[2][8 + i] = x; }); p.zones = [{ ch: 'message', o: { cells: c } }]; }); })()`); await sleep(300);
+  const edges = await ev('splitFlap.cur().pages[0].id');
+  check('an edit to a board of a playlist is an edit to the board in Boards', (await ev(`splitFlap.blueprints.find(b => b.id === '${edges}').name`)) === 'Edges');
 
-  // Import a pasted Vestaboard message into My boards, previewed as you type
+  // add it to the café playlist (3 x 15): the playlist points at it, at its own size, nothing cut
+  await ev('splitFlap.S.editing || splitFlap.toggleEdit()'); await sleep(300);
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${cafe}', view: 'boards' })`); await sleep(400);
+  await ev(`document.querySelector('[data-k=add-page]').click()`); await sleep(300);
+  await ev(`document.querySelector('[data-k="add-blueprint-${edges}"]').click()`); await sleep(300);
+  check('the board is previewed at its own size, 6 x 22, in the 3 x 15 playlist', (await ev('JSON.stringify(splitFlap.dims())')) === JSON.stringify({ rows: 6, cols: 22 }) && (await ev(`splitFlap.currentPage().id`)) === edges);
+  check('and no cut warning, since nothing is cut', (await ev(`String(!!document.querySelector('[data-k=cut-warn]'))`)) === 'false');
+  await ev(`document.querySelector('[data-k=add-confirm]').click()`); await sleep(400);
+  check('the playlist points at the same board', (await ev(`splitFlap.playlists.find(p => p.id === '${cafe}').items.some(i => i.id === '${edges}')`)) === true && (await ev('splitFlap.blueprints.length')) === (await ev(`new Set(splitFlap.blueprints.map(b => b.id)).size`)));
+  check('and says it has mixed sizes', (await ev(`splitFlap.sizeLabel(splitFlap.boards.find(b => b.id === '${cafe}'))`)) === 'Mixed sizes');
+  await ev(`document.querySelector('[data-k=add-page]').click()`); await sleep(300);
+  check('a board already in the playlist cannot be added twice', (await ev(`String(document.querySelector('[data-k="add-blueprint-${edges}"]').disabled)`)) === 'true');
+  await ev(`document.querySelector('[data-k=sheet-close]').click()`); await sleep(200);
+
+  // a playlist of mixed sizes: the screen takes each board's size as it comes round
+  await ev(`(() => { const app = splitFlap, i = app.boards.findIndex(b => b.id === '${cafe}'); if (app.S.editing) app.toggleEdit(); app.active = i; app.S.pageIdx = 0; app.S.pageStart = Date.now(); app.tick(); })()`); await sleep(300);
+  const d0 = await ev('JSON.stringify([splitFlap.board.o.rows, splitFlap.board.o.cols])');
+  await ev(`(() => { const app = splitFlap; app.S.pageIdx = app.cur().pages.length - 1; app.S.pageStart = Date.now(); app.tick(); })()`); await sleep(300);
+  const d1 = await ev('JSON.stringify([splitFlap.board.o.rows, splitFlap.board.o.cols])');
+  check('the screen runs each board at its own size', d0 === '[3,15]' && d1 === '[6,22]', `${d0} then ${d1}`);
+
+  // one board in two playlists: edit it in one, the other shows it, and the board says where it is
+  await ev('splitFlap.S.editing || splitFlap.toggleEdit()'); await sleep(300);
+  await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'board', sb: '${cafe}', bd: '${edges}' })`); await sleep(400);
+  await ev(`splitFlap.updPage(p => { p.name = 'Edges everywhere'; })`); await sleep(400);
+  check('an edit in one playlist shows in the other', (await ev(`splitFlap.boards.find(b => b.id === '${demo}').pages.find(p => p.id === '${edges}').name`)) === 'Edges everywhere');
+  check('the board names the playlists it is in', /In Demo and/.test(await ev(`document.querySelector('[data-k=in-playlists]').textContent`)), await ev(`document.querySelector('[data-k=in-playlists]').textContent`));
+  check('its times stay with each playlist', (await ev(`splitFlap.playlists.find(p => p.id === '${demo}').items[0].dur`)) === 10);
+
+  // Duplicate makes a board of its own
+  await ev(`splitFlap.editor.go({ sec: 'my', lv: 'bp', bp: '${edges}' })`); await sleep(300);
+  check('a board in Boards is previewed with the gold bar', (await ev('String(splitFlap.looking())')) === 'true');
+  await ev(`document.querySelector('[data-k=more-bp-open]').click()`); await sleep(200);
+  check('its menu has Add to a playlist, Duplicate, Share and Delete', /Duplicate.*Add to a playlist.*Share.*Delete/.test(await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`)), await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`));
+  await ev(`document.querySelector('.sf-more.open [data-k=more-duplicate]').click()`); await sleep(300);
+  check('Duplicate makes a board of its own, in no playlist', (await ev(`splitFlap.blueprints.some(b => b.name === 'Edges everywhere copy' && !splitFlap.playlists.some(p => p.items.some(i => i.id === b.id)))`)) === true);
+
+  // Delete is never refused: it names the playlists and offers Undo
+  await ev(`document.querySelector('[data-k=more-bp-open]').click()`); await sleep(200);
+  await ev(`document.querySelector('.sf-more.open [data-k=more-delete]').click()`); await sleep(200);
+  await ev(`document.querySelector('.sf-more.open [data-k=more-delete]').click()`); await sleep(500);
+  const said = await ev(`(document.querySelector('[data-k=status-line]') || {}).textContent || ''`);
+  check('Delete names the playlists it is taken out of', /Deleted Edges everywhere\. Also taken out of Demo and Café/.test(said) || /Also taken out of/.test(said), said);
+  check('and it leaves both playlists', (await ev(`splitFlap.playlists.some(p => p.items.some(i => i.id === '${edges}'))`)) === false && (await lv()) === 'my:list', await lv());
+  await ev(`document.querySelector('[data-k=status-act]').click()`); await sleep(400);
+  check('Undo puts it back in both, where it was', (await ev(`splitFlap.boards.find(b => b.id === '${demo}').pages[0].name`)) === 'Edges everywhere' && (await ev(`splitFlap.boards.find(b => b.id === '${cafe}').pages.at(-1).name`)) === 'Edges everywhere');
+
+  // Import a pasted Vestaboard message into Boards, previewed as you type
   await ev(`splitFlap.editor.go({ sec: 'my', lv: 'list' })`); await sleep(300);
   await ev(`document.querySelector('[data-k=my-import]').click()`); await sleep(300);
   await ev(`document.querySelector('[data-k=imp-tab-vb]').click()`); await sleep(300);
@@ -69,16 +88,18 @@ try {
   check('a pasted Vestaboard message is previewed on the big board', (await ev(`JSON.stringify(splitFlap.currentPage().zones[0].o.lines)`)) === JSON.stringify(['BACK AT 14:00', '', 'KEYS IN THE', 'BLUE BOWL']));
   await ev(`document.querySelector('[data-k=imp-vb-save]').click()`); await sleep(400);
   const vb = await ev('splitFlap.blueprints[0].id');
-  check('and saved to My boards', (await ev('splitFlap.blueprints[0].name')) === 'back at 14:00' || (await ev('splitFlap.blueprints[0].name')) === 'BACK AT 14:00', await ev('splitFlap.blueprints[0].name'));
+  check('and saved to Boards', /back at 14:00/i.test(await ev('splitFlap.blueprints[0].name')), await ev('splitFlap.blueprints[0].name'));
 
-  // a blueprint's level has its own address, its own size, and no times
+  // a board's level has its own address, its own size, and no times
   await ev(`document.querySelector('[data-k="bp-${vb}"]').click()`); await sleep(400);
-  check('a blueprint opens at its own address', (await at()) === `#/my-boards/${vb}`, await at());
+  check('a board opens at its own address', (await at()) === `#/my-boards/${vb}`, await at());
   check('with no times to set', (await ev(`String(!!document.querySelector('[data-k=win-add]'))`)) === 'false');
+  await ev(`document.querySelector('[data-k=size-12x40]').click()`); await sleep(300);
+  check('and a size of its own, set on the board', (await ev(`splitFlap.blueprints.find(b => b.id === '${vb}').size`)) === '12x40' && (await ev('JSON.stringify(splitFlap.dims())')) === JSON.stringify({ rows: 12, cols: 40 }));
   await send('Page.reload'); await sleep(2500);
   check('and a reload lands back on it', (await lv()) === 'my:bp', await lv());
   await ev(`document.querySelector('[data-k=back]').click()`); await sleep(300);
-  check('Back goes to My boards', (await at()) === '#/my-boards', await at());
+  check('Back goes to Boards', (await at()) === '#/my-boards', await at());
 } catch (e) { results.push('ERROR ' + e.message); }
 console.log(results.join('\n'));
 ws.close(); proc.kill(); process.exit(results.every(r => r.startsWith('PASS')) ? 0 : 1);

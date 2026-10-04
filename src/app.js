@@ -6,11 +6,13 @@
 import { Board, THEMES, fillGrid, renderStatic, staticGeom } from './renderer.js';
 import { isChip, isDim } from './charset.js';
 import { compose, FALLBACK_PAGE, newId, blank } from './content.js';
-import { TEMPLATES, fromTemplate, storyboardOf } from './templates.js';
+import { TEMPLATES, fromTemplate } from './templates.js';
 import { RAINBOW } from './pixels.js';
 import { nextPage, inQuiet } from './schedule.js';
 import { STR } from './strings.js';
-import { loadBoards, saveBoards, saveActiveOnly, loadBlueprints, saveBlueprints, sanitizeBlueprint, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard } from './store.js';
+import { loadBoards, loadBlueprints, sanitizeBlueprint, getFlag, setFlag, sanitizeBoard, encodeBoard, decodeBoard, loadLibrary, loadPlaylists, saveLibrary, savePlaylists, loadShown, saveShown,
+  loadSettings, saveSettings, sanitizeSettings, sanitizePlaylist, sizeOf, dimsOfSize } from './store.js';
+import { resolve, decompose, loadModel, usedIn, soloOf } from './library.js';
 import { Live } from './live.js';
 import * as sound from './sound.js';
 import qrcode from './vendor/qrcode.js';
@@ -23,6 +25,7 @@ import { h, clone } from './dom.js';
 import { VERSION, versionIn, shouldReload } from './changelog.js';
 
 const LOOK_MS = 180000;   // three minutes untouched ends a preview (0.10)
+export const MAX_PL = 100, MAX_LIB = 500;   // playlists, and boards in your Boards (0.10.1)
 
 export class App {
   constructor(root) {
@@ -75,9 +78,17 @@ export class App {
     this.live = new Live(() => this.tick(true));
     this.readHome();
 
-    const { boards, active } = loadBoards();
-    this.boards = boards.length ? boards : [fromTemplate('demo', this.S.lang, this.live.data.home, this.firstPlace())];
-    this.active = active; this.look = null; this.lookTpl = null;
+    // 0.10.1: every board once, in your Boards (this.blueprints, the library), and playlists
+    // that point at them (this.playlists). The app runs on the playlists resolved with their
+    // boards (this.boards), the shape storyboards had, so the renderer, the week and the
+    // editor work as before; save() takes an edited one apart again (library.js).
+    const model = loadModel({ loadBoards, loadBlueprints, loadLibrary, loadPlaylists, saveLibrary, savePlaylists, loadShown, saveShown, getFlag, setFlag });
+    this.blueprints = model.library; this.playlists = model.playlists || []; this.migrated = model.migrated;
+    this.settings = loadSettings();
+    const boards = this.playlists;
+    this.resolveAll();
+    this.active = Math.max(0, this.boards.findIndex(b => b.id === loadShown())); this.look = null; this.lookTpl = null;
+    if (!this.boards.length) this.boards = [fromTemplate('demo', this.S.lang, this.live.data.home, this.firstPlace())];
     // A first visit opens Explore on the first Edit. Picking a template then replaces the
     // demo made for this visit. The demo is saved at once (0.7.0 review), so its ids, and
     // the editor's addresses that name them, stay the same across reloads.
@@ -85,8 +96,7 @@ export class App {
     this.hadBoards = boards.length > 0 && !(boards.length === 1 && boards[0].id === fresh);
     this.firstRun = !started && (!boards.length || (boards.length === 1 && boards[0].id === fresh));
     this.freshId = this.firstRun ? this.boards[0].id : null;
-    if (!boards.length) { saveBoards(this.boards, 0); setFlag('sf_fresh', this.boards[0].id); setFlag('sf_words_070', '1'); }
-    this.blueprints = loadBlueprints();   // My boards (0.7.1)
+    if (!boards.length) { this.save(); setFlag('sf_fresh', this.boards[0].id); setFlag('sf_words_070', '1'); }
     this.connections = loadConns();       // your own sources (0.9.2), kept in this browser and synced
     this.editor = new Editor(this);
     this.account = new Account(this);
@@ -99,7 +109,7 @@ export class App {
       this.active = i; this.S.cue = false; this.firstRun = false;
       params.delete('template');
       history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash);
-      saveBoards(this.boards, this.active);
+      this.save();
     }
 
     this.board = new Board(this.canvas, Object.assign(this.boardOpts(), { transparent: this.transparent,
@@ -142,8 +152,10 @@ export class App {
   looking() {
     if (!this.S.editing || this.kioskStrict) return false;
     const E = this.editor && this.editor.E;
-    return !!(this.lookTpl || (this.look != null && this.look !== this.active) || (this.editor && this.editor.onBlueprint()) || (E && E.preview));
+    return !!(this.lookTpl || (this.look != null && this.look !== this.active) || (this.editor && this.editor.onBlueprint() && !this.bpOnScreen()) || (E && E.preview));
   }
+  // A board of your Boards that this screen shows on its own is not being looked at.
+  bpOnScreen() { const b = this.shown(), E = this.editor && this.editor.E; return !!(E && b && b.solo && b.pages[0] && b.pages[0].id === E.bp); }
   // Look at stored storyboard i in the editor. The one on the screen is not looking.
   setLook(i) {
     const was = this.curIdx(), next = i === this.active ? null : i;
@@ -170,19 +182,10 @@ export class App {
     const t = this.t, E = this.editor.E, bp = this.editor.bp();
     if (E.preview && E.sheet && E.sheet.kind === 'add') { this.editor.confirmAdd(); return; }
     if (this.lookTpl) { this.useTemplate(this.lookTpl.from, { kept: true }); return; }
-    if (bp) {
-      const nb = storyboardOf(bp.page, { rows: bp.rows, cols: bp.cols, theme: bp.theme, name: bp.name, loc: this.newPlace() });
-      if (this.boards.length >= 50) { this.say(t.sbFull, { fail: true }); return; }
-      const prev = this.active;
-      this.boards.push(nb); this.active = this.boards.length - 1; this.look = null; this.save();
-      this.say(t.sNowKept(nb.name), { action: { label: t.undo, fn: () => this.undoShow(prev) } });
-      this.editor.go({ sec: 'sb', lv: 'board', sb: nb.id, bd: nb.pages[0].id, from: 'boards' });
-      this.refresh();
-      return;
-    }
+    if (bp) { this.showBoard(bp.id); return; }
     if (this.look != null && this.boards[this.look]) {
       const prev = this.active;
-      this.active = this.look; this.look = null; this.saveActive();
+      this.active = this.look; this.look = null; this.saveActive(); this.markShown();
       Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
       this.say(t.sNow(this.shown().name), { action: { label: t.undo, fn: () => this.undoShow(prev) } });
       this.refresh();
@@ -190,7 +193,7 @@ export class App {
   }
   undoShow(prev) {
     if (!this.boards[prev]) return;
-    const cur = this.active; this.active = prev; this.saveActive();
+    const cur = this.active; this.active = prev; this.saveActive(); this.markShown();
     if (this.S.editing && this.editor.E.sec === 'sb' && this.boards[cur] && cur !== prev) this.look = cur;
     Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
     this.say(this.t.sBack(this.shown().name)); this.refresh();
@@ -198,7 +201,124 @@ export class App {
   // Under 1024 px the editor stacks: the board on top, one drawer level below it.
   isMobile() { return innerWidth < 1024; }
   set(patch, render = true) { Object.assign(this.S, patch); if (render) this.render(); }
-  save() { saveBoards(this.boards, this.active); if (this.account) { this.account.changed(); if (!this.account.state.user) this.keepStorage(); } }
+
+  // ---------- the library and the playlists (0.10.1) ----------
+  libMap() { return new Map(this.blueprints.map(b => [b.id, b])); }
+  // The playlists with their boards in place, keeping what the screen shows and what the
+  // editor looks at by id.
+  resolveAll() {
+    const curId = this.boards && this.shown() && this.shown().id, lookId = this.boards && this.look != null && this.boards[this.look] ? this.boards[this.look].id : null;
+    const lib = this.libMap();
+    this.boards = this.playlists.map(pl => resolve(pl, lib));
+    this.snap = new Map(this.boards.map(b => [b.id, JSON.stringify(b)]));
+    if (curId != null) { const i = this.boards.findIndex(b => b.id === curId); this.active = i >= 0 ? i : Math.min(this.active || 0, Math.max(0, this.boards.length - 1)); }
+    if (lookId != null) { const li = this.boards.findIndex(b => b.id === lookId); this.look = li >= 0 && li !== this.active ? li : null; }
+  }
+  // The resolved playlists that changed since they were resolved, taken apart into the
+  // playlists and the boards. Returns whether any board changed.
+  commit() {
+    const lib = this.libMap(), byId = new Map(this.playlists.map(p => [p.id, p])), out = [], fresh = [];
+    let libChanged = false;
+    for (const sb of this.boards) {
+      if (this.snap && this.snap.get(sb.id) === JSON.stringify(sb) && byId.has(sb.id)) { out.push(byId.get(sb.id)); continue; }
+      const d = decompose(sb, lib);
+      if (!d.playlist) continue;
+      for (const lb of d.boards) {
+        const i = this.blueprints.findIndex(x => x.id === lb.id);
+        if (i >= 0) this.blueprints[i] = lb; else fresh.push(lb);
+        lib.set(lb.id, lb); libChanged = true;
+      }
+      out.push(d.playlist);
+    }
+    if (fresh.length) this.blueprints = fresh.concat(this.blueprints);   // newest first, as My boards were
+    this.playlists = out;
+    this.resolveAll();
+    return libChanged;
+  }
+  save() {
+    const libChanged = this.commit();
+    savePlaylists(this.playlists); if (libChanged) saveLibrary(this.blueprints); saveShown(this.shown() && this.shown().id);
+    if (this.account) { this.account.changed(); if (libChanged) this.account.changedMy(); if (!this.account.state.user) this.keepStorage(); }
+  }
+  // Settings kept with the account (0.10.1): Home, and what was last shown.
+  setting(id) { return this.settings.find(x => x.id === id) || null; }
+  home() { return this.setting('home') || { id: 'home', stops: [] }; }
+  putSetting(x) {
+    const c = sanitizeSettings(x); if (!c) return;
+    const i = this.settings.findIndex(y => y.id === c.id);
+    if (i >= 0 && JSON.stringify(this.settings[i]) === JSON.stringify(c)) return;
+    if (i >= 0) this.settings[i] = c; else this.settings.push(c);
+    saveSettings(this.settings); if (this.account) this.account.changedSt();
+  }
+  setHome(patch) { this.putSetting(Object.assign({}, this.home(), patch)); this.editor.tplCache = null; }
+  replaceSettings(list) { this.settings = list || []; saveSettings(this.settings); }
+  // What this screen shows was chosen by a person: the account remembers it, so a new
+  // device can offer it (0.10.1, lastShown).
+  markShown() {
+    const b = this.shown(); if (!b || this.kioskStrict) return;
+    setFlag('sf_chosen', '1');
+    this.putSetting({ id: 'last', pl: b.id, name: b.name, at: Date.now() });
+  }
+  // Show one board of your Boards on this screen: through the one-board playlist made for
+  // it, made now if there is none.
+  showBoard(id, o = {}) {
+    const t = this.t, lb = this.blueprints.find(x => x.id === id); if (!lb) return;
+    let i = this.boards.findIndex(b => b.solo && b.pages.length === 1 && b.pages[0].id === id);
+    if (i < 0) {
+      if (this.playlists.length >= MAX_PL) { this.say(t.sbFull, { fail: true }); return; }
+      const pl = sanitizePlaylist(Object.assign({ name: lb.name, solo: true, items: [{ id, dur: lb.page.dur || 10, wins: [] }] }, this.newPlace() ? { loc: this.newPlace() } : {}));
+      pl.id = newId('b'); this.playlists.push(pl); this.resolveAll(); i = this.boards.length - 1;
+    }
+    const prev = this.active;
+    this.active = i; this.look = null; this.save(); this.markShown();
+    Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
+    if (o.say !== false) this.say(t.sNow(lb.name), { action: { label: t.undo, fn: () => this.undoShow(prev) } });
+    this.refresh();
+  }
+  // Delete a board from your Boards. Never refused: it is taken out of every playlist it is
+  // in, a playlist left with nothing goes too, and the line names them, with Undo.
+  deleteLibBoard(id) {
+    const t = this.t, lb = this.blueprints.find(x => x.id === id); if (!lb) return;
+    const shownId = this.shown() && this.shown().id;
+    const was = this.playlists.map((pl, at) => ({ pl: JSON.parse(JSON.stringify(pl)), at, k: pl.items.findIndex(it => it.id === id) })).filter(x => x.k >= 0);
+    const named = was.filter(x => !x.pl.solo).map(x => x.pl.name);
+    this.blueprints = this.blueprints.filter(x => x.id !== id); this.account.deletedMy(id);
+    const gone = new Set();
+    this.playlists = this.playlists.map(pl => {
+      if (!pl.items.some(it => it.id === id)) return pl;
+      const items = pl.items.filter(it => it.id !== id);
+      if (!items.length) { gone.add(pl.id); this.account.deleted(pl.id); return null; }
+      return Object.assign({}, pl, { items });
+    }).filter(Boolean);
+    this.resolveAll();
+    if (!this.boards.length) { this.boards = [fromTemplate('blank', this.S.lang, this.live.data.home, this.newPlace())]; }
+    this.save(); saveLibrary(this.blueprints);
+    Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
+    const undo = () => this.undoDeleteLib(lb, was, shownId);
+    this.say(named.length ? t.deletedIn(lb.name, named) : t.deletedBoard(lb.name), { action: { label: t.undo, fn: undo } });
+    this.refresh();
+  }
+  // Undo puts the board back under a new id, so a delete the account already has never
+  // meets it, and puts it back where it was in each playlist.
+  undoDeleteLib(lb, was, shownId) {
+    const nid = newId('p'), c = Object.assign(JSON.parse(JSON.stringify(lb)), { id: nid }); c.page.id = nid;
+    this.blueprints.unshift(c);
+    let show = null;
+    for (const w of was) {
+      const item = Object.assign({}, w.pl.items[w.k], { id: nid }), i = this.playlists.findIndex(pl => pl.id === w.pl.id);
+      if (i >= 0) { const items = this.playlists[i].items.slice(); items.splice(Math.min(w.k, items.length), 0, item); this.playlists[i] = Object.assign({}, this.playlists[i], { items }); if (w.pl.id === shownId) show = w.pl.id; }
+      else { const pl = Object.assign({}, w.pl, { id: newId('b'), items: w.pl.items.map((it, k) => k === w.k ? item : it).filter(it => it.id === nid || this.blueprints.some(b => b.id === it.id)) }); this.playlists.splice(Math.min(w.at, this.playlists.length), 0, pl); if (w.pl.id === shownId) show = pl.id; }
+    }
+    this.resolveAll();
+    if (show) { const i = this.boards.findIndex(b => b.id === show); if (i >= 0) this.active = i; }
+    saveLibrary(this.blueprints); this.save(); this.account.changedMy();
+    this.say(this.t.restored(c.name)); this.refresh();
+  }
+  // The playlists a board is in, for "In Morning and Office".
+  usedIn(id) { return usedIn(id, this.playlists); }
+  soloOf(id) { return soloOf(id, this.playlists); }
+  // Every board of a playlist in one theme, from its Display settings.
+  setPlaylistTheme(th) { this.upd(bb => { bb.theme = th; bb.pages.forEach(p => { p.theme = th; }); }); }
   // A guest has made something: ask the browser not to clear this site's storage on its
   // own (Chrome and recent Safari honour it). Once per page.
   keepStorage() {
@@ -224,38 +344,40 @@ export class App {
   }
   updateConnection(id, patch) { const i = this.connections.findIndex(c => c.id === id); if (i < 0) return; const c = sanitizeConnection(Object.assign({}, this.connections[i], patch, { updated: Date.now() })); if (!c) return false; this.connections[i] = c; this.saveConns(); return true; }
   removeConnection(id) { const i = this.connections.findIndex(c => c.id === id); if (i < 0) return; this.connections.splice(i, 1); this.account.deletedConn(id); this.saveConns(); this.render(); }
-  saveMy() { saveBlueprints(this.blueprints); if (this.account) { this.account.changedMy(); if (!this.account.state.user) this.keepStorage(); } }
-  replaceBlueprints(list) { this.account.my.replacing = true; this.blueprints = list || []; saveBlueprints(this.blueprints); this.account.my.replacing = false; }
-  deleteBlueprint(id) { const i = this.blueprints.findIndex(x => x.id === id); if (i < 0) return; this.blueprints.splice(i, 1); this.account.deletedMy(id); this.saveMy(); this.render(); }
+  // A board edited, added or removed in your Boards: saved, and every playlist that shows it
+  // shows the change.
+  saveMy() { saveLibrary(this.blueprints); this.resolveAll(); if (this.account) { this.account.changedMy(); if (!this.account.state.user) this.keepStorage(); } }
+  replaceBlueprints(list) { this.account.my.replacing = true; this.blueprints = list || []; saveLibrary(this.blueprints); this.resolveAll(); this.account.my.replacing = false; }
+  deleteBlueprint(id) { this.deleteLibBoard(id); }
   // Another tab saved (0.6.4). Its list and its sync state are newer than this tab's, so
   // they are taken as they are, before this tab's next save could write an older list
   // over them. Nothing is saved here, so the tabs never echo each other.
   fromOtherTab() {
     // what the screen runs and what the editor looks at are kept by id, so another tab's save
     // never switches the screen or moves a preview to another playlist (0.10 review)
-    const { boards } = loadBoards(), curId = this.shown() && this.shown().id, lookId = this.look != null && this.boards[this.look] ? this.boards[this.look].id : null;
-    if (boards.length) {
-      this.boards = boards;
-      const i = boards.findIndex(b => b.id === curId); this.active = i >= 0 ? i : Math.min(this.active, boards.length - 1);
-      if (i < 0) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
-      const li = lookId ? boards.findIndex(b => b.id === lookId) : -1; this.look = li >= 0 && li !== this.active ? li : null;
-    }
-    if (this.account) { this.account.state = loadState(); this.account.remember(); }
+    const pls = loadPlaylists(), lib = loadLibrary(), curId = this.shown() && this.shown().id;
+    if (lib) this.blueprints = lib;
+    if (pls && pls.length) this.playlists = pls;
+    this.settings = loadSettings();
+    this.resolveAll();
+    if (!this.boards.some(b => b.id === curId)) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
+    if (this.account) { this.account.state = loadState(); this.account.remember(); this.account.my.state = loadMyState('sf_sync_lib'); this.account.my.remember(); this.account.st.state = loadMyState('sf_sync_st'); this.account.st.remember(); }
     this.refresh();
   }
   // The whole list at once (a sync pull, signing out), keeping the board on screen when it
   // is still there. Not counted as an edit to push. An empty list becomes a blank board.
-  replaceBoards(list) {
-    const curId = this.shown() && this.shown().id, lookId = this.look != null && this.boards[this.look] ? this.boards[this.look].id : null;
+  // 0.10.1: the playlists, as the account has them.
+  replacePlaylists(list) {
+    const curId = this.shown() && this.shown().id;
     this.account.replacing = true;
-    this.boards = list && list.length ? list : [fromTemplate('blank', this.S.lang, this.live.data.home)];
-    const li = lookId ? this.boards.findIndex(b => b.id === lookId) : -1;
-    const i = this.boards.findIndex(b => b.id === curId);
-    if (i < 0) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
-    this.active = i >= 0 ? i : 0; this.look = li >= 0 && li !== this.active ? li : null;
+    this.playlists = list || [];
+    this.resolveAll();
+    if (!this.boards.length) this.boards = [fromTemplate('blank', this.S.lang, this.live.data.home)];
+    if (!this.boards.some(b => b.id === curId)) { Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() }); this.active = 0; }
     this.save(); this.account.replacing = false;
     this.refresh();
   }
+  replaceBoards(list) { this.replacePlaylists(list); }
   // The account's sync status changed: the text updates in place. Rebuilding the drawer
   // here would run on every keystroke, since every save marks a board for sync.
   paintAccount() {
@@ -297,7 +419,7 @@ export class App {
   }
   updPage(fn, quiet) {
     const bp = this.editor.bp();
-    if (bp) { const i = this.blueprints.indexOf(bp), c = clone(bp); fn(c.page, c); c.name = c.page.name || c.name; this.blueprints[i] = c; this.saveMy(); this.saved(); this.refresh(quiet); return; }
+    if (bp) { const i = this.blueprints.indexOf(bp), c = clone(bp); fn(c.page, c); c.name = c.page.name || c.name; this.blueprints[i] = sanitizeBlueprint(c) || c; this.saveMy(); this.saved(); this.refresh(quiet); return; }
     this.upd(b => { const p = b.pages[this.selIdx(b)]; if (p) fn(p, b); }, quiet);
   }
   selIdx(b = this.cur()) { return Math.max(0, Math.min(this.S.sel, b.pages.length - 1)); }
@@ -319,28 +441,32 @@ export class App {
   liveLines() { const now = Date.now(); return this.lines.filter(l => l.until > now); }
   statusLines(cls = '') {
     const lines = this.liveLines(); if (!lines.length) return null;
-    return h('div', { class: 'sf-status ' + cls, 'data-status': '' }, lines.map((l, i) => h('div', { class: 'sf-status-line' + (l.fail ? ' fail' : '') + (i ? ' old' : ''), 'data-k': i ? null : 'status-line' },
+    // 0.10.1 (walkthrough): one line at a time. Two stacked took a sixth of a phone's panel, and
+    // the newer line always says what the screen is doing now.
+    return h('div', { class: 'sf-status ' + cls, 'data-status': '' }, lines.slice(0, 1).map((l, i) => h('div', { class: 'sf-status-line' + (l.fail ? ' fail' : '') + (i ? ' old' : ''), 'data-k': i ? null : 'status-line' },
       h('span', { class: 'sf-dot', 'aria-hidden': 'true' }), h('span', { class: 'sf-status-text' }, l.msg),
       l.action ? h('button', { class: 'sf-status-act', 'data-k': i ? null : 'status-act', onclick: () => { l.until = 0; l.action.fn(); this.paintNotice(); } }, l.action.label) : null)));
   }
 
-  dims() { const bp = this.editor && this.editor.bp(); return bp ? { rows: bp.rows, cols: bp.cols } : this.dimsOf(this.cur()); }
+  // 0.10.1: each board has its own size and theme, so the screen takes them from the board
+  // on it (a playlist may mix sizes), else from the playlist, as a storyboard had them.
+  dims() { const bp = this.editor && this.editor.bp(); if (bp) return this.dimsOf(bp); const p = this.editor && this.currentPage(); return p && p.size ? this.dimsOf(p) : this.dimsOf(this.cur()); }
   dimsOf(b) {
-    if (b.size === 'fill') {
+    if (sizeOf(b) === 'fill') {
       // measured from the stage when this board is showing, else a full window
-      const r = b === this.cur() && !this.S.editing ? this.stage.getBoundingClientRect() : { width: innerWidth, height: innerHeight };
+      const r = (b === this.cur() || (this.editor && b === this.currentPage())) && !this.S.editing ? this.stage.getBoundingClientRect() : { width: innerWidth, height: innerHeight };
       return fillGrid(r.width || innerWidth, r.height || innerHeight);
     }
-    if (b.size === 'custom') return { rows: Math.max(1, Math.min(24, +b.rows || 6)), cols: Math.max(4, Math.min(60, +b.cols || 22)) };
-    const [r, c] = b.size.split('x').map(Number); return { rows: r, cols: c };
+    return dimsOfSize(b);
   }
-  boardOpts() { const b = this.cur(), d = this.dims(), bp = this.editor && this.editor.bp(); return { rows: d.rows, cols: d.cols, theme: bp ? bp.theme : b.theme, transition: this.transitionNow(), speed: b.speed }; }
+  themeNow() { const bp = this.editor && this.editor.bp(); if (bp) return bp.theme; const p = this.editor && this.currentPage(); return (p && p.theme) || this.cur().theme; }
+  boardOpts() { const b = this.cur(), d = this.dims(); return { rows: d.rows, cols: d.cols, theme: this.themeNow(), transition: this.transitionNow(), speed: b.speed }; }
   // The page showing (or being edited) may pick its own transition; else the board's.
   transitionNow() { const p = this.currentPage(); return (p && p.tr) || this.cur().transition; }
   quietMode() { const b = this.cur(); return !this.S.editing && inQuiet(b.quiet, Date.now()) ? b.quiet.mode : null; }
   // The big board holds the board being edited; anywhere else in the editor it plays on.
   holding() { return this.S.editing && (this.editor.onBoard() || this.editor.onBlueprint() || !!this.editor.E.card || !!this.editor.E.preview); }
-  saveActive() { saveActiveOnly(this.active); }   // which storyboard is showing, without rewriting them all
+  saveActive() { saveShown(this.shown() && this.shown().id); }   // what this screen shows, by id, without rewriting the playlists
   currentPage() {
     const b = this.cur();
     const E = this.editor.E, bp = this.editor.bp();
@@ -374,8 +500,11 @@ export class App {
       const n = nextPage(b.pages, this.S.pageIdx, this.S.pageStart, now);
       this.S.pageIdx = n.idx; this.S.pageStart = n.start;
     }
+    // a board arrives at its own size and theme (0.10.1), and with its own transition, so they
+    // are set before the new grid
+    const d = this.dims(), th = this.themeNow(), o = this.board.o;
+    if (!this.previewing && (o.rows !== d.rows || o.cols !== d.cols || o.theme !== th)) { this.board.setOptions({ rows: d.rows, cols: d.cols, theme: th }); this.chromeTheme(); }
     const g = this.grid();
-    // a page arrives with its own transition, so it is set before the new grid
     if (!this.previewing && this.board.o.transition !== this.transitionNow()) this.board.setOptions({ transition: this.transitionNow() });
     if (!this.previewing) this.board.setGrid(g);
     this.paintHighlight();
@@ -429,7 +558,7 @@ export class App {
   // The zone being edited, outlined on the big board in the chrome's accent.
   paintHighlight() {
     const rect = this.S.editing ? this.editor.hlRect() : null;
-    this.board.setHighlight(rect, this.cur().theme === 'white' ? '#8C6222' : '#C8974A');
+    this.board.setHighlight(rect, this.themeNow() === 'white' ? '#8C6222' : '#C8974A');
   }
 
   // The home station starred on the maclaine.se SL map (same site, same storage).
@@ -454,9 +583,8 @@ export class App {
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.lock(); if (this.readHome()) this.refresh(); else this.tick(true); } });
     addEventListener('storage', e => {
       if (e.key === 'slmap_home' && this.readHome()) this.refresh();
-      if (e.key === 'sf_boards' || e.key === 'sf_sync') this.fromOtherTab();
+      if (['sf_playlists', 'sf_library', 'sf_sync_pl', 'sf_sync_lib', 'sf_settings', 'sf_sync_st'].includes(e.key)) this.fromOtherTab();
       if (e.key === 'sf_conns' || e.key === 'sf_sync_conn') { this.connections = loadConns(); this.account.cn.state = loadMyState('sf_sync_conn'); this.account.cn.remember(); this.render(); }
-      if (e.key === 'sf_myboards' || e.key === 'sf_sync_my') { this.blueprints = loadBlueprints(); this.account.my.state = loadMyState(); this.account.my.remember(); this.render(); }
     });
     addEventListener('hashchange', () => { if (location.hash === '#log') return this.openLog(); if (parseRoute(location.hash)) return; this.openLink().then(() => this.refresh()); });
     // A click anywhere else closes an open more menu.
@@ -501,7 +629,10 @@ export class App {
     this.linkVisit = true; this.S.cue = false;
     // Same board id: replace it. A kiosk that opens the same link at every boot keeps
     // one copy that follows the link, instead of piling up duplicates.
+    // 0.10.1: its boards are copied into your Boards, under the ids the link gives them, so
+    // opening it again replaces the same ones.
     const i = this.boards.findIndex(x => x.id === b.id);
+    if (b.pages.length === 1 && (b.pages[0].name || '') === b.name) b.solo = true;
     if (i >= 0) this.boards[i] = b; else this.boards.push(b);
     this.active = i >= 0 ? i : this.boards.length - 1;
     this.S.pageIdx = 0; this.S.pageStart = Date.now(); this.S.sel = 0;
@@ -638,7 +769,7 @@ export class App {
     const E = this.editor.E, adding = E.preview && E.sheet && E.sheet.kind === 'add';
     const tpl = this.lookTpl && TEMPLATES.find(x => x.id === this.lookTpl.from);
     const name = adding ? E.preview.name || t.page : this.editor.bp() ? this.editor.bp().name : tpl ? tpl.name[this.S.lang] : this.cur().name;
-    const label = adding ? t.addTo(this.cur().name) : t.showOn;
+    const label = adding ? (this.cur().solo ? t.showBoth : t.addTo(this.cur().name)) : t.showOn;
     const bar = h('div', { class: 'sf-look-bar', role: 'region', 'aria-label': t.previewing },
       h('span', { class: 'sf-look-kicker' }, t.lookKicker), h('strong', { class: 'sf-look-name' }, name),
       h('button', { class: 'sf-look-go', 'data-k': 'look-show', onclick: () => this.showHere() }, label));
@@ -782,8 +913,12 @@ export class App {
     const d = new Date(at), today = d.toDateString() === new Date().toDateString(), loc = this.S.lang === 'sv' ? 'sv-SE' : 'en-GB';
     return this.t.changedAt(today ? d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString(loc, { day: 'numeric', month: 'short' }));
   }
-  sizeLabel(bd) { return bd.size === 'fill' ? this.t.fill : bd.size === 'custom' ? `${bd.rows} × ${bd.cols}` : bd.size.replace('x', ' × '); }
-  pickBoard(i) { this.active = i; this.look = null; this.sayNext = true; this.save(); Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }); this.say(this.t.sNow(this.shown().name)); this.refresh(); }
+  sizeLabel(bd) {
+    const one = x => { const s = sizeOf(x); return s === 'fill' ? this.t.fill : s === 'custom' ? `${x.rows} × ${x.cols}` : s.replace('x', ' × '); };
+    if (bd.pages) { const all = [...new Set(bd.pages.filter(p => !p.missing).map(p => p.size ? one(p) : one(bd)))]; if (all.length > 1) return this.t.mixedSizes; }
+    return bd.pages && bd.pages[0] && bd.pages[0].size ? one(bd.pages[0]) : one(bd);
+  }
+  pickBoard(i) { this.active = i; this.look = null; this.sayNext = true; this.save(); this.markShown(); Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), switcher: false, cz: -1 }); this.say(this.t.sNow(this.shown().name)); this.refresh(); }
   // New board, from the board switcher: the Start panel, where a template adds a board.
   newBoard() {
     Object.assign(this.S, { switcher: false, editing: true, cz: -1 });
@@ -796,14 +931,18 @@ export class App {
   // The Place a new storyboard starts from (0.8): the one this screen was given on the
   // first visit, else the open storyboard's, else none (a Stockholm board, as before).
   firstPlace() { try { const p = JSON.parse(getFlag('sf_place') || 'null'); return p && p.lat != null ? p : null; } catch { return null; } }
-  newPlace() { const l = this.cur() && this.cur().loc; return this.firstPlace() || (l && l.lat != null ? l : null); }
+  // This screen's own place, else Home (0.10.1), else the open playlist's.
+  newPlace() { const l = this.cur() && this.cur().loc, hp = this.home().place; return this.firstPlace() || (hp && hp.lat != null ? hp : null) || (l && l.lat != null ? l : null); }
   // "Where is this screen?" on the first visit: kept for new storyboards, and the untouched
   // demo is built again for the place, under the same id so its addresses still work.
   setFirstPlace(r) {
     const p = Object.assign({ city: r.name, lat: r.lat, lon: r.lon }, r.cc ? { cc: r.cc } : {}, r.tz ? { tz: r.tz } : {});
     setFlag('sf_place', JSON.stringify(p));
+    if (!this.home().place) this.setHome({ place: p });   // the first place is Home too, until it is changed in Account
     if (this.startPending() && this.freshId === this.shown().id) {
-      const nb = fromTemplate('demo', this.S.lang, this.live.data.home, p); nb.id = this.freshId;
+      // the demo is built again for the place, with the same ids, so it stays one demo
+      const nb = fromTemplate('demo', this.S.lang, this.live.data.home, p), old = this.boards[this.active]; nb.id = this.freshId;
+      nb.pages.forEach((pg, k) => { if (old.pages[k]) pg.id = old.pages[k].id; });
       this.boards[this.active] = nb; this.save();
     }
     // choosing a place is a choice (0.10): the first visit is over, and the line says what changed
@@ -826,6 +965,7 @@ export class App {
     this.look = null; this.lookTpl = null;
   }
   lookTimedOut() {
+    this.lastInput = Date.now();   // once: going back to Showing redraws, and that must not time out again
     const t = this.t, r = this.editor.route(), tpl = this.lookTpl, tt = tpl && TEMPLATES.find(x => x.id === tpl.from), bp = this.editor.bp();
     const name = tt ? tt.name[this.S.lang] : bp ? bp.name : this.cur().name;
     const again = { label: t.showItNow, fn: () => { this.lastInput = Date.now(); if (tpl) this.lookAtTemplate(tpl); else this.editor.go(r); this.render(); } };
@@ -838,7 +978,7 @@ export class App {
   }
   showIdx(i) {
     if (!this.boards[i]) return;
-    const prev = this.active; this.active = i; this.saveActive();
+    const prev = this.active; this.active = i; this.saveActive(); this.markShown();
     Object.assign(this.S, { pageIdx: 0, pageStart: Date.now() });
     this.say(this.t.sNow(this.shown().name), { action: { label: this.t.undo, fn: () => this.undoShow(prev) } }); this.refresh();
   }
@@ -848,18 +988,28 @@ export class App {
     if (!TEMPLATES.some(x => x.id === id)) return;
     const t = this.t, nb = fromTemplate(id, this.S.lang, this.live.data.home, this.newPlace()), prev = this.active;
     const replace = this.startPending() && this.freshId === this.shown().id;
-    if (replace) this.boards[this.active] = nb;
+    if (replace) {
+      // the untouched demo leaves no trace: its boards go too, unless something else shows them
+      const gone = new Set(this.shown().pages.map(p => p.id)), rest = this.playlists.filter(p => p.id !== this.freshId);
+      this.blueprints = this.blueprints.filter(b => !gone.has(b.id) || rest.some(p => p.items.some(i => i.id === b.id)));
+      saveLibrary(this.blueprints);
+      this.boards[this.active] = nb;
+    }
     else { this.boards.push(nb); this.active = this.boards.length - 1; }
+    if (nb.pages.length === 1) nb.solo = true;   // one board shows as that board (0.10.1)
     this.look = null; this.lookTpl = null;
-    this.freshId = null; this.markStarted(); this.save();
+    this.freshId = null; this.markStarted(); this.save(); this.markShown();
     Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now(), cz: -1, editing: true });
     this.say(t.sNowKept(nb.name), replace ? {} : { action: { label: t.undo, fn: () => this.undoShow(prev) } });
-    if (nb.pages.length === 1) this.editor.go({ sec: 'sb', lv: 'board', sb: nb.id, bd: nb.pages[0].id, from: 'boards' });
-    else this.editor.go({ sec: 'sb', lv: 'sb', sb: nb.id, view: 'boards' });
+    if (nb.pages.length === 1) this.editor.go({ sec: 'sb', lv: 'board', sb: this.shown().id, bd: this.shown().pages[0].id, from: 'boards' });
+    else this.editor.go({ sec: 'sb', lv: 'sb', sb: this.shown().id, view: 'boards' });
     this.refresh();
   }
+  // A copy of a playlist points at the same boards (0.10.1): it is the order and the times
+  // that are copied. Duplicate a board for a board of its own.
   duplicateBoard(i) {
-    const nb = clone(this.boards[i]); nb.id = newId('b'); nb.name = this.boards[i].name + this.t.copySuffix; delete nb.from;
+    if (this.playlists.length >= MAX_PL) { this.say(this.t.sbFull, { fail: true }); return; }
+    const nb = clone(this.boards[i]); nb.id = newId('b'); nb.name = this.boards[i].name + this.t.copySuffix; delete nb.from; delete nb.solo;
     this.boards.push(nb);
     if (this.S.editing) this.look = this.boards.length - 1; else this.active = this.boards.length - 1;   // the editor looks at the copy; the screen keeps running
     this.S.sel = 0; this.save(); this.refresh();
@@ -917,7 +1067,7 @@ export class App {
   }
 
   exportJson(i = this.active) {
-    const b = this.boards[i], blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' });
+    const b = sanitizeBoard(this.boards[i]) || this.boards[i], blob = new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' });
     const a = h('a', { href: URL.createObjectURL(blob), download: (b.name || 'board').replace(/[^\wÀ-ɏ-]+/g, '_') + '.json' });
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
@@ -935,7 +1085,7 @@ export class App {
       let x = null; try { x = JSON.parse(txt); } catch { x = null; }
       const bp = x && x.page ? sanitizeBlueprint(x) : null;
       if (bp) {
-        if (this.blueprints.length >= 100) { this.flash(this.t.myFull); return; }
+        if (this.blueprints.length >= MAX_LIB) { this.flash(this.t.myFull); return; }
         if (this.blueprints.some(y => y.id === bp.id)) bp.id = newId('m');
         this.blueprints.unshift(bp); this.saveMy(); this.flash(this.t.savedToMy(bp.name)); this.render(); return;
       }
@@ -949,7 +1099,9 @@ export class App {
     f.text().then(txt => {
       let nb = null; try { nb = sanitizeBoard(JSON.parse(txt)); } catch { nb = null; }
       if (!nb) { this.flash(this.t.importFail); return; }
+      // a file is copied in: its playlist and its boards get ids of their own if they clash
       nb.id = this.boards.some(x => x.id === nb.id) ? newId('b') : nb.id;
+      const lib = this.libMap(); nb.pages.forEach(p => { if (lib.has(p.id)) p.id = newId('p'); });
       this.boards.push(nb); this.active = this.boards.length - 1; this.S.sel = 0; this.save(); this.refresh();
     });
   }

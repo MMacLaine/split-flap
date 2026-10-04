@@ -32,7 +32,8 @@ function copyOf(board, suffix, newId) {
 // Returns { boards, state, push, guests } where push is the ids to send (with the rev
 // to send them against in state), and guests the ids of guest boards that had to become
 // copies, so the app can offer them rather than take them.
-export function merge(local, remote, state, user, { suffix = ' (copy)', newId } = {}) {
+// noCopies (settings, 0.10.1): one row per id, so a change in both places takes the server's.
+export function merge(local, remote, state, user, { suffix = ' (copy)', newId, noCopies = false } = {}) {
   const st = { user, boards: Object.assign({}, state.boards) };
   const byId = new Map(remote.map(r => [r.id, r])), onServer = new Set(remote.map(r => r.id));
   const out = [], push = [], guests = [];
@@ -41,7 +42,8 @@ export function merge(local, remote, state, user, { suffix = ' (copy)', newId } 
     const r = byId.get(b.id), e = st.boards[b.id];
     if (e && e.owner !== user) { out.push(b); continue; }  // another account's board: left alone
     if (!e) {                                               // a guest board
-      if (r && !r.deleted) { byId.delete(b.id); const c = copyOf(b, suffix, newId); out.push(r.board, c); guests.push(c.id); st.boards[b.id] = { rev: r.rev, dirty: false, owner: user }; }
+      if (r && !r.deleted && noCopies) { byId.delete(b.id); out.push(r.board); st.boards[b.id] = { rev: r.rev, dirty: false, owner: user }; }
+      else if (r && !r.deleted) { byId.delete(b.id); const c = copyOf(b, suffix, newId); out.push(r.board, c); guests.push(c.id); st.boards[b.id] = { rev: r.rev, dirty: false, owner: user }; }
       else out.push(b);
       continue;
     }
@@ -72,6 +74,7 @@ export function merge(local, remote, state, user, { suffix = ' (copy)', newId } 
     // changed in both places
     if (!r.deleted) { out.push(r.board); st.boards[b.id] = { rev: r.rev, dirty: false, owner: user }; }
     else delete st.boards[b.id];
+    if (noCopies) continue;
     const c = copyOf(b, suffix, newId);
     out.push(c); st.boards[c.id] = { rev: 0, dirty: true, owner: user }; push.push(c.id);
   }

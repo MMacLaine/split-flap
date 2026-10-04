@@ -81,8 +81,11 @@ export const TEMPLATES = [
     make: a => { const c = ctx(a), sv = a.sv; return base('Demo', { ...c.loc, pages: [
       page(sv ? 'Välkommen' : 'Welcome', 'full', 10, [z('message', { lines: ['', sv ? 'HEJ FRÅN' : 'HELLO FROM', sv ? 'EN LEDIG SKÄRM' : 'A SPARE MONITOR', '', 'roygbv', ''] })]),
       page(sv ? 'Stor klocka' : 'Big clock', 'full', 10, [z('bigclock', { fmt: c.fmt, color: 'f' })]),
-      page(sv ? 'Avgångar' : 'Departures', 'header', 14, [c.clock(), c.deps(9117, 'Odenplan', { modes: c.P && !inStockholm(c.P) ? null : ['METRO', 'TRAIN'] })]),
-      page(sv ? 'Väder' : 'Weather', 'full', 12, [c.wx('now')]),
+      // 0.10.1: before a place is picked the demo assumes no city, so a world clock and today
+      // stand where the departures and the weather go; picking a place builds them in
+      c.P ? page(sv ? 'Avgångar' : 'Departures', 'header', 14, [c.clock(), c.deps(9117, 'Odenplan', { modes: !inStockholm(c.P) ? null : ['METRO', 'TRAIN'] })])
+        : page(sv ? 'Världsklocka' : 'World clock', 'full', 14, [z('worldtime', { places: [{ city: 'London', tz: 'Europe/London' }, { city: 'New York', tz: 'America/New_York' }, { city: 'Tokyo', tz: 'Asia/Tokyo' }], fmt: c.fmt })]),
+      c.P ? page(sv ? 'Väder' : 'Weather', 'full', 12, [c.wx('now')]) : page(sv ? 'Idag' : 'Today', 'full', 12, [z('today', { sun: false })]),
       page(sv ? 'Regnbåge' : 'Rainbow', 'full', 9, [z('art', { pattern: 'rainbow', step: 3 })]),
       page(sv ? 'Dagens ord' : 'Quote of the hour', 'ticker', 14, [z('quote'), z('message', { text: sv ? 'GRATIS. INGET KONTO.' : 'FREE. NO ACCOUNT.' })])
     ] }); }

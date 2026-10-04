@@ -591,3 +591,25 @@ html[data-chrome="light"] .sf-block.alone { background: oklch(0.8 0.1 var(--hue)
 .sf-pl.tpl-row { flex-wrap: wrap; }
 @media (max-width: 1023px) { .sf-pl.tpl-row > .sf-row { flex-basis: 100%; padding-left: 144px; } }
 @media (max-width: 480px) { .sf-pl.tpl-row > .sf-row { padding-left: 0; } }
+
+/* 0.10.1: Boards. Playlists as rows, then every board in a grid of equal cells, each drawn at
+   its own shape, letterboxed on a dark well. The board on the screen has a gold outline. */
+.sf-bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.sf-bcell { position: relative; display: flex; flex-direction: column; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-2); overflow: visible; }
+.sf-bcell.on { outline: 2px solid #C8974A; outline-offset: 1px; }
+.sf-bcell-open, .sf-bcell.new { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: none; border: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; width: 100%; }
+.sf-bcell.new { border: 1px dashed var(--border); align-items: stretch; }
+.sf-bcell.new .sf-well { font-size: 28px; color: var(--muted); }
+.sf-well { display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; border-radius: 8px; background: #0b0b0c; padding: 6px; overflow: hidden; }
+.sf-well .sf-thumb { max-width: 100%; max-height: 100%; width: auto; height: 100%; object-fit: contain; }
+.sf-bcell-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sf-bcell-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sf-mono { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.sf-bcell .sf-more { position: absolute; top: 4px; right: 4px; }
+.sf-adv > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; font-size: 13px; padding: 6px 0; }
+.sf-adv > summary::-webkit-details-marker { display: none; }
+.sf-adv > summary::before { content: '›'; display: inline-block; transition: transform 0.15s; }
+.sf-adv[open] > summary::before { transform: rotate(90deg); }
+.sf-last { display: flex; flex-direction: column; gap: 6px; }
+.sf-bcell-text .sf-tag { align-self: flex-start; }
+strong > .sf-tag.on-now { margin-left: 8px; vertical-align: 2px; }

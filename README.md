@@ -21,13 +21,13 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 - **The place:** one city search in Display, and new boards start from it: the weather, the nearest stop, the holidays, the currency and 12 or 24 hours. Names in Greek and Cyrillic are spelled in Latin letters, and accents the flaps lack are dropped, so no letter prints blank.
 - **Pictures:** paint with the colour chips, turn a photo into chips in the browser, or run an animated pattern (Nordic flags, rain, waves, confetti).
 - **Templates:** ten to start from, including Home dashboard, Station board, Café, Office lobby, Letter clock and Everything at once, which fills the screen and rolls every flap the long way round.
-- **Storyboards and boards:** a storyboard is what a screen plays, its boards in order and when each one shows. A board is one screen at a time, one zone or two (header and body, split, ticker row, or stacked halves for portrait screens), each showing a different channel. `GLOSSARY.md` has the words.
-- **The week:** a storyboard's main view. Boards take turns on their own timers, and a board can have several times, by days of the week or on a date once or every year, which you drag in the week or set on the board. Show alone gives a board its time to itself (the train times on weekday mornings). Today's playlist, beside the week, is what that adds up to. Quiet hours dim or blank the screen overnight.
+- **Playlists and boards:** a playlist is what a screen plays, its boards in order and when each one shows. Every board is kept once, in Boards, at its own size and theme, and a playlist points at boards there, so one board can be in several playlists. A board is one screen at a time, one zone or two (header and body, split, ticker row, or stacked halves for portrait screens), each showing a different channel. `GLOSSARY.md` has the words.
+- **The week:** a playlist's main view. Boards take turns on their own timers, and a board can have several times, by days of the week or on a date once or every year, which you drag in the week or set on the board. Show alone gives a board its time to itself (the train times on weekday mornings). Today's playlist, beside the week, is what that adds up to. Quiet hours dim or blank the screen overnight.
 - **Three themes** (Vestaboard Black, Vestaboard White, Solari Amber), any grid from 1 × 4 to 24 × 60, and four transitions at three speeds, previewed on the board as you pick them. Authentic rolls every flap the whole way round.
 - **Four flap sounds** (Clack, Heavy, Soft, Tick), synthesised: a plastic tick for each flap and a ka-chunk when the last one lands.
-- **The editor.** Three sections along the top, Storyboards, Explore and Account, the same on a phone and a wide screen, and every level has its own address, so the browser's back button goes up one level. Each kind of content is a tile drawn as a small board in the shape of the zone it fills, so you see it before you pick it.
+- **The editor.** Four sections along the top, Showing, Boards, Explore and Account, the same on a phone and a wide screen, and every level has its own address, so the browser's back button goes up one level. Each kind of content is a tile drawn as a small board in the shape of the zone it fills, so you see it before you pick it.
 - **Messages are made on the grid** in Type, Paint or Photo mode, with undo and redo. A message you change is kept under Earlier messages in this browser.
-- **Share by link or QR (Quick Response) code.** The link holds the whole storyboard, compressed into the part of the URL after `#`, which browsers never send to a server. Share as image downloads the board as a PNG.
+- **Share by link or QR (Quick Response) code.** The link holds the whole playlist with its boards, compressed into the part of the URL after `#`, which browsers never send to a server. Share as image downloads the board as a PNG.
 - **Made for walls:** kiosk mode (`?kiosk=1`), screen wake lock, a one pixel drift against burn-in, offline support, a small note when live data is getting old, and a reload in quiet hours when a new version is live. Every flap can roll once at start up and on the hour. `?bg=transparent` draws the board on nothing, for OBS.
 - **Stereo flaps:** each flap's sound is panned by its column.
 - English and Swedish. Å Ä Ö Æ Ø Ü É each have their own flap, and so does ♥.
@@ -40,7 +40,7 @@ A [Vestaboard](https://www.vestaboard.com) costs thousands, and screen apps like
 
 An account is optional. Without one, boards live in the browser that made them, as they always have. Sign in with Google and they are kept with the account too, and come back on any device you sign in on. The browser stays the working copy, so the board runs offline and a wall screen never waits on the server. A board changed in two places keeps both versions. Wall screens use board links and never sign in.
 
-The account stores the Google account id, the name, the email and the storyboards, in a Cloudflare D1 database in the EU. It keeps no IP addresses, browser details or Google tokens, and there are no analytics. Export my account and Delete account are in the editor. The full notice is [privacy.html](privacy.html), at [maclaine.se/en/split-flap/privacy](https://maclaine.se/en/split-flap/privacy).
+The account stores the Google account id, the name, the email, the boards and playlists, and Home, in a Cloudflare D1 database in the EU. It keeps no IP addresses, browser details or Google tokens, and there are no analytics. Export my account and Delete account are in the editor. The full notice is [privacy.html](privacy.html), at [maclaine.se/en/split-flap/privacy](https://maclaine.se/en/split-flap/privacy).
 
 The server is a Cloudflare Worker in [`worker/`](worker/), with its own dependencies and README. The app itself still has none.
 
@@ -97,7 +97,8 @@ The SL station list in `data/sl-sites.json` is baked from SL's open site list; r
 | `worker/` | The accounts API (a Cloudflare Worker with D1 and Better Auth), and the cached data routes for departures. |
 | `privacy.html` | The privacy notice (the Swedish one is in `site/`). |
 | `src/app.js` | Control bar, share, kiosk mode, and the board state the editor works on. |
-| `src/editor.js` | The editor drawer: the sections, storyboards, a board with its content, Explore, Account, and the more menu. |
+| `src/editor.js` | The editor drawer: the sections, Showing, Boards, a playlist, a board with its content, Explore, Account, and the more menu. |
+| `src/library.js` | Boards and playlists (0.10.1): a playlist resolved with its boards, taken apart again after an edit, and the migration from storyboards, shared with the Worker. |
 | `src/catalogue.js` | The picker's tiles, their defaults and their option fields. |
 | `src/composer.js` | Type, Paint and Photo on the grid, undo and redo, earlier messages. |
 | `src/photo.js` | A photo to colour chips, with dithering. |
