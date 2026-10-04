@@ -77,7 +77,8 @@ export const FOLD = {
   fast:      { step: 70,  final: 160, settle: 90,  maxSteps: 10 },
   gentle:    { step: 110, final: 260, settle: 120, maxSteps: 14 },
   // Every flap between here and there, like the hardware. Steps are quicker than Fast
-  // so a full turn of the drum (74 flaps) lands in about four seconds.
+  // so a full turn of the drum (80 flaps on the 0.9 drum, 82 with the amber halves) lands in
+  // about four seconds.
   authentic: { step: 52,  final: 160, settle: 90,  maxSteps: Infinity },
   meter:     { step: 40,  final: 50,  settle: 1,   maxSteps: 1, dimFade: 80 },   // [F] the meter (0.11.2): faint to lit in 80 ms, not 600
   exp: 1.35,          // fold angle = PI * t^1.35 (gravity: slow release, accelerating fall)
