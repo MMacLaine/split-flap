@@ -50,3 +50,14 @@ test('the Worker keeps only well-formed events, and strips what could be persona
   assert.equal(parseBatch({ e: Array.from({ length: 100 }, () => ({ n: 'view' })) }).events.length, 40);
   assert.equal(clean('a'.repeat(100)).length, 60);
 });
+
+test('a full queue sends at once rather than dropping the first events', () => {
+  const sent = [];
+  const tr = new Track({ off: false, send: b => sent.push(JSON.parse(b)), ctx: () => ({}) });
+  clearInterval(tr.timer);
+  tr.ev('open', 'first');
+  for (let i = 0; i < 45; i++) tr.ev('said', 'k' + i);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].e[0].n, 'open', 'the visit itself is never the one lost');
+  assert.equal(sent[0].e.length, 40);
+});
