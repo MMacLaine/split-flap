@@ -48,16 +48,30 @@ try {
   // the composer on a phone: cells a finger can pick
   await ev(`(() => { splitFlap.updPage(p => { p.zones = [{ ch: 'message', o: { lines: ['', 'HELLO'] } }]; }); splitFlap.editor.openZone(0); })()`); await sleep(500);
   const cw = await ev(`(() => { const c = document.querySelector('.sf-comp-cell'); return c ? Math.round(c.getBoundingClientRect().width) : 0; })()`);
-  check('a 40-wide message on a phone keeps 22 px cells', cw >= 22, cw + ' px');
+  check('a 40-wide message on a phone keeps cells of 14 px or more', cw >= 14, cw + ' px');
   check('and says to swipe for the rest', (await ev(`String(!!document.querySelector('[data-k=comp-scroll]'))`)) === 'true');
   check('the grid scrolls sideways', (await ev(`(() => { const w = document.querySelector('.sf-composer.scroll'); return !!w && w.scrollWidth > w.clientWidth; })()`)) === true);
 
-  // a landscape phone: the drawer beside the board, and the playlist folded above the week
-  await send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 2, mobile: true }); await sleep(600);
-  await ev(`splitFlap.render()`); await sleep(300);
+  // a swipe across the wide grid scrolls without placing the caret or raising the keyboard (0.10.2 review)
+  const box = await ev(`(() => { const r = document.querySelector('.sf-comp-grid').getBoundingClientRect(); return JSON.stringify([r.left + 60, r.top + 20]); })()`), [sx, sy] = JSON.parse(box);
+  const caret0 = await ev('splitFlap.S.caret');
+  await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: sx, y: sy }] });
+  for (let k = 1; k <= 8; k++) { await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: sx - k * 25, y: sy }] }); await sleep(30); }
+  await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300);
+  check('a sideways swipe does not place the caret or focus the keyboard', (await ev('splitFlap.S.caret')) === caret0 && (await ev(`String(document.activeElement && document.activeElement.classList.contains('sf-comp-input'))`)) === 'false', `${caret0} then ${await ev('splitFlap.S.caret')}`);
+  // the default 6 x 22 fits a portrait phone whole
+  await ev(`document.querySelector('[data-k=size-6x22]').click()`); await sleep(300);
+  await ev(`splitFlap.editor.openZone(0)`); await sleep(400);
+  check('a 6 x 22 message fits a portrait phone without scrolling', (await ev(`String(!!document.querySelector('.sf-composer.scroll'))`)) === 'false' && (await ev(`Math.round(document.querySelector('.sf-comp-cell').getBoundingClientRect().width)`)) >= 12, String(await ev(`Math.round(document.querySelector('.sf-comp-cell').getBoundingClientRect().width)`)));
+
+  // a landscape phone: the drawer beside the board, and the playlist folded above the week.
+  // Turned without a render call: the app redraws itself (0.10.2 review)
+  await send('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 2, mobile: true }); await sleep(800);
   check('on a landscape phone the drawer sits beside the board', (await ev(`(() => { const d = document.querySelector('.sf-drawer').getBoundingClientRect(), m = document.querySelector('.sf-main').getBoundingClientRect(); return d.right <= m.left + 1 && m.height > 300; })()`)) === true);
   await ev(`(() => { const app = splitFlap; app.pickBoard(0); if (!app.S.editing) app.toggleEdit(); app.editor.go({ sec: 'sb', lv: 'sb', sb: app.shown().id, view: 'week' }); })()`); await sleep(500);
   check("and Today's playlist is one line that opens on a tap", (await ev(`(() => { const f = document.querySelector('[data-k=playlist-fold]'); return !!f && !f.open && f.getBoundingClientRect().height < 64; })()`)) === true, await ev(`(() => { const f = document.querySelector('[data-k=playlist-fold]'); return JSON.stringify([!!f, f && f.open, f && f.getBoundingClientRect().height, splitFlap.editor.E.lv, splitFlap.editor.E.view, innerHeight, splitFlap.editor.phone()]); })()`));
+  await send('Emulation.setDeviceMetricsOverride', { width: 400, height: 844, deviceScaleFactor: 2, mobile: true }); await sleep(800);
+  check('turned back to portrait, the playlist unfolds by itself', (await ev(`String(!!document.querySelector('[data-k=playlist-fold]'))`)) === 'false' && (await ev(`String(!!document.querySelector('.sf-week .sf-playlist'))`)) === 'true');
 } catch (e) { results.push('ERROR ' + e.message); }
 console.log(results.join('\n'));
 ws.close(); proc.kill(); process.exit(results.every(r => r.startsWith('PASS')) ? 0 : 1);

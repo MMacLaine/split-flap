@@ -59,3 +59,27 @@ test('weather at 12 x 40 is now on top, the hours and three days under it', () =
   assert.ok(g.some(r => r.includes('08 09 10')) && g.some(r => r.includes('TODAY')) && g.some(r => r.includes('WED')));
   assert.equal(grid('weather', pl, {}).map(r => r.join('')).filter(r => r.includes('LOADING')).length, 1);   // still loading: as before
 });
+
+// 0.10.2 review
+test('currency at 12 x 40 says LOADING until the rates are in, as the small layout does', () => {
+  const g = rows(grid('currency', { base: 'GBP', pairs: ['EUR', 'USD', 'SEK', 'JPY'] }, {}));
+  assert.equal(g.filter(r => r.includes('LOADING')).length, 1);
+  assert.equal(g.filter(r => r.includes('GBP')).length, 1);
+});
+
+test('a world clock of six cities shows all six, in two rows, with names whole', () => {
+  const places = ['London:Europe/London', 'New York:America/New_York', 'Tokyo:Asia/Tokyo', 'Johannesburg:Africa/Johannesburg', 'Los Angeles:America/Los_Angeles', 'Sydney:Australia/Sydney'].map(x => ({ city: x.split(':')[0], tz: x.split(':')[1] }));
+  const g = rows(grid('worldtime', { places }));
+  for (const n of ['LONDON', 'NEW YORK', 'TOKYO', 'JOHANNESBURG', 'LOS ANGELES', 'SYDNEY']) assert.ok(g.some(r => r.includes(n)), n);
+});
+
+test('a menu with an item too long for half the board stays in one column', () => {
+  const g = rows(grid('menu', { title: 'TODAY', items: ['Smoked salmon bagel 85', 'Soup 65', 'Tea 20', 'Cake 40'], suffix: ' KR' }));
+  assert.ok(g.some(r => r.includes('SMOKED SALMON BAGEL')));
+  assert.ok(!g.some(r => r.includes('SOUP') && r.includes('TEA')));
+});
+
+test('the 12-hour big clock says AM or PM, and 12 x 30 still gets big digits', () => {
+  assert.ok(rows(grid('clock', { fmt: '12' })).some(r => /MONDAY 5 OCT +AM/.test(r)));
+  assert.equal(used(grid('clock', { fmt: '24' }, {}, 12, 30)), 11);
+});

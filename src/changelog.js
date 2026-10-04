@@ -13,12 +13,12 @@ export const CHANGELOG = [
       en: [
         '**Tiles for 12 × 40.** The clock has digits twice the size with the date under them, Today has the day in big letters, the world clock has a column a city, the weather has now, the next hours and three days together, and currency and menus are in two columns.',
         '**Fill screen is the wall\'s.** A board set to Fill screen takes the size of the wall that shows it. The editor shows it at the size a wall in this browser last filled, or 8 × 22, so a phone no longer edits a tall board the wall never shows.',
-        '**The editor on a phone.** Typing on a wide board keeps cells big enough for a finger and scrolls sideways, a landscape phone puts the editor beside the board, and on a short screen Today\'s playlist folds to one line above the week.'
+        '**The editor on a phone.** Typing on a 12 × 40 board keeps cells big enough for a finger and scrolls sideways, a landscape phone puts the editor beside the board, and on a short screen Today\'s playlist folds to one line above the week.'
       ],
       sv: [
         '**Rutor för 12 × 40.** Klockan har siffror i dubbel storlek med datumet under, Idag har dagen med stora bokstäver, världsklockan har en kolumn per stad, vädret visar nu, de närmaste timmarna och tre dagar tillsammans, och valuta och menyer står i två kolumner.',
         '**Fyll skärmen hör till väggen.** En tavla som ska fylla skärmen tar storleken på väggen som visar den. Redigeraren visar den i storleken en vägg i den här webbläsaren senast fyllde, eller 8 × 22, så en telefon redigerar inte längre en hög tavla som väggen aldrig visar.',
-        '**Redigeraren på en telefon.** När du skriver på en bred tavla behåller rutorna en storlek som går att träffa med fingret och rullar åt sidan, en telefon på tvären visar redigeraren bredvid tavlan, och på en låg skärm viks Dagens spellista ihop till en rad ovanför veckan.'
+        '**Redigeraren på en telefon.** När du skriver på en tavla i 12 × 40 behåller rutorna en storlek som går att träffa med fingret och rullar åt sidan, en telefon på tvären visar redigeraren bredvid tavlan, och på en låg skärm viks Dagens spellista ihop till en rad ovanför veckan.'
       ]
     }
   },

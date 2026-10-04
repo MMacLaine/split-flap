@@ -404,7 +404,7 @@ function todayLines(o, z, d, W, lang, w, live) {
   if (z.h === 1) return { exact: lr(`${day.slice(0, 3)} ${d.getDate()} ${mon}`, o.week !== false ? `${w.week} ${isoWeek(d)}` : '', W) };
   // in a big zone's panes (0.10.2): under big digits the day and date are one line; under the
   // day in big letters the day is not printed again
-  const lines = o.dayLine ? [`${day} ${d.getDate()} ${mon}`] : o.noDay ? [date] : [day, date];
+  const lines = o.dayLine ? [`${day} ${d.getDate()} ${mon}${o.ampm ? '  ' + o.ampm : ''}`] : o.noDay ? [date] : [day, date];
   if (special) lines.push(special);
   if (o.week !== false) lines.push(`${w.week} ${isoWeek(d)}`);
   if (sun) lines.push(sun);
@@ -690,7 +690,7 @@ function weatherLines(o, city, d, z, W, lang, w, now) {
     return { lines: (o.bare ? [] : [city]).concat(days.map((f, i) => {
       const name = i === 0 ? w.today.slice(0, 5) : dayName(f.date);
       const txt = `${deg(f.max)} ${deg(f.min)}`, rain = f.pp != null && W >= 18 ? ` ${f.pp}%` : '';
-      return [...name.padEnd(6), weatherChip(f.code), ' ', ...txt, ...rain];
+      return [...name.padEnd(6), weatherChip(f.code), ...(W >= 15 ? [' '] : []), ...txt, ...rain];   // no gap after the chip in a narrow pane
     })), align: 'left' };
   }
   // now: the detail view
@@ -770,9 +770,12 @@ const half = (list, n = Math.ceil(list.length / 2)) => [list.slice(0, n), list.s
 const BIG = {
   // the time in big digits, the day and date under it
   clock: (g, z, o, now, lang, live) => {
-    const two = z.h >= 12, digits = two ? 10 : 5, top = o.date === false ? Math.floor((z.h - digits) / 2) : two ? 0 : Math.max(0, Math.floor((z.h - 8) / 2));
+    const two = z.h >= 11, digits = two ? 10 : 5, top = o.date === false ? Math.floor((z.h - digits) / 2) : two ? 0 : Math.max(0, Math.floor((z.h - 8) / 2));
     pane(g, z, top, 0, digits, z.w, 'bigclock', { fmt: o.fmt, color: 'f' }, now, lang, live);
-    if (o.date !== false) pane(g, z, top + digits, 0, Math.min(3, z.h - top - digits), z.w, 'today', { dayLine: true, sun: false, days: false, week: !!o.week }, now, lang, live);
+    // 12 hours: AM or PM goes on the date line, since the digits have no room for it (0.10.2 review)
+    const ampm = o.fmt === '12' ? (new Date(now).getHours() < 12 ? 'AM' : 'PM') : '';
+    if (o.date !== false) pane(g, z, top + digits, 0, Math.min(3, z.h - top - digits), z.w, 'today', { dayLine: true, ampm, sun: false, days: false, week: !!o.week }, now, lang, live);
+    else if (ampm) put(g, z.r + Math.min(z.h - 1, top + digits), z.c, z.w, ampm, 'center');
     return true;
   },
   // the day in big letters (or its short form), then the date, the holiday, the week and the sun
@@ -783,15 +786,25 @@ const BIG = {
     return true;
   },
   // a column per city, with its time and its day against this screen's
+  // (0.10.2 review) all six cities: up to three in a row, a second row for four to six, and a
+  // name on two lines rather than cut
   worldtime: (g, z, o, now, lang, live) => {
-    const list = (Array.isArray(o.places) ? o.places : []).filter(p => p && p.tz).slice(0, 4);
+    const list = (Array.isArray(o.places) ? o.places : []).filter(p => p && p.tz).slice(0, 6);
     if (list.length < 2) return false;
-    const cw = Math.floor(z.w / list.length), here = new Date(now).getDay(), w = WORDS[lang] || WORDS.en;
-    list.forEach((p, i) => {
-      let t; try { t = wallIn(p.tz, now); } catch { return; }
-      const hh = o.fmt === '12' ? `${(t.h % 12) || 12}:${two(t.m)}` : `${two(t.h)}:${two(t.m)}`, diff = (t.dow - here + 7) % 7;
-      const lines = [boardText(p.city).toUpperCase().slice(0, cw - 1), '', hh, o.fmt === '12' ? (t.h < 12 ? 'AM' : 'PM') : '', diff === 1 ? w.tomorrow : diff === 6 ? w.yesterday : ''];
-      block(g, { r: z.r, c: z.c + i * cw, h: z.h, w: cw }, lines, 'center');
+    const bands = list.length > 3 ? [list.slice(0, Math.ceil(list.length / 2)), list.slice(Math.ceil(list.length / 2))] : [list];
+    const bh = Math.floor(z.h / bands.length), here = new Date(now).getDay(), w = WORDS[lang] || WORDS.en;
+    bands.forEach((band, bi) => {
+      const cw = Math.floor(z.w / band.length), off = Math.floor((z.w - cw * band.length) / 2);
+      band.forEach((p, i) => {
+        const name = wrap(boardText(p.city).toUpperCase(), cw - 1).slice(0, 2);
+        let t = null; try { t = wallIn(p.tz, now); } catch { t = null; }
+        const hh = !t ? '--:--' : o.fmt === '12' ? `${(t.h % 12) || 12}:${two(t.m)}` : `${two(t.h)}:${two(t.m)}`, diff = t ? (t.dow - here + 7) % 7 : 0;
+        const ap = t && o.fmt === '12' ? (t.h < 12 ? 'AM' : 'PM') : '', word = diff === 1 ? w.tomorrow : diff === 6 ? w.yesterday : '', short = diff === 1 ? '+1' : diff === 6 ? '-1' : '';
+        const fit = s => s.length <= cw - 1;
+        const lines = bands.length === 1 ? [...name, '', hh, ap, fit(word) ? word : short]
+          : [...name, hh, [ap, word].filter(Boolean).join(' ')].map((l, k, a) => k === a.length - 1 && !fit(l) ? [ap, short].filter(Boolean).join(' ') : l);
+        block(g, { r: z.r + bi * bh, c: z.c + off + i * cw, h: bh, w: cw }, lines, 'center');
+      });
     });
     return true;
   },
@@ -799,16 +812,20 @@ const BIG = {
   weather: (g, z, o, now, lang, live) => {
     const place = wxPlace(o, live), data = place && live && live.wx && live.wx[wxKey(place)];
     if (!data || data.t == null) return false;
-    const top = Math.min(6, z.h - 5), hw = Math.floor(z.w / 2);
+    // the two lower panes start on the same row (0.10.2 review): both four rows, from the top
+    const top = Math.min(6, z.h - 5), hw = Math.floor(z.w / 2), lh = Math.min(4, z.h - top - 1);
     pane(g, z, 0, 0, top, z.w, 'weather', Object.assign({}, o, { view: 'now' }), now, lang, live);
-    pane(g, z, top + 1, 0, z.h - top - 1, hw, 'weather', Object.assign({}, o, { view: 'hours', bare: true }), now, lang, live);
-    pane(g, z, top + 1, hw, z.h - top - 1, z.w - hw, 'weather', Object.assign({}, o, { view: 'days', bare: true }), now, lang, live);
+    pane(g, z, top + 1, 0, lh, hw, 'weather', Object.assign({}, o, { view: 'hours', bare: true }), now, lang, live);
+    pane(g, z, top + 1, hw, lh, z.w - hw, 'weather', Object.assign({}, o, { view: 'days', bare: true }), now, lang, live);
     return true;
   },
   // the pairs in two columns
   currency: (g, z, o, now, lang, live) => {
     const pairs = (Array.isArray(o.pairs) && o.pairs.length ? o.pairs : ['EUR', 'USD', 'GBP']).filter(p => p !== (o.base || 'SEK'));
     if (pairs.length < 3) return false;
+    // until every rate is in, the small layout says LOADING or NO DATA YET (0.10.2 review)
+    const base = o.base || 'SEK', fx = live && live.fx && live.fx[base], coins = pairs.filter(p => COINS[p]), cd = coins.length ? live && live.coin && live.coin[base] : null;
+    if ((pairs.some(p => !COINS[p]) && !(fx && fx.rates)) || (coins.length && !(cd && cd.prices))) return false;
     const [a, b] = half(pairs), hw = Math.floor(z.w / 2), n = a.length, gap = n * 2 - 1 <= z.h ? 2 : 1, top = Math.floor((z.h - (n - 1) * gap - 1) / 2);
     [a, b].forEach((col, j) => col.forEach((p, i) => pane(g, z, top + i * gap, j ? hw : 0, 2, j ? z.w - hw : hw, 'currency', Object.assign({}, o, { pairs: [p] }), now, lang, live)));
     return true;
@@ -817,6 +834,9 @@ const BIG = {
   menu: (g, z, o, now, lang, live) => {
     const items = (o.items || []).filter(x => String(x || '').trim());
     if (items.length < 4) return false;
+    // two columns only when every item fits its half whole (0.10.2 review); else one, as before
+    const hw0 = Math.floor(z.w / 2), extra = (o.prefix === '$' ? 1 : 0) + String(o.suffix || '').length;
+    if (items.some(x => String(x).trim().length + extra > hw0 - 2)) return false;
     const title = String(o.title || '').toUpperCase(), [a, b] = half(items), hw = Math.floor(z.w / 2), t0 = title ? 2 : 0;
     if (title) put(g, z.r, z.c, z.w, title, 'center');
     const n = a.length, gap = t0 + n * 2 - 1 <= z.h ? 2 : 1, top = t0 + Math.max(0, Math.floor((z.h - t0 - (n - 1) * gap - 1) / 2));
@@ -832,7 +852,9 @@ function drawChannel(g, ch, o, z, now) {
   if (ch === 'bigclock') {
     const d = new Date(now), hh = d.getHours();
     const time = o.fmt === '12' ? `${(hh % 12) || 12}:${two(d.getMinutes())}` : `${two(hh)}:${two(d.getMinutes())}`;
-    const t = pixelWidth(time) <= z.w ? time : time.replace(':', ''), k = z.h >= 10 && pixelWidth(t) * 2 <= z.w ? 2 : 1;   // twice the size where it fits (0.10.2)
+    // twice the size where it fits (0.10.2): with the colon, then without, then at one size
+    const tries = [[time, 2], [time.replace(':', ''), 2], [time, 1], [time.replace(':', ''), 1]].filter(([s, k]) => (k === 1 || z.h >= 10) && pixelWidth(s) * k <= z.w);
+    const [t, k] = tries[0] || [time.replace(':', ''), 1];
     drawPixels(g, z, t, color, now, k);
     return;
   }

@@ -76,11 +76,13 @@ export class Composer {
     const redo = h('button', { class: 'sf-small-btn', 'data-k': 'redo', 'aria-keyshortcuts': 'Control+Shift+Z Meta+Shift+Z', disabled: !(H.i < H.st.length - 1), onclick: () => this.redo() }, t.redo);
 
     // the grid, with a hidden input over it so the phone keyboard works in Type mode
-    // 0.10.2 (Q29): on a phone a cell is never smaller than a finger can pick, 22 px; a wider
-    // board scrolls sideways under the finger instead of shrinking to 10 px cells
-    const avail = (this.ed.phone() ? innerWidth : 412) - 52 - (zd.w - 1) * 2, tight = this.ed.phone() && avail / zd.w < 22;
-    const fs = tight ? 14 : Math.max(7, Math.min(18, Math.floor(avail / zd.w * 0.66)));
-    const grid = h('div', { class: 'sf-comp-grid ' + mode + (tight ? ' wide' : ''), style: `grid-template-columns:repeat(${zd.w},${tight ? '22px' : 'minmax(0,1fr)'});background:${T.housing}` });
+    // 0.10.2 (Q29): on a phone, a board whose cells would be under 12 px scrolls sideways at 14 px
+    // cells instead of shrinking to 10 px. The default 6 x 22 gets 12 to 14 px on a portrait
+    // phone from 360 px wide, so it fits whole; 12 x 40 scrolls (0.10.2 review)
+    const avail = (this.ed.phone() ? innerWidth : 412) - 52 - (zd.w - 1) * 2, tight = this.ed.phone() && avail / zd.w < 12;
+    this.tight = tight;
+    const fs = tight ? 10 : Math.max(7, Math.min(18, Math.floor(avail / zd.w * 0.66)));
+    const grid = h('div', { class: 'sf-comp-grid ' + mode + (tight ? ' wide' : ''), style: `grid-template-columns:repeat(${zd.w},${tight ? '14px' : 'minmax(0,1fr)'});background:${T.housing}` });
     const cellEls = [];
     for (let i = 0; i < n; i++) { const c = h('span', { class: 'sf-comp-cell', 'data-i': i, style: `font-size:${fs}px;font-family:${T.font}, 'DM Mono', monospace` }); cellEls.push(c); grid.append(c); }
     const input = h('input', { class: 'sf-comp-input', value: '', 'aria-label': t.typeOnBoard, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', 'data-k': 'comp', tabIndex: mode === 'type' ? 0 : -1,
@@ -88,7 +90,7 @@ export class Composer {
       oninput: e => this.typed(e), onkeydown: e => this.typeKey(e) });
     grid.addEventListener('pointerdown', e => this.down(e));
     grid.addEventListener('pointermove', e => this.move(e));
-    grid.addEventListener('pointerup', () => this.up()); grid.addEventListener('pointercancel', () => this.up());
+    grid.addEventListener('pointerup', e => this.up(e)); grid.addEventListener('pointercancel', () => this.up());
 
     const used = h('span', { class: 'sf-comp-used' }), notice = null;
     this.els = { cells: cellEls, input, undo, redo, used, grid };
@@ -170,14 +172,19 @@ export class Composer {
   cellAt(e) { const el = document.elementFromPoint(e.clientX, e.clientY); const i = el && el.dataset ? +el.dataset.i : NaN; return el && this.els && this.els.grid.contains(el) && !isNaN(i) ? i : -1; }
   down(e) {
     const zone = this.ed.zone(), mode = this.mode(zone), i = this.cellAt(e); if (i < 0) return;
-    if (mode === 'type') { e.preventDefault(); this.app.S.caret = i; this.els.input.focus(); this.paintGrid(); return; }
+    // Type: the caret goes where a tap lands, on pointerup, and only if the pointer stayed put,
+    // so a sideways swipe across a wide board scrolls without opening the keyboard (0.10.2 review)
+    if (mode === 'type') { this.tap = { i, x: e.clientX, y: e.clientY }; if (!this.tight) e.preventDefault(); return; }
     if (mode !== 'paint') return;
     e.preventDefault(); this.els.grid.setPointerCapture && this.els.grid.setPointerCapture(e.pointerId);
     if (this.tool === 'fill') { this.fill(i); return; }
     this.stroke = { cells: this.cells(), last: -1 }; this.dab(i);
   }
   move(e) { if (!this.stroke) return; const i = this.cellAt(e); if (i >= 0 && i !== this.stroke.last) this.dab(i); }
-  up() { if (!this.stroke) return; const c = this.stroke.cells; this.stroke = null; this.push(c); this.paintGrid(); }
+  up(e) {
+    const tp = this.tap; this.tap = null;
+    if (tp && e && Math.hypot(e.clientX - tp.x, e.clientY - tp.y) < 8) { const i = this.cellAt(e); this.app.S.caret = i >= 0 ? i : tp.i; this.els.input.focus(); this.paintGrid(); return; }
+    if (!this.stroke) return; const c = this.stroke.cells; this.stroke = null; this.push(c); this.paintGrid(); }
   dab(i) {
     const w = this.zd.w, r = Math.floor(i / w), c = i % w, S = this.stroke;
     S.cells[r][c] = this.paint; if (this.mirror) S.cells[r][w - 1 - c] = this.paint;
