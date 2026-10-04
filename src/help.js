@@ -42,7 +42,9 @@ export const HELP = {
     ] },
     { h: 'The display', p: [
       ['A board\'s size and theme are on the board. A playlist\'s transition, sound and place are in ', { k: 'settings', t: 'Display' }, ', next to Week and Boards, where its theme can also be set for every board at once. Language and Home are under ', { k: 'account', t: 'Account' }, '.'],
-      'The place is where the screen is. New boards start from it: the weather, the nearest stop, the holidays, the currency, and 12 or 24 hours. Sunrise and sunset use it too.'
+      'The place is where the screen is. New boards start from it: the weather, the nearest stop, the holidays, the currency, and 12 or 24 hours. Sunrise and sunset use it too.',
+      'Fill screen means the board takes the size of the wall that shows it. The editor shows it at the size a wall in this browser last filled, or 8 × 22 until one has, so a phone never edits a shape the wall cannot show.',
+      'At 12 × 40 the clock, Today, the world clock, the weather, currency and a menu each have a layout of their own for the big board.'
     ] },
     { h: 'Live data, almost anywhere', p: [
       ['Set the place in ', { k: 'settings', t: 'Display' }, ' by searching for your city, and new boards start from it. Departures picks the nearest stop, the weather and the holidays follow the country, prices are in its currency, and clocks use 12 or 24 hours the way it does. Each tile says what it chose, and you can pick something else.'],
@@ -104,7 +106,9 @@ export const HELP = {
     ] },
     { h: 'Skärmen', p: [
       ['En tavlas storlek och tema finns på tavlan. En spellistas övergång, ljud och plats finns under ', { k: 'settings', t: 'Visning' }, ', bredvid Vecka och Tavlor, där temat också kan sättas för alla tavlor på en gång. Språk och Hem finns under ', { k: 'account', t: 'Konto' }, '.'],
-      'Platsen är där skärmen finns. Nya tavlor utgår från den: vädret, närmaste hållplats, helgdagar, valutan och 12 eller 24 timmar. Soluppgång och solnedgång använder den också.'
+      'Platsen är där skärmen finns. Nya tavlor utgår från den: vädret, närmaste hållplats, helgdagar, valutan och 12 eller 24 timmar. Soluppgång och solnedgång använder den också.',
+      'Fyll skärmen betyder att tavlan tar storleken på väggen som visar den. Redigeraren visar den i storleken en vägg i den här webbläsaren senast fyllde, eller 8 × 22 tills en har gjort det, så att en telefon aldrig redigerar en form väggen inte kan visa.',
+      'I 12 × 40 har klockan, Idag, världsklockan, vädret, valuta och en meny var sin layout för den stora tavlan.'
     ] },
     { h: 'Livedata, nästan var som helst', p: [
       ['Välj platsen under ', { k: 'settings', t: 'Visning' }, ' genom att söka efter din stad, så utgår nya tavlor från den. Avgångar väljer närmaste hållplats, vädret och helgdagarna följer landet, priser står i dess valuta och klockor visar 12 eller 24 timmar som där. Varje ruta säger vad den valde, och du kan välja något annat.'],

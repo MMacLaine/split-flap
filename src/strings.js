@@ -4,7 +4,8 @@
 export const STR = {
   en: {
     // 0.10.1: one Boards list, playlists that point at boards, a board's own size, Home.
-    typeOwnNew: 'Adds a message board, shown in turn with this', mixedSizes: 'Mixed sizes', boardSize: 'Size and theme', sizeOwn: 'This board keeps its own size and theme in every playlist it is in.',
+    fillNote: (r, c) => `Fill screen is worked out by the wall that shows it. Until a wall here has run it full screen, the editor shows it at ${r} × ${c}.`, fillSeen: (r, c) => `Fill screen is worked out by the wall that shows it. The editor shows it at ${r} × ${c}, the size a wall in this browser last filled.`,
+    compScroll: 'The board is wider than the phone. Swipe sideways in Type mode to reach the rest.', typeOwnNew: 'Adds a message board, shown in turn with this', mixedSizes: 'Mixed sizes', boardSize: 'Size and theme', sizeOwn: 'This board keeps its own size and theme in every playlist it is in.',
     themeAll: 'Sets the theme of every board in this playlist.', sizeOnBoard: 'Each board has its own size now. Change it on the board.',
     deletedBoard: x => `Deleted ${x}.`, deletedIn: (x, names) => `Deleted ${x}. Also taken out of ${names.join(' and ').replace(/ and (?=.* and )/g, ', ')}.`, restored: x => `${x} is back.`,
     lastShowed: x => `Last time you showed ${x}`, lastShowedSub: 'Your account had it on a screen. Show it here too?',
@@ -165,7 +166,8 @@ export const STR = {
   },
   sv: {
     // 0.10.1: en lista med tavlor, spellistor som pekar på tavlor, tavlans egen storlek, Hem.
-    typeOwnNew: 'Lägger till en meddelandetavla, som visas i tur med den här', mixedSizes: 'Blandade storlekar', boardSize: 'Storlek och tema', sizeOwn: 'Tavlan behåller sin storlek och sitt tema i varje spellista den finns i.',
+    fillNote: (r, c) => `Fyll skärmen räknas ut av väggen som visar den. Tills en vägg här har visat den i helskärm visar redigeraren den i ${r} × ${c}.`, fillSeen: (r, c) => `Fyll skärmen räknas ut av väggen som visar den. Redigeraren visar den i ${r} × ${c}, storleken en vägg i den här webbläsaren senast fyllde.`,
+    compScroll: 'Tavlan är bredare än telefonen. Svep åt sidan i läget Skriv för att nå resten.', typeOwnNew: 'Lägger till en meddelandetavla, som visas i tur med den här', mixedSizes: 'Blandade storlekar', boardSize: 'Storlek och tema', sizeOwn: 'Tavlan behåller sin storlek och sitt tema i varje spellista den finns i.',
     themeAll: 'Sätter temat för alla tavlor i spellistan.', sizeOnBoard: 'Varje tavla har sin egen storlek nu. Ändra den på tavlan.',
     deletedBoard: x => `${x} är borttagen.`, deletedIn: (x, names) => `${x} är borttagen. Den togs också ur ${names.join(' och ').replace(/ och (?=.* och )/g, ', ')}.`, restored: x => `${x} är tillbaka.`,
     lastShowed: x => `Förra gången visade du ${x}`, lastShowedSub: 'Ditt konto hade den på en skärm. Visa den här också?',

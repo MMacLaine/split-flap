@@ -718,6 +718,7 @@ export class Editor {
         h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.rows), h('input', { type: 'number', class: 'sf-input num', min: 1, max: 24, value: own.rows, 'data-k': 'rows', onchange: e => set(o => { o.rows = Math.max(1, Math.min(24, +e.target.value || 6)); }) })),
         h('label', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.cols), h('input', { type: 'number', class: 'sf-input num', min: 4, max: 60, value: own.cols, 'data-k': 'cols', onchange: e => set(o => { o.cols = Math.max(4, Math.min(60, +e.target.value || 22)); }) }))) : null,
       h('div', { class: 'sf-row wrap', role: 'group', 'aria-label': t.theme }, seg(Object.values(THEMES).map(th => [th.id, th.label]), own.theme || app.themeNow(), v => set(o => { o.theme = v; }), 'btheme')),
+      cur === 'fill' ? h('span', { class: 'sf-hint', 'data-k': 'fill-note' }, app.fillSeen() ? t.fillSeen(d.rows, d.cols) : t.fillNote(d.rows, d.cols)) : null,
       h('span', { class: 'sf-hint' }, t.sizeOwn));
   }
   // A page's time windows: the tick is the way in, then one card per window.

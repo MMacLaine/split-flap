@@ -613,3 +613,21 @@ html[data-chrome="light"] .sf-block.alone { background: oklch(0.8 0.1 var(--hue)
 .sf-last { display: flex; flex-direction: column; gap: 6px; }
 .sf-bcell-text .sf-tag { align-self: flex-start; }
 strong > .sf-tag.on-now { margin-left: 8px; vertical-align: 2px; }
+
+/* 0.10.2 (Q29): the composer on a phone keeps 22 px cells, and a wide board scrolls sideways */
+.sf-composer.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.sf-comp-grid.wide { width: max-content; }
+/* 0.10.2 (Q29): a landscape phone puts the drawer beside the board, as a wide screen does,
+   so neither is a strip a third of the screen tall */
+@media (max-height: 500px) and (orientation: landscape) {
+  .sf.editing-mobile { flex-direction: row; }
+  .sf.editing-mobile .sf-main { order: 1; flex: 1; min-width: 0; height: 100vh; height: 100dvh; }
+  .sf.editing-mobile .sf-drawer { order: 0; width: 56%; flex: none; height: 100vh; height: 100dvh; border-top: 0; border-right: 1px solid var(--border); }
+}
+.sf-playlist-fold > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; padding: 4px 0; }
+.sf-playlist-fold > summary::-webkit-details-marker { display: none; }
+.sf-playlist-fold > summary::after { content: '›'; margin-left: auto; transition: transform 0.15s; }
+.sf-playlist-fold[open] > summary::after { transform: rotate(90deg); }
+.sf-playlist-fold > summary .sf-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sf-playlist-fold > summary .sf-eyebrow { flex: none; }
+.sf-playlist.sf-playlist-fold { padding-top: 8px; padding-bottom: 8px; gap: 8px; }

@@ -453,12 +453,20 @@ export class App {
   dims() { const bp = this.editor && this.editor.bp(); if (bp) return this.dimsOf(bp); const p = this.editor && this.currentPage(); return p && p.size ? this.dimsOf(p) : this.dimsOf(this.cur()); }
   dimsOf(b) {
     if (sizeOf(b) === 'fill') {
-      // measured from the stage when this board is showing, else a full window
-      const r = (b === this.cur() || (this.editor && b === this.currentPage())) && !this.S.editing ? this.stage.getBoundingClientRect() : { width: innerWidth, height: innerHeight };
-      return fillGrid(r.width || innerWidth, r.height || innerHeight);
+      // 0.10.2 (QA E-M3): Fill screen is the wall's setting. The screen running the board
+      // measures itself; a wall (kiosk or fullscreen) remembers what it measured, and the
+      // editor and thumbnails use that, else 8 x 22, never a phone's own portrait shape.
+      if ((b === this.cur() || (this.editor && b === this.currentPage())) && !this.S.editing) {
+        const r = this.stage.getBoundingClientRect(), d = fillGrid(r.width || innerWidth, r.height || innerHeight);
+        if ((this.kioskStrict || this.S.isFull) && r.width > 0) { const k = `${d.rows}x${d.cols}`; if (getFlag('sf_fill') !== k) setFlag('sf_fill', k); }
+        return d;
+      }
+      return this.fillSeen() || { rows: 8, cols: 22 };
     }
     return dimsOfSize(b);
   }
+  // The last size a wall in this browser filled, as rows x columns, or null.
+  fillSeen() { const m = /^(\d{1,2})x(\d{1,2})$/.exec(getFlag('sf_fill') || ''); return m && +m[1] >= 1 && +m[1] <= 24 && +m[2] >= 4 && +m[2] <= 60 ? { rows: +m[1], cols: +m[2] } : null; }
   themeNow() { const bp = this.editor && this.editor.bp(); if (bp) return bp.theme; const p = this.editor && this.currentPage(); return (p && p.theme) || this.cur().theme; }
   boardOpts() { const b = this.cur(), d = this.dims(); return { rows: d.rows, cols: d.cols, theme: this.themeNow(), transition: this.transitionNow(), speed: b.speed }; }
   // The page showing (or being edited) may pick its own transition; else the board's.
