@@ -4,12 +4,23 @@
 // of key caps. Kept short, one idea per paragraph.
 
 export const INTRO = {
-  en: { title: 'How it works', lede: 'A short guide to making a playlist and putting it on a wall. Everything here can be changed later.' },
-  sv: { title: 'Så fungerar det', lede: 'En kort guide till att göra en spellista och sätta upp den på en vägg. Allt här går att ändra senare.' }
+  en: { title: 'How it works', lede: 'A short guide to making a playlist and putting it on a wall. Everything here can be changed later.', toc: 'In this guide' },
+  sv: { title: 'Så fungerar det', lede: 'En kort guide till att göra en spellista och sätta upp den på en vägg. Allt här går att ändra senare.', toc: 'I den här guiden' }
 };
 
 export const HELP = {
   en: [
+    { h: 'Start here', p: [
+      'The board you see is a demo. Press Edit to make it yours: change the words, or pick something ready.',
+      ['Explore has templates for most uses: departures, the weather, a clock, markets, a café menu. Open one and it shows on the screen at once, at its own size. Show on this screen keeps it. ', { k: 'start', t: 'Open Explore' }],
+      'Look changes how a board is made: Classic, glass, paper, light round the frame. Share or Fullscreen puts it on a wall.',
+      'Nothing needs an account. Signing in only keeps your boards on every device.'
+    ] },
+    { h: 'Explore and templates', p: [
+      'Explore has ready boards, grouped by what they are for. Opening one shows it on the screen with the gold bar under it, so you can see it before you take it.',
+      'Each template comes at the size it was made for, like 10 × 32 for a station board or 12 × 40 for the weather. Pick another size in its preview if your screen suits one better.',
+      'Show on this screen copies it into your Boards, where you can change anything. The template itself stays as it was.'
+    ] },
     { h: 'Playlists and boards', fig: 'board', p: [
       'A playlist is what a screen plays. It holds boards in order, and says when each one shows.',
       'A board is one screen at a time: a layout of one or two zones, and in each zone one kind of content, like a message, the clock, departures or the weather.',
@@ -86,6 +97,17 @@ export const HELP = {
     { h: 'Keys', keys: [['E', 'Open and close the editor'], ['F', 'Fullscreen'], ['S', 'Sound on and off'], ['R', 'Read the board aloud, with a screen reader on'], ['Esc', 'Close a menu, then the editor'], ['↑ ↓', 'Move a block in the week by 15 minutes, with Shift to change its end'], ['Ctrl Z', 'Undo in a message, with Shift to redo']] }
   ],
   sv: [
+    { h: 'Börja här', p: [
+      'Tavlan du ser är en demo. Tryck på Redigera för att göra den till din: ändra orden, eller välj något färdigt.',
+      ['Utforska har mallar för det mesta: avgångar, vädret, en klocka, marknader, en kafémeny. Öppna en så visas den på skärmen direkt, i sin egen storlek. Visa på den här skärmen behåller den. ', { k: 'start', t: 'Öppna Utforska' }],
+      'Utseende ändrar hur en tavla är gjord: Klassisk, glas, papper, ljus runt ramen. Dela eller Helskärm sätter upp den på en vägg.',
+      'Inget kräver ett konto. Att logga in sparar bara dina tavlor på alla enheter.'
+    ] },
+    { h: 'Utforska och mallar', p: [
+      'Utforska har färdiga tavlor, ordnade efter vad de är till för. När du öppnar en visas den på skärmen med den gyllene listen under, så att du ser den innan du tar den.',
+      'Varje mall kommer i den storlek den gjordes för, som 10 × 32 för en stationstavla eller 12 × 40 för vädret. Välj en annan storlek i förhandsvisningen om din skärm passar bättre för den.',
+      'Visa på den här skärmen kopierar den till dina Tavlor, där du kan ändra allt. Själva mallen är kvar som den var.'
+    ] },
     { h: 'Spellistor och tavlor', fig: 'board', p: [
       'En spellista är det en skärm spelar. Den har tavlor i ordning, och säger när var och en visas.',
       'En tavla är en skärm i taget: en layout med en eller två zoner, och i varje zon en sorts innehåll, som ett meddelande, klockan, avgångar eller vädret.',
