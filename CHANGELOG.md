@@ -6,7 +6,7 @@ Each version is a release, newest first. The app shows this log under Edit, at t
 
 Help is one press away now, from the bar, the editor or the ? key, and the guide has caught up with the last few releases.
 
-- **Help in the bar.** There is a Help button next to Share, a ? in the editor's head, and the ? key opens it from anywhere. It used to sit under Account, which is the last place anyone looks.
+- **Help in the bar.** There is a Help button next to Share, a ? in the editor's head, and the ? key opens it from anywhere. It used to sit under Account.
 - **Start here.** The guide opens with how to make the demo yours and where the templates are, then has a list of every section to jump to.
 - **The page under the board** says what Split-Flap does today: departures in most of Europe, looks, and where to find Help.
 

@@ -11,12 +11,12 @@ export const CHANGELOG = [
     },
     items: {
       en: [
-        '**Help in the bar.** There is a Help button next to Share, a ? in the editor\'s head, and the ? key opens it from anywhere. It used to sit under Account, which is the last place anyone looks.',
+        '**Help in the bar.** There is a Help button next to Share, a ? in the editor\'s head, and the ? key opens it from anywhere. It used to sit under Account.',
         '**Start here.** The guide opens with how to make the demo yours and where the templates are, then has a list of every section to jump to.',
         '**The page under the board** says what Split-Flap does today: departures in most of Europe, looks, and where to find Help.'
       ],
       sv: [
-        '**Hjälp i raden.** Det finns en Hjälp-knapp bredvid Dela, ett ? i redigerarens överdel, och tangenten ? öppnar den var du än är. Förut låg den under Konto, som är det sista stället man letar på.',
+        '**Hjälp i raden.** Det finns en Hjälp-knapp bredvid Dela, ett ? i redigerarens överdel, och tangenten ? öppnar den var du än är. Förut låg den under Konto.',
         '**Börja här.** Guiden börjar med hur du gör demon till din och var mallarna finns, och har sedan en lista över alla avsnitt att hoppa till.',
         '**Sidan under tavlan** säger vad Split-Flap gör i dag: avgångar i större delen av Europa, utseenden, och var Hjälpen finns.'
       ]

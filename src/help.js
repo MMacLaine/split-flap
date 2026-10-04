@@ -94,7 +94,7 @@ export const HELP = {
       ['As a guest, playlists are kept in this browser and nowhere else. To move one, share its link, or export it from its ⋯ menu in ', { k: 'playlists', t: 'Playlists' }, ' and import it from ', { k: 'start', t: 'Explore' }, ' in the other browser.'],
       ['With an account, your playlists are kept with it as well, and come back on any device you sign in on. ', { k: 'account', t: 'Account' }, ' has signing in, export and delete, and the ', { href: 'privacy', t: 'privacy page' }, ' says what it stores.']
     ] },
-    { h: 'Keys', keys: [['E', 'Open and close the editor'], ['F', 'Fullscreen'], ['S', 'Sound on and off'], ['R', 'Read the board aloud, with a screen reader on'], ['Esc', 'Close a menu, then the editor'], ['↑ ↓', 'Move a block in the week by 15 minutes, with Shift to change its end'], ['Ctrl Z', 'Undo in a message, with Shift to redo']] }
+    { h: 'Keys', keys: [['E', 'Open and close the editor'], ['F', 'Fullscreen'], ['S', 'Sound on and off'], ['L', 'Listen on and off, on a board that uses it'], ['?', 'Open Help'], ['R', 'Read the board aloud, with a screen reader on'], ['Esc', 'Close a menu, then the editor'], ['↑ ↓', 'Move a block in the week by 15 minutes, with Shift to change its end'], ['Ctrl Z', 'Undo in a message, with Shift to redo']] }
   ],
   sv: [
     { h: 'Börja här', p: [
@@ -181,6 +181,6 @@ export const HELP = {
       ['Som gäst sparas spellistor i den här webbläsaren och ingen annanstans. För att flytta en, dela dess länk, eller exportera den från dess ⋯-meny under ', { k: 'spellistor', t: 'Spellistor' }, ' och importera den från ', { k: 'start', t: 'Utforska' }, ' i den andra webbläsaren.'],
       ['Med ett konto sparas dina spellistor med det också, och kommer tillbaka på alla enheter där du loggar in. ', { k: 'account', t: 'Konto' }, ' har inloggning, export och radering, och ', { href: 'privacy', t: 'integritetssidan' }, ' säger vad det sparar.']
     ] },
-    { h: 'Tangenter', keys: [['E', 'Öppna och stäng redigeraren'], ['F', 'Helskärm'], ['S', 'Ljud på och av'], ['R', 'Läs upp tavlan, med en skärmläsare på'], ['Esc', 'Stäng en meny, sedan redigeraren'], ['↑ ↓', 'Flytta ett block i veckan 15 minuter, med Skift för att ändra slutet'], ['Ctrl Z', 'Ångra i ett meddelande, med Skift för att göra om']] }
+    { h: 'Tangenter', keys: [['E', 'Öppna och stäng redigeraren'], ['F', 'Helskärm'], ['S', 'Ljud på och av'], ['L', 'Lyssna på och av, på en tavla som använder det'], ['?', 'Öppna Hjälp'], ['R', 'Läs upp tavlan, med en skärmläsare på'], ['Esc', 'Stäng en meny, sedan redigeraren'], ['↑ ↓', 'Flytta ett block i veckan 15 minuter, med Skift för att ändra slutet'], ['Ctrl Z', 'Ångra i ett meddelande, med Skift för att göra om']] }
   ]
 };

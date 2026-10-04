@@ -178,6 +178,11 @@ try {
   await go(URL0);
   await send('Emulation.setDeviceMetricsOverride', { width: 400, height: 860, deviceScaleFactor: 1, mobile: true });
   await go(URL0 + `#/storyboards/${sb}/week`);
+  await send('Emulation.setDeviceMetricsOverride', { width: 360, height: 780, deviceScaleFactor: 1, mobile: true });
+  await go(URL0 + `#/storyboards/${sb}`); await sleep(300);
+  check("at 360 px the editor's head fits with its ?", (await ev(`(() => { const h = document.querySelector('.sf-panel-head'); return String(!!h.querySelector('[data-k=head-help]') && h.scrollWidth <= h.clientWidth); })()`)) === 'true');
+  await send('Emulation.setDeviceMetricsOverride', { width: 400, height: 860, deviceScaleFactor: 1, mobile: true });
+  await go(URL0 + `#/storyboards/${sb}/week`);
   check('on a phone the week shows one day, with day chips', (await ev(`document.querySelectorAll('.sf-day-col').length`)) === 1 && (await ev(`document.querySelectorAll('[data-k^=day-chip]').length`)) === 7);
   check("and Today's playlist sits above it", (await ev(`String(!!document.querySelector('.sf-week .sf-playlist'))`)) === 'true');
   check('the drawer is on screen below the board', (await ev(`Math.round(document.querySelector('.sf-drawer').getBoundingClientRect().top)`)) < 400, String(await ev(`Math.round(document.querySelector('.sf-drawer').getBoundingClientRect().top)`)));
