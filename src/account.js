@@ -353,6 +353,7 @@ export class Account {
   offerConn() { return this.cn.state.offer || []; }
   offerCount() { return this.offer.length + this.offerMy().length + this.offerConn().length; }
   answerOffer(keep) {
+    this.app.ev('signin_offer', keep ? 'kept' : 'left');
     // a one-board playlist is not shown in the offer: it goes with its board (0.10.1)
     for (const id of this.offer) { const pl = this.app.playlists.find(x => x.id === id); if (pl && pl.solo) { if (this.unticked.has(pl.items[0].id)) this.unticked.add(id); else this.unticked.delete(id); } }
     // and a playlist taken takes the boards it shows, so it never arrives blank on another device

@@ -41,6 +41,11 @@ database_id = "b893a0fb-ab4a-4ecf-8555-1da08155938b"   # created with --jurisdic
 migrations_dir = "migrations"
 
 # 60 board writes a minute per account, counted by Cloudflare, not in D1
+# Anonymous usage counts (0.11.5), read with _dev/stats.mjs
+[[analytics_engine_datasets]]
+binding = "EVENTS"
+dataset = "split_flap_events"
+
 [[ratelimits]]
 name = "WRITES"
 namespace_id = "5051"
@@ -60,5 +65,6 @@ vars = { BASE_URL = "http://localhost:8787", DEV_APP = "http://localhost:8801", 
 durable_objects = { bindings = [{ name = "MARKETS", class_name = "Markets" }] }
 # DEV_TEST=1 comes from .dev.vars when running the tests, never from here
 d1_databases = [{ binding = "DB", database_name = "split-flap", database_id = "00000000-0000-0000-0000-000000000000", migrations_dir = "migrations" }]
+analytics_engine_datasets = [{ binding = "EVENTS", dataset = "split_flap_events_dev" }]
 ratelimits = [{ name = "WRITES", namespace_id = "5051", simple = { limit = 60, period = 60 } }, { name = "DATA", namespace_id = "5052", simple = { limit = 120, period = 60 } }]
 routes = []

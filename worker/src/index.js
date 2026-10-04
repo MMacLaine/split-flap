@@ -18,6 +18,7 @@
 //   GET    /export       the account, its boards and its blueprints as one JSON file
 //   DELETE /account      the account, its sessions, its boards and its blueprints
 //   GET    /data/*       live data for tiles, cached, no sign-in (0.8, see data.js)
+//   POST   /e            anonymous usage counts, no sign-in (0.11.5, see events.js)
 
 import { betterAuth } from 'better-auth';
 import { makeSignature } from 'better-auth/crypto';
@@ -28,6 +29,7 @@ import { sanitizeConnection } from '../../src/connections.js';
 import { sealKey, seal, unseal } from './seal.js';
 import { beforeFeed, afterSave } from './feeds.js';
 import { data } from './data.js';
+import { events } from './events.js';
 export { Markets } from './markets.js';   // the Durable Object in front of Alpha Vantage (0.9)
 
 const API = '/split-flap/api';
@@ -88,7 +90,7 @@ export async function logFailure(req, url, res) {
   console.warn(JSON.stringify(line));
   return line;
 }
-const KNOWN = ['/', '/me', '/boards', '/blueprints', '/playlists', '/settings', '/connections', '/export', '/account', '/dev/session', '/dev/row', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates', '/data/feed'];
+const KNOWN = ['/', '/e', '/me', '/boards', '/blueprints', '/playlists', '/settings', '/connections', '/export', '/account', '/dev/session', '/dev/row', '/data/status', '/data/transit/departures', '/data/transit/search', '/data/transit/near', '/data/markets', '/data/rates', '/data/feed'];
 // Known routes only: an id is replaced, and anything else is logged as unknown, never as typed.
 export const routeName = path => path.startsWith('/auth/') ? '/auth/' + (/^[a-z-]{1,32}$/.test(path.split('/')[2] || '') ? path.split('/')[2] : 'unknown')
   : /^\/(boards|blueprints|playlists|settings|connections)\/.+$/.test(path) ? path.replace(/^\/(boards|blueprints|playlists|settings|connections)\/.+$/, '/$1/:id') : KNOWN.includes(path) ? path : 'unknown';
@@ -101,6 +103,8 @@ async function route(req, env, url) {
 
   // Writes must come from the app's own page, on top of the SameSite cookie.
   if (req.method !== 'GET' && req.headers.get('origin') !== new URL(env.BASE_URL).origin) return fail(403, 'bad_origin');
+  // anonymous usage counts (0.11.5): no sign-in, nothing about who sent them
+  if (path === '/e') return events(req, env);
 
   const session = await auth.api.getSession({ headers: req.headers });
   const user = session && session.user;
