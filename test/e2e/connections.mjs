@@ -6,8 +6,8 @@
 // worker/, with CONN_KEY in worker/.dev.vars. It asks the ECB and the Fed for real, so it
 // is not run in CI. npm run e2e:connections
 import { spawn } from 'node:child_process';
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', PORT = 9400 + Math.floor(Math.random() * 300);
-const proc = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=/tmp/two-${Date.now()}`, 'about:blank'], { stdio: 'ignore' });
+import { launchChrome } from './chrome.mjs';
+const { proc, PORT } = await launchChrome('two', []);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let ws; for (let i = 0; i < 50 && !ws; i++) { try { const v = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json(); ws = new WebSocket(v.webSocketDebuggerUrl); } catch { await sleep(200); } }
 await new Promise(r => ws.addEventListener('open', r));

@@ -62,8 +62,8 @@ export function lastChange(series) {
 
 // ---------- the zone ----------
 const WORDS = {
-  en: { since: 'SINCE', loading: 'LOADING', nodata: 'NO DATA YET', pick: 'PICK A BANK', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'], years: n => n === 1 ? '1 YEAR' : `${n} YEARS`, off: 'NOT AVAILABLE' },
-  sv: { since: 'SEDAN', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', pick: 'VÄLJ EN BANK', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'], years: n => n === 1 ? '1 ÅR' : `${n} ÅR`, off: 'INTE TILLGÄNGLIG' }
+  en: { since: 'SINCE', loading: 'LOADING', nodata: 'NO DATA YET', pick: '-', name: 'RATES', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'], years: n => n === 1 ? '1 YEAR' : `${n} YEARS`, off: 'NOT AVAILABLE' },
+  sv: { since: 'SEDAN', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', pick: '-', name: 'RÄNTOR', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'], years: n => n === 1 ? '1 ÅR' : `${n} ÅR`, off: 'INTE TILLGÄNGLIG' }
 };
 const pct = (v, lang) => { const s = (Math.round(v * 100) / 100).toFixed(2); return (lang === 'sv' ? s.replace('.', ',') : s) + '%'; };
 export function rateText(bank, s, lang) {
@@ -82,7 +82,8 @@ export function ratesCells(o, z, live, lang) {
   const banks = (Array.isArray(o.banks) ? o.banks : []).filter(b => BANKS[b]).slice(0, 4);
   const put = (r, c, l) => pad(l, Wd - c).forEach((x, j) => { if (cells[r]) cells[r][c + j] = x; });
   const data = b => live && live.rates && live.rates[`${b}:${o.years || 5}`];
-  if (!banks.length) { put(Math.floor(H / 2), Math.max(0, Math.floor((Wd - w.pick.length) / 2)), w.pick); return cells; }
+  // unset: its name over a dash, as every tile with nothing set (0.10.3)
+  if (!banks.length) { const r0 = Math.max(0, Math.floor(H / 2) - (H > 1 ? 1 : 0)); if (H > 1) put(r0, Math.max(0, Math.floor((Wd - w.name.length) / 2)), w.name); put(H > 1 ? r0 + 1 : r0, Math.max(0, Math.floor((Wd - w.pick.length) / 2)), w.pick); return cells; }
   const wait = b => { const d = data(b); return d && d.off ? w.off : d && (d.fails || 0) >= 4 ? w.nodata : w.loading; };
   if (banks.length === 1 && o.view !== 'list' && Wd >= 24 && H >= 4) {
     const b = banks[0], d = data(b), s = d && d.series;

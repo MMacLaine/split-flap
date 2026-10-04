@@ -10,7 +10,7 @@
 import { h, clone } from './dom.js';
 import { THEMES, renderStatic, staticGeom, GEOM } from './renderer.js';
 import { CHIPS, CHIP_NAMES } from './charset.js';
-import { compose, zonesFor, LAYOUTS, newId, blank, templateTokens, fixedCut, vestaboard, nearKey } from './content.js';
+import { compose, unsetOf, zonesFor, LAYOUTS, newId, blank, templateTokens, fixedCut, vestaboard, nearKey } from './content.js';
 import { TEMPLATES, fromTemplate, availableFor, SECTIONS as TPL_SECTIONS, sectionOf, fitOf } from './templates.js';
 import { searchStations, searchCities, searchStops, nearStops, MODE_LETTERS } from './live.js';
 import { placeOf, formatsFor, priceMark, screenTz, tzDiffers, FX_CURRENCIES } from './place.js';
@@ -817,6 +817,9 @@ export class Editor {
     const body = [h('div', { class: 'sf-ch-head sf-land', 'data-k-land': this.E.landKey || 0 },
       h('div', null, h('strong', null, this.L(tile.name)), h('span', null, this.L(tile.desc))),
       h('button', { class: 'sf-btn', 'data-k': 'change', onclick: () => { this.E.picking = true; this.E.search = ''; this.app.render(); const s = this.app.drawer.querySelector('[data-k="pick-search"]'); if (s) s.focus(); } }, t.change))];
+    // a tile with nothing set says what it needs here, never on the flaps (0.10.3)
+    const need = unsetOf(zone, this.app.live.data);
+    if (need) body.push(h('p', { class: 'sf-hint warn', 'data-k': 'unset-hint' }, t.unsetHint[need]));
     if (zone.ch === 'message' && this.isTicker()) {
       body.push(this.field({ k: 'text', t: 'text', label: { en: t.text, sv: t.text }, upper: 1, len: 500 }, zone.o || {}));
     } else if (zone.ch === 'message') {

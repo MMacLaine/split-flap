@@ -75,7 +75,7 @@ test('the station board leads with the time and destination, and every row keeps
 
 test('a stop that has not answered says so, and a board built for a place follows its nearest stop', () => {
   assert.deepEqual(one('departures', { stops: [{ src: 'tr', id: 'x', name: 'Oslo S' }] }, 3, 22, NOW, {}).map(s => s.trim()), ['OSLO S', '', 'LOADING']);
-  assert.deepEqual(one('departures', {}, 2, 22, NOW, {}).map(s => s.trim()), ['DEPARTURES', 'PICK A STOP']);
+  assert.deepEqual(one('departures', {}, 2, 22, NOW, {}).map(s => s.trim()), ['DEPARTURES', '-']);   // 0.10.3: a dash, never an instruction
   const live = { loc: LONDON, near: { '51.509,-0.126': { stops: [{ id: 'bus1', name: 'Trafalgar Square', modes: ['BUS'] }, { id: 'rail1', name: 'Charing Cross', modes: ['TRAIN', 'METRO'] }] } } };
   assert.deepEqual(depStops({ near: true }, live), [{ src: 'tr', id: 'bus1', name: 'Trafalgar Square' }]);
   assert.deepEqual(depStops({ near: 'rail' }, live), [{ src: 'tr', id: 'rail1', name: 'Charing Cross' }]);
