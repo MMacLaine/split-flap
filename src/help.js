@@ -33,7 +33,9 @@ export const HELP = {
     { h: 'Looks', p: [
       'A look is how a board is made: what its flaps are, the type, the letters and the wall behind it. Classic is the board as it has always been. Calm is clear glass over slow colour, with letters that glow.',
       'Change it on a board\'s page, under Look. Each card shows that board in the look, and opening one shows it on the screen with the gold bar. Use this look keeps it, with Undo. Make your own lets you pick the parts.',
-      ['A board on Default follows the default look in ', { k: 'account', t: 'Account' }, '. Showing can pin one look to this screen, over every board, and Same look for all gives one look to every board in a playlist.']
+      ['A board on Default follows the default look in ', { k: 'account', t: 'Account' }, '. Showing can pin one look to this screen, over every board, and Same look for all gives one look to every board in a playlist.'],
+      'Some looks have light round the frame. It can take its colour from the board, so Signal turns red when a red chip is on it. Outside follows the sky where the screen is, the time of day and the weather, and without a place it follows the sun alone.',
+      'A slow screen drops the moving wall first and the light last. Smoothness on Showing sets it for this screen.'
     ] },
     { h: 'Messages', fig: 'message', p: [
       'Messages are made straight on the grid, so you see where every letter lands. Type puts letters where you click, Paint drags colour flaps across the grid, and Photo turns a picture into colour flaps.',
@@ -102,7 +104,9 @@ export const HELP = {
     { h: 'Utseenden', p: [
       'Ett utseende är hur en tavla är gjord: vad flapparna är av, typsnittet, bokstäverna och väggen bakom. Klassisk är tavlan som den alltid varit. Lugn är klart glas över långsam färg, med bokstäver som lyser.',
       'Ändra det på tavlans sida, under Utseende. Varje kort visar tavlan i utseendet, och öppnar du ett visas det på skärmen med den gyllene raden. Använd det här utseendet behåller det, med Ångra. Gör ditt eget låter dig välja delarna.',
-      ['En tavla på Standard följer standardutseendet under ', { k: 'account', t: 'Konto' }, '. Visas kan fästa ett utseende vid den här skärmen, över varje tavla, och Samma utseende för alla ger alla tavlor i en spellista samma utseende.']
+      ['En tavla på Standard följer standardutseendet under ', { k: 'account', t: 'Konto' }, '. Visas kan fästa ett utseende vid den här skärmen, över varje tavla, och Samma utseende för alla ger alla tavlor i en spellista samma utseende.'],
+      'Vissa utseenden har ljus runt ramen. Det kan ta sin färg från tavlan, så Signal blir röd när ett rött fält finns på den. Ute följer himlen där skärmen är, tiden på dygnet och vädret, och utan en plats följer den bara solen.',
+      'En långsam skärm tar bort den rörliga väggen först och ljuset sist. Jämnhet under Visas ställer in det för den här skärmen.'
     ] },
     { h: 'Meddelanden', fig: 'message', p: [
       'Meddelanden görs direkt på rutnätet, så du ser var varje bokstav hamnar. Skriv sätter bokstäver där du klickar, Måla drar färgblad över rutnätet, och Foto gör om en bild till färgblad.',

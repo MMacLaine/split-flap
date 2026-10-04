@@ -44,23 +44,35 @@ async function frames(url, theme) {
 }
 // The page as composited, through the app's own path (no theme forced): the demo at rest, with
 // the overlay hidden, captured from the screen.
-async function shot(url) {
+async function shot(url, pin) {
   await send('Page.navigate', { url: 'about:blank' }); await sleep(300);
   await send('Page.navigate', { url }); await sleep(1500);
-  await ev(`localStorage.clear(); localStorage.setItem('sf_started','1'); localStorage.setItem('sf_cue_seen','1')`);
+  await ev(`localStorage.clear(); localStorage.setItem('sf_started','1'); localStorage.setItem('sf_cue_seen','1')${pin ? `; localStorage.setItem('sf_look_pin', '${JSON.stringify({ id: pin })}')` : ''}`);
   await send('Page.navigate', { url }); await sleep(2500);
   const theme = await ev(`splitFlap.board.o.theme`);
   await ev(`(async () => { const app = splitFlap; clearInterval(app.iv); app.tick = () => {}; await document.fonts.ready;
     const st = document.createElement('style'); st.textContent = '.sf-overlay, .sf-look-bar { display: none !important; }'; document.head.append(st);
     const rows = ['', ' HELLO FROM ÅLESUND', ' 14:02  r g b y o v', ' $3.50 ♥', '', ' THE LAST ROW 22']; app.board.setGrid(rows.map(s => [...s.padEnd(22)].slice(0, 22)), { instant: true }); await new Promise(r => setTimeout(r, 400)); })()`);
   const r = await send('Page.captureScreenshot', { format: 'png' });
-  return { theme, png: r.data };
+  const rect = await ev(`(() => { const r = splitFlap.board.lastLayout, c = splitFlap.canvas.getBoundingClientRect(); return r && { x: Math.round(c.left + r.x), y: Math.round(c.top + r.y), w: Math.round(r.w), h: Math.round(r.h) }; })()`);
+  return { theme, png: r.data, rect };
 }
+// A checksum of one rectangle of a screenshot, decoded in the page.
+const area = (png, r) => ev(`(async () => { const b = await createImageBitmap(await (await fetch('data:image/png;base64,${png}')).blob());
+  const c = new OffscreenCanvas(${r.w}, ${r.h}), x = c.getContext('2d'); x.drawImage(b, ${r.x}, ${r.y}, ${r.w}, ${r.h}, 0, 0, ${r.w}, ${r.h});
+  const d = x.getImageData(0, 0, ${r.w}, ${r.h}).data; let h = 2166136261; for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619) >>> 0; return h.toString(16); })()`);
 try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
   const s1 = await shot(OLD), s2 = await shot(NEW);
   check('the app draws a new install in 0.10\'s own theme', s2.theme === 'black' && s1.theme === 'black', `${s1.theme} / ${s2.theme}`);
   check('the composited page at rest is 0.10.2\'s, byte for byte', s1.png === s2.png, `${s1.png.length} / ${s2.png.length}`);
+  // 0.11.1: Classic RGB's ring sits over the canvas in screen blend, cut out at the board, so
+  // the board itself is Classic's to the pixel and only the room around it lights
+  const s3 = await shot(NEW, 'rgb');
+  check('Classic RGB draws in Classic\'s own theme', s3.theme === 'black', s3.theme);
+  check('Classic RGB: the ring is on', await ev(`document.querySelector('.sf-ring').classList.contains('on')`));
+  check('Classic RGB: the board area is Classic\'s, byte for byte', JSON.stringify(s3.rect) === JSON.stringify(s2.rect) && await area(s3.png, s3.rect) === await area(s2.png, s2.rect), JSON.stringify(s3.rect));
+  check('Classic RGB: the room around the board is not', s3.png !== s2.png);
   for (const theme of ['black', 'white', 'solari']) {
     const a = await frames(OLD, theme), b = await frames(NEW, theme);
     check(`${theme}: at rest, every pixel as 0.10.2`, a.rest === b.rest, `${a.rest} / ${b.rest}`);

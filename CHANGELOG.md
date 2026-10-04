@@ -2,6 +2,17 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.11.1 (2026-10-04): Light and sky
+
+Looks can now have light round the frame and follow the sky outside. Five new looks use them: Backlit, Classic RGB, Signal, Outside and Sunday.
+
+- **Light round the frame.** It can glow, breathe, chase or flash when the board changes, in a colour you pick or the board's own: Signal goes red when a red chip is on the board, so a late train shows from across the room.
+- **Follow the sky.** Outside takes the time of day and the weather where the screen is, so the wall goes from night to dawn to day, and rain on the forecast is rain on the wall. Without a place it follows the sun alone, and the board's page says so.
+- **Classic RGB.** Classic as it is, with a ring of colour round it. The board itself is Classic to the pixel.
+- **Make your own** has Light and Sky rows now, with a few stops for speed, brightness and size instead of sliders.
+- **Smoothness.** A slow screen drops the moving wall first and the light last, and says so once. Showing has the setting for this screen, Automatic or a step of your own.
+- Templates start in the look made for them: the station board in Signal, the weather in Outside, the markets in Backlit and the café menu in Sunday.
+
 ## v0.11.0 (2026-10-04): Looks
 
 Every board can now have a look of its own: what its flaps are made of, the type, the letters and the wall behind it. This release has Classic, which is the board as it was, and Calm, with Make your own for the rest.

@@ -12,7 +12,7 @@
 //   prev the look that picks shows on the screen, resolved ({ id, parts }), or null
 
 import { h, clone } from './dom.js';
-import { LOOKS, SHIPPED, MATERIALS, TYPES, MOTION, MATRIX, RELEASED, partsOf, swatch, lookOf, defaultOf, wallPreset, sanitizeParts, legacyLook, templateLook, lookFor } from './looks.js';
+import { ringFor, RING, SKY, RING_FX, LOOKS, SHIPPED, MATERIALS, TYPES, MOTION, MATRIX, RELEASED, partsOf, swatch, lookOf, defaultOf, wallPreset, sanitizeParts, legacyLook, templateLook, lookFor } from './looks.js';
 import { compose } from './content.js';
 
 const same = (a, b) => !!a && !!b && a.id === b.id && (a.id !== 'custom' || JSON.stringify(a.parts) === JSON.stringify(b.parts));
@@ -41,8 +41,11 @@ function resolved(app, l, page) {
 // The 40 x 28 swatch (decision 15): the wall, a face in the material's colour, and "Aa" in the
 // look's face and letter colour, lit where the letters are lit. One function, used everywhere.
 export function swatchEl(app, l, page) {
-  const r = resolved(app, l, page), s = swatch(r.parts || partsOf(r.id));
-  return h('span', { class: 'sf-swatch-lk', 'aria-hidden': 'true', style: `background:${s.wall}` },
+  const r = resolved(app, l, page), p = r.parts || partsOf(r.id), s = swatch(p);
+  // the ring as a glow round it (decision 15); a rainbow shows its colours
+  const rg = p.ring && p.ring.fx !== 'off' ? ringFor(p, null, null, null) : null;
+  const glow = rg ? `;box-shadow:0 0 7px 1px ${rg.colours[0]}, 0 0 0 1.5px ${rg.colours[1]}${rg.colours[2] ? `, 2px 2px 6px ${rg.colours[2]}, -2px -2px 6px ${rg.colours[3] || rg.colours[0]}` : ''}` : '';
+  return h('span', { class: 'sf-swatch-lk', 'aria-hidden': 'true', style: `background:${s.wall}${glow}` },
     h('span', { style: `background:${s.face};color:${s.ink};font-family:${s.font};font-weight:${s.weight};${s.lit ? `text-shadow:0 0 6px ${s.ink}` : ''}` }, 'Aa'));
 }
 
@@ -169,6 +172,8 @@ function setPart(ed, k, v) {
   // a new material takes its own wall colour, even when the wall's kind carries over (review 6)
   if (k === 'material') { p.material = v; p.wall = wallPreset(MATRIX.walls[v].includes(p.wall.kind) ? p.wall.kind : MATRIX.walls[v][0], v); }
   else if (k === 'wall') p.wall = wallPreset(v, p.material);
+  else if (k === 'ring') p.ring = Object.assign({}, p.ring, v);
+  else if (k === 'sky') p.sky = Object.assign({}, p.sky, v);
   else p[k] = v;
   S.own = sanitizeParts(p);
   pick(ed, { id: 'custom', parts: S.own });
@@ -179,7 +184,7 @@ function ownRows(ed) {
   const m = MATERIALS[p.material];
   const seg = (label, items) => h('div', { class: 'sf-field' }, h('span', { class: 'sf-eyebrow' }, label),
     h('div', { class: 'sf-row wrap', role: 'group', 'aria-label': label }, items.map(it => h('button', { class: 'sf-seg' + (it.sw ? ' sw' : ''), 'aria-pressed': String(!!it.on), 'aria-label': it.aria || null, 'data-k': it.k, onclick: it.fn },
-      it.sw ? h('span', { class: 'sf-ink-dot', style: `background:${it.sw}` }) : null, it.sw ? null : it.label))));
+      it.sw ? h('span', { class: 'sf-ink-dot' + (/gradient/.test(it.sw) ? ' wide' : ''), style: `background:${it.sw}` }) : null, it.sw ? null : it.label))));
   const inks = m.inks.map(([k, label, hex]) => ({ k: 'lk-ink-' + k, label: t.inks[k] || label, aria: t.lettersIn((t.inks[k] || label).toLowerCase()), sw: hex, on: p.ink === k, fn: () => setPart(ed, 'ink', k) }));
   if (m.lit && !m.alwaysLit) inks.push({ k: 'lk-lit', label: t.litLetters, on: p.lit, fn: () => setPart(ed, 'lit', !p.lit) });
   return h('div', { class: 'sf-lk-own' },
@@ -187,7 +192,18 @@ function ownRows(ed) {
     seg(t.type, MATRIX.types[p.material].map(k => ({ k: 'lk-type-' + k, label: t.types[k], on: p.type === k, fn: () => setPart(ed, 'type', k) }))),
     seg(t.letters, inks),
     seg(t.motion, [['playlist', t.motionPlaylist], ...Object.keys(MOTION).map(k => [k, t.motions[k]])].map(([k, label]) => ({ k: 'lk-mo-' + k, label, on: p.motion === k, fn: () => setPart(ed, 'motion', k) }))),
-    seg(t.wall, MATRIX.walls[p.material].map(k => ({ k: 'lk-wall-' + k, label: t.walls[k], on: p.wall.kind === k, fn: () => setPart(ed, 'wall', k) }))));
+    seg(t.wall, MATRIX.walls[p.material].map(k => ({ k: 'lk-wall-' + k, label: t.walls[k], on: p.wall.kind === k, fn: () => setPart(ed, 'wall', k) }))),
+    // 0.11.1: the light round the frame, and the sky, each as MATRIX allows
+    seg(t.light, RING_FX.map(k => ({ k: 'lk-fx-' + k, label: t.effects[k], on: p.ring.fx === k, fn: () => setPart(ed, 'ring', { fx: k }) }))),
+    p.ring.fx !== 'off' ? [
+      seg(t.colours, Object.keys(RING.palettes).filter(k => k !== 'sky' || p.sky.on).map(k => ({ k: 'lk-pal-' + k, label: t.palettes[k], aria: t.palettes[k], sw: RING.palettes[k].c ? `linear-gradient(90deg, ${RING.palettes[k].c.join(', ')})` : null, on: p.ring.pal === k, fn: () => setPart(ed, 'ring', { pal: k }) }))),
+      p.ring.fx === 'breathe' || p.ring.fx === 'chase' ? seg(t.speedStop, Object.keys(RING.stops.speed).map(k => ({ k: 'lk-speed-' + k, label: t.stops[k], on: p.ring.speed === k, fn: () => setPart(ed, 'ring', { speed: k }) }))) : null,
+      seg(t.brightness, Object.keys(RING.stops.bright).map(k => ({ k: 'lk-bright-' + k, label: t.stops[k], on: p.ring.bright === k, fn: () => setPart(ed, 'ring', { bright: k }) }))),
+      seg(t.sizeStop, Object.keys(RING.stops.size).map(k => ({ k: 'lk-rsize-' + k, label: t.stops[k], on: p.ring.size === k, fn: () => setPart(ed, 'ring', { size: k }) })))] : null,
+    seg(t.sky, [{ k: 'lk-sky', label: t.followSky, on: p.sky.on, fn: () => setPart(ed, 'sky', { on: !p.sky.on }) }]),
+    p.sky.on ? [
+      seg(t.skyChanges, [['wall', t.skyWall], ...(m.light ? [] : [['ring', t.skyRing], ['ink', t.skyInk]])].map(([k, label]) => ({ k: 'lk-sky-' + k, label, on: p.sky[k], fn: () => setPart(ed, 'sky', { [k]: !p.sky[k] }) }))),
+      seg(t.strength, (m.light ? ['hint'] : Object.keys(SKY.strength)).map(k => ({ k: 'lk-str-' + k, label: t.strengths[k], on: p.sky.strength === k, fn: () => setPart(ed, 'sky', { strength: k }) })))] : null);
 }
 
 // The Look row, with its swatch and Change (the five places).

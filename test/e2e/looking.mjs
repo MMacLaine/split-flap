@@ -78,7 +78,7 @@ try {
   check('the playlists are untouched while it is looked at', (await ev('splitFlap.boards.length')) === nBefore && (await ev('splitFlap.shown().id')) === shown0);
   const tplPages = await ev('splitFlap.cur().pages.length');
   await ev(`document.querySelector('[data-k=use-tpl]').click()`); await sleep(600);
-  check('Show on this screen keeps it and shows it', (await ev('splitFlap.boards.length')) === nBefore + 1 && (await ev('splitFlap.shown().from')) === 'weather' && /now showing/i.test(await status()), await status());
+  check('Show on this screen keeps it and shows it', (await ev('splitFlap.boards.length')) === nBefore + 1 && (await ev('splitFlap.shown().from')) === 'weather' && /now showing|added .*, in outside/i.test(await status()), await status());   // 0.11.1: the weather comes in Outside
   check('and lands on its board, never the week view', (await lv()) === (tplPages === 1 ? 'sb:board' : 'sb:sb:boards'), await lv());
 
   // every change says Saved

@@ -96,10 +96,14 @@ test('the account default is a settings row, checked against MATRIX', () => {
 
 test('template looks: only once the look has shipped, keyed to the real template ids', () => {
   assert.equal(L.templateLook('letters'), 'calm');
-  assert.equal(L.templateLook('station'), null);            // Signal comes with the ring
+  assert.equal(L.templateLook('station'), 'signal');        // 0.11.1: the ring has shipped
   assert.equal(fromTemplate('letters', 'en').pages[0].look, 'calm');
-  assert.equal(fromTemplate('station', 'en').pages[0].look, undefined);
-  assert.equal(L.lookOf({ theme: fromTemplate('station', 'en').theme }).look, 'solari');   // until then, on its 0.10 theme
+  assert.equal(fromTemplate('station', 'en').pages[0].look, 'signal');
+  assert.equal(fromTemplate('weather', 'en').pages[0].look, 'outside');
+  assert.equal(fromTemplate('stocks', 'en').pages[0].look, 'backlit');
+  assert.equal(fromTemplate('cafe', 'en').pages[0].look, 'sunday');
+  assert.equal(fromTemplate('news', 'en').pages[0].look, undefined);   // the rest stay on their 0.10 theme
+  assert.equal(L.templateLook('meter'), null);
   for (const id of Object.keys(L.TEMPLATE_LOOKS)) assert.ok(['demo', 'blank', 'home', 'morning', 'news', 'weather', 'station', 'lobby', 'world', 'cafe', 'money', 'stocks', 'indices', 'crypto', 'rates', 'colour', 'letters', 'showcase'].includes(id), id);
 });
 

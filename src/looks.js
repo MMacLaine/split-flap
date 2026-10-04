@@ -2,7 +2,7 @@
 // looks.js), as an ES module. Data and pure functions only: materials in the shape of THEMES
 // in renderer.js, type metrics, letter colours, the ring's palettes, the looks, the Make your
 // own matrix, and the functions that turn a look into a theme, a wall and a swatch.
-// The sky's thirty states, the meter and the quality ladder come with 0.11.1 and 0.11.2.
+// 0.11.1 adds the sky's thirty states and the quality ladder; the meter's constants are here for 0.11.2.
 // The strings are in strings.js.
 
 // ---- Colour helpers ------------------------------------------------------------
@@ -201,16 +201,97 @@ const RING = {
 };
 
 // ---- The sky ----------------------------------------------------------------------
-// The thirty sky states, the timeline and the weather layers ship with 0.11.1. 0.11.0
-// needs only the strengths and the contrast target, which wallFor, themeFor and
-// smokeFor read.
 const SKY = {
+  phases: ['night', 'dawn', 'day', 'golden', 'dusk'],
+  phaseLabel: { night: 'Night', dawn: 'Dawn', day: 'Day', golden: 'Golden hour', dusk: 'Dusk' },
+  weather: ['clear', 'cloud', 'rain', 'snow', 'fog', 'storm'],
+  weatherLabel: { clear: 'Clear', cloud: 'Cloud', rain: 'Rain', snow: 'Snow', fog: 'Fog', storm: 'Storm' },
+  // minutes from that day's sunrise (R) and sunset (S) where each phase is fully on
+  timeline: [['night', 'R-70'], ['dawn', 'R'], ['day', 'R+70'], ['day', 'S-80'], ['golden', 'S-15'], ['dusk', 'S+25'], ['night', 'S+80']],
+  // three stops, not a slider (Fable 9.1)
   strength: { hint: { label: 'A hint', k: 0.35 }, room: { label: 'The room', k: 0.70 }, weather: { label: 'The weather', k: 1.0 } },
+  // weather on the wall: one sliding layer, transform only
+  layers: {
+    cloud: { label: 'A veil drifting', period: 90000 },
+    rain:  { label: 'Streaks at 104°, near and far', near: 600, far: 1100, angle: 104 },
+    snow:  { label: 'Flakes, two depths', near: 7000, far: 12000 },
+    fog:   { label: 'Two bands drifting', period: 60000 },
+    storm: { label: 'Heavy rain and lightning on the ring', near: 420, far: 800 }
+  },
   // The contrast rule: translucent glass smokes as far as it must for its letters to reach
   // the target over the brightest colour on the wall. smoke is one of 0, 0.5, 1, so the
   // atlas holds at most three faces per look. Letters never change colour for it.
-  contrastTarget: 4.5
+  contrastTarget: 4.5,
+  rules: [
+    'Quiet hours win over the sky.',
+    'Reduced motion stops the drift, the rain and the snow, and keeps the colour.',
+    'Weather up to 3 hours old holds. Older, the sky falls back to the sun alone (clear).',
+    'With no place set, the sky follows this device’s clock with a 06:30 sunrise and 18:30 sunset, and says so.',
+    'A board that travels by link follows the sky of the place it carries.',
+    'Paper never takes the sky’s letter tint, and its wall takes the sky at most as A hint.'
+  ],
+  states: {
+    night: {
+      clear: { a: '#0E1C46', b: '#1E1550', c: '#082A36', base: '#03050C', ring: ['#2B3F8F', '#5A3FA0', '#1B6F8F', '#3A2C7A'], ink: '#D6E2FF', layer: null, layerOpacity: 0 },
+      cloud: { a: '#323D5A', b: '#3B395F', c: '#2F4551', base: '#242831', ring: ['#394A87', '#5B4A94', '#2D6D87', '#443C78'], ink: '#D6E2FF', layer: 'cloud', layerOpacity: 0.5 },
+      rain : { a: '#202D4A', b: '#272A4F', c: '#1D3343', base: '#161D29', ring: ['#2C3E7A', '#4B3E85', '#215E7A', '#36316B'], ink: '#D6E2FF', layer: 'rain', layerOpacity: 0.55 },
+      snow : { a: '#1F3A72', b: '#2C3470', c: '#18466A', base: '#0A1430', ring: ['#BFD8FF', '#7FA8FF', '#E6F0FF', '#5A7CFF'], ink: '#EAF2FF', layer: 'snow', layerOpacity: 0.95 },
+      fog  : { a: '#515B72', b: '#585876', c: '#4F616B', base: '#3E424B', ring: ['#49588F', '#67589A', '#3F778F', '#524C82'], ink: '#E4E8F0', layer: 'fog', layerOpacity: 0.6 },
+      storm: { a: '#121B30', b: '#171933', c: '#101F2B', base: '#0D111B', ring: ['#212F63', '#3D2F6D', '#184B63', '#2A2457'], ink: '#D6E2FF', layer: 'storm', layerOpacity: 0.8 },
+    },
+    dawn: {
+      clear: { a: '#E9876A', b: '#6D58A6', c: '#2B4B8C', base: '#191530', ring: ['#FF9A7A', '#C77DFF', '#6FA8FF', '#FFC59A'], ink: '#FFE6D6', layer: null, layerOpacity: 0 },
+      cloud: { a: '#AA786E', b: '#665E8F', c: '#425780', base: '#323248', ring: ['#D48C78', '#AB77D9', '#6A96D9', '#D4AB8F'], ink: '#FFE6D6', layer: 'cloud', layerOpacity: 0.5 },
+      rain : { a: '#825D5B', b: '#4A4876', c: '#2D426A', base: '#22263D', ring: ['#BA7B6B', '#9567C5', '#5A84C5', '#BA9781'], ink: '#FFE6D6', layer: 'rain', layerOpacity: 0.55 },
+      snow : { a: '#D1A69E', b: '#938EBC', c: '#7288AF', base: '#595B71', ring: ['#EAA794', '#C392F2', '#85B0F2', '#EAC5AB'], ink: '#FFE6D6', layer: 'snow', layerOpacity: 0.85 },
+      fog  : { a: '#A98680', b: '#777398', c: '#5D6E8E', base: '#494B5E', ring: ['#D19282', '#AD80D7', '#749BD7', '#D1AE96'], ink: '#F7EBE4', layer: 'fog', layerOpacity: 0.6 },
+      storm: { a: '#543B3A', b: '#2F2D4C', c: '#1B2945', base: '#16182A', ring: ['#9C6457', '#7C53A4', '#496CA4', '#9C7D69'], ink: '#FFE6D6', layer: 'storm', layerOpacity: 0.8 },
+    },
+    day: {
+      clear: { a: '#4E9BE0', b: '#8CC8F2', c: '#2F72C4', base: '#1E4E86', ring: ['#7FD3FF', '#FFFFFF', '#4EA8FF', '#BFE8FF'], ink: '#FFFFFF', layer: null, layerOpacity: 0 },
+      cloud: { a: '#5583AF', b: '#779CB8', c: '#446D9F', base: '#35577F', ring: ['#76B6D9', '#D4D6D9', '#5296D9', '#A5C5D9'], ink: '#FFFFFF', layer: 'cloud', layerOpacity: 0.5 },
+      rain : { a: '#3C6690', b: '#587A98', c: '#2E5483', base: '#25466D', ring: ['#64A1C5', '#BABEC5', '#4384C5', '#8FAFC5'], ink: '#FFFFFF', layer: 'rain', layerOpacity: 0.55 },
+      snow : { a: '#83B0D9', b: '#A2C6E2', c: '#749BCB', base: '#5C7DA4', ring: ['#90CFF2', '#EAEDF2', '#6EB0F2', '#BDDDF2'], ink: '#FFFFFF', layer: 'snow', layerOpacity: 0.85 },
+      fog  : { a: '#6B8EAF', b: '#84A0B7', c: '#5E7DA4', base: '#4C688A', ring: ['#7FB7D7', '#D1D3D7', '#5F9BD7', '#A8C4D7'], ink: '#FFFFFF', layer: 'fog', layerOpacity: 0.6 },
+      storm: { a: '#25415E', b: '#384E63', c: '#1C3455', base: '#183150', ring: ['#5285A4', '#9C9FA4', '#366CA4', '#7791A4'], ink: '#FFFFFF', layer: 'storm', layerOpacity: 0.8 },
+    },
+    golden: {
+      clear: { a: '#F2A13A', b: '#E2583A', c: '#8A3F86', base: '#3A1E24', ring: ['#FFB347', '#FF7A1A', '#FF5E7A', '#FFD27A'], ink: '#FFE6BF', layer: null, layerOpacity: 0 },
+      cloud: { a: '#AF8653', b: '#A75E53', c: '#76517D', base: '#473840', ring: ['#D49E53', '#D47532', '#D46078', '#D4B578'], ink: '#FFE6BF', layer: 'cloud', layerOpacity: 0.5 },
+      rain : { a: '#866945', b: '#7F4845', c: '#573D67', base: '#352B36', ring: ['#BA8B49', '#BA652B', '#BA526B', '#BAA06B'], ink: '#FFE6BF', layer: 'rain', layerOpacity: 0.55 },
+      snow : { a: '#D5B386', b: '#CD8E86', c: '#A182AC', base: '#6C606A', ring: ['#EAB871', '#EA9051', '#EA7D94', '#EACE94'], ink: '#FFE6BF', layer: 'snow', layerOpacity: 0.85 },
+      fog  : { a: '#AC906D', b: '#A6736D', c: '#83698B', base: '#5B4F57', ring: ['#D1A261', '#D17E44', '#D16C82', '#D1B682'], ink: '#F7EBD9', layer: 'fog', layerOpacity: 0.6 },
+      storm: { a: '#57432C', b: '#522D2C', c: '#372543', base: '#251C25', ring: ['#FF8A3A', '#8A3A2A', '#FFB070', '#5A2A30'], ink: '#FFE6BF', layer: 'storm', layerOpacity: 0.8 },
+    },
+    dusk: {
+      clear: { a: '#B9467A', b: '#41307D', c: '#15295A', base: '#110D22', ring: ['#FF5E9A', '#7B5CFF', '#3D6BFF', '#C74BFF'], ink: '#FFDCEB', layer: null, layerOpacity: 0 },
+      cloud: { a: '#905476', b: '#4E4878', c: '#364465', base: '#2D2D3F', ring: ['#D4608F', '#735FD9', '#466AD9', '#AB52D9'], ink: '#FFDCEB', layer: 'cloud', layerOpacity: 0.5 },
+      rain : { a: '#7A3A64', b: '#3A2E6A', c: '#1A2850', base: '#170F22', ring: ['#FF7AA8', '#9A6BFF', '#FF9AC0', '#6A4CC8'], ink: '#FFDCEB', layer: 'rain', layerOpacity: 0.6 },
+      snow : { a: '#B985A6', b: '#7D7AA8', c: '#677796', base: '#545668', ring: ['#EA7DAB', '#8D7BF2', '#6286F2', '#C36FF2'], ink: '#FFDCEB', layer: 'snow', layerOpacity: 0.85 },
+      fog  : { a: '#966C87', b: '#666388', c: '#54607A', base: '#454756', ring: ['#D16C96', '#7C6BD7', '#5474D7', '#AD60D7'], ink: '#F7E6EF', layer: 'fog', layerOpacity: 0.6 },
+      storm: { a: '#46273F', b: '#222140', c: '#141F36', base: '#131424', ring: ['#9C4169', '#5040A4', '#2C49A4', '#7C36A4'], ink: '#FFDCEB', layer: 'storm', layerOpacity: 0.8 },
+    },
+  }
 };
+
+// ---- The meter (a board layout, not a look) ----------------------------------------
+const METER = {
+  styles: { mixer: 'Mixer', bars: 'Bars', mirror: 'Mirror' },
+  colours: { green: '#2C9A5A', amber: '#F2BE2E', red: '#D5352B' },   // the g, y, r chips
+  zones: { green: 0.60, amber: 0.85 },        // share of the column's height
+  halves: { amber: ['\uE006', '\uE007'] },    // new: amber top and bottom, after the 0.9 halves
+  tick: 90,           // ms between updates
+  step: 1,            // each column's top moves at most one cell (two half cells) per tick
+  peakHold: 700,      // ms before the peak-hold flap starts to fall
+  peakFall: 0.5,      // cells per tick
+  quietAfter: 4000,   // ms of silence before the board says it is listening
+  stoppedFor: 2500,   // ms the board says Stopped before it shows its words again
+  fold: { step: 40, final: 50, settle: 1, maxSteps: 1 },
+  grid: { rows: 12, cols: 40 },   // the Meter board's default (L7); Fill is offered
+  bandCols: 2, bandGap: 1,        // 13 bands across 40 columns
+  sound: false                    // the board's clack is off while the meter runs
+};
+
 
 // ---- The looks -------------------------------------------------------------------
 // wall: room = today's radial wall and contact shadow, painted on the canvas (Classic
@@ -279,10 +360,17 @@ LOOKS.solari = {
 // Classic, Paper and Solari leave motion to the playlist (0.11.0), so a 0.10 board turns
 // as it did; a look with its own motion wins over the playlist, and a page's own wins over both.
 LOOKS.classic.parts.motion = 'playlist';
-const ORDER = ['classic', 'backlit', 'signal', 'calm', 'outside', 'sunday', 'party'];
+// Classic RGB (0.11.1, Matthew's R1): Classic with a rainbow ring that chases round the frame.
+LOOKS.rgb = {
+  label: 'Classic RGB', hint: 'Today’s board in a ring of colour',
+  digital: 'Classic, with light round the frame in every colour, turning slowly.',
+  parts: Object.assign(JSON.parse(JSON.stringify(LOOKS.classic.parts)), { ring: ring('chase', 'rainbow') }),
+  chrome: { mode: 'dark', accent: '#C8974A' }, legacy: 'black'
+};
+const ORDER = ['classic', 'backlit', 'rgb', 'signal', 'calm', 'outside', 'sunday', 'party'];
 // What 0.11.0 offers: the looks whose parts have shipped. Backlit and Signal need the
 // ring, Outside and Sunday the sky (0.11.1), Party Listen (0.11.2).
-const SHIPPED = ['classic', 'calm'];
+const SHIPPED = ['classic', 'backlit', 'rgb', 'signal', 'calm', 'outside', 'sunday'];   // 0.11.1: the ring and the sky; Party needs Listen (0.11.2)
 
 // The look each template comes in (Fable 6.7), keyed to the app's template ids (0.10.3).
 // Used only once the look has shipped; until then a template comes in on its 0.10 theme.
@@ -309,6 +397,52 @@ const MATRIX = {
 const clone = o => JSON.parse(JSON.stringify(o));
 function partsOf(id, custom) { return id === 'custom' && custom ? clone(custom) : clone((LOOKS[id] || LOOKS.classic).parts); }
 function inkHex(mat, ink) { const m = MATERIALS[mat]; const f = m.inks.find(i => i[0] === ink) || m.inks[0]; return f[2]; }
+
+const TL = SKY.timeline;
+function phaseAt(minute, rise, set) {
+  const at = s => { const n = +s.slice(2) || 0; return (s[0] === 'R' ? rise : set) + (s[1] === '-' ? -n : n); };
+  // every key kept inside the day and in order, so a sunrise before 01:10 or a sunset after
+  // 22:40 still blends (0.11.1 review 2.3)
+  const keys = [[0, 'night']].concat(TL.map(k => [Math.min(1440, Math.max(0, at(k[1]))), k[0]])).concat([[1440, 'night']]);
+  for (let j = 1; j < keys.length; j++) if (keys[j][0] < keys[j - 1][0]) keys[j][0] = keys[j - 1][0];
+  let i = 0; while (i < keys.length - 2 && minute >= keys[i + 1][0]) i++;
+  const [m0, p0] = keys[i], [m1, p1] = keys[i + 1];
+  const t = m1 > m0 ? Math.min(1, Math.max(0, (minute - m0) / (m1 - m0))) : 0;
+  return { from: p0, to: p1, t, near: t < 0.5 ? p0 : p1 };
+}
+// WMO weather codes to the sky's six kinds (0.11.1 review 2.4).
+export function wxKind(code) {
+  if (code == null) return 'clear';
+  if (code >= 95) return 'storm';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 2) return 'cloud';
+  return 'clear';
+}
+// The sky at a minute: two states of the same weather, blended. Never per frame.
+function skyAt(o) {
+  const rise = o.rise == null ? 390 : o.rise, set = o.set == null ? 1110 : o.set;
+  const wx = o.stale ? 'clear' : (o.wx || 'clear'), ph = phaseAt(o.minute, rise, set);
+  const A = SKY.states[ph.from][wx], B = SKY.states[ph.to][wx], t = ph.t, out = { phase: ph.near, label: SKY.phaseLabel[ph.near], wx };
+  for (const k of ['a', 'b', 'c', 'base']) out[k] = mix(A[k], B[k], t);
+  // the letters' tint in three steps, not a new colour every minute (0.11.1 review 3.1): each
+  // step is a new face in the atlas, so a day of Outside makes only a few
+  out.ink = mix(A.ink, B.ink, Math.round(t * 2) / 2);
+  out.ring = A.ring.map((c, j) => mix(c, B.ring[j], t));
+  out.layer = A.layer; out.layerOpacity = A.layerOpacity; out.storm = wx === 'storm';
+  return out;
+}
+// ---- Quality ladder --------------------------------------------------------------------
+// A two-second probe at start (count frames over 34 ms) and the renderer's own budget
+// step down one rung at a time. Reduced motion jumps to rung 1. Quiet hours change nothing.
+const QUALITY = [
+  { id: 'full', label: 'Everything' },
+  { id: 'still', label: 'The wall holds still' },
+  { id: 'noweather', label: 'No rain or snow on the wall' },
+  { id: 'noring', label: 'No ring' },
+  { id: 'lowres', label: 'The board at 1× density (renderer budget)' }
+];
 
 const wallLum = w => (lum(w.a) + lum(w.b) + lum(w.c) + lum(w.base)) / 4;
 const brightest = w => [w.a, w.b, w.c, w.base].sort((x, y) => lum(y) - lum(x))[0];
@@ -358,9 +492,10 @@ function themeFor(p, sk, wall) {
 const CHIP = { r: '#D5352B', o: '#EE7D22', y: '#F2BE2E', g: '#2C9A5A', b: '#2B6FC4', v: '#7A4DB2' };
 const HALF_KEY = { '\uE000': 'g', '\uE001': 'g', '\uE002': 'r', '\uE003': 'r', '\uE006': 'y', '\uE007': 'y' };
 function boardChip(grid) {
-  const n = {}; (grid || []).forEach(row => [...(Array.isArray(row) ? row : String(row))].forEach(ch => { const k = CHIP[ch] ? ch : HALF_KEY[ch]; if (k) n[k] = (n[k] || 0) + 1; }));
-  // a red chip wins over any number of green ones: the ring is there to warn
-  if (n.r) return 'r';
+  const n = {}, whole = {}; (grid || []).forEach(row => [...(Array.isArray(row) ? row : String(row))].forEach(ch => { const k = CHIP[ch] ? ch : HALF_KEY[ch]; if (k) { n[k] = (n[k] || 0) + 1; if (CHIP[ch]) whole[k] = 1; } }));
+  // a red chip wins over any number of green ones: the ring is there to warn. Whole chips only:
+  // a markets chart's red half flaps count by majority, like any other (0.11.1 review 2.6)
+  if (whole.r) return 'r';
   const best = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
   return best || null;
 }
@@ -409,7 +544,21 @@ export function sanitizeParts(p) {
   if (kind === 'still' && HEXC.test(w.base || '')) wall.base = w.base;
   if (kind === 'fields' && HEXC.test(w.base || '') && Array.isArray(w.c) && w.c.length === 3 && w.c.every(c => HEXC.test(c || ''))) wall = { kind, base: w.base, c: w.c.slice() };
   return { material: p.material, type: types.includes(p.type) ? p.type : types[0], ink: inks.includes(p.ink) ? p.ink : inks[0],
-    lit: !!p.lit && !!m.lit, motion: MOTIONS.includes(p.motion) ? p.motion : 'playlist', ring: ring('off', 'warm'), wall, sky: clone(noSky) };
+    lit: !!p.lit && !!m.lit, motion: MOTIONS.includes(p.motion) ? p.motion : 'playlist', ring: ringPart(p.ring), wall, sky: skyPart(p.sky, m) };
+}
+// The ring (0.11.1): an effect, a palette and three stops. Music needs Listen (0.11.2).
+export const RING_FX = ['off', 'glow', 'breathe', 'chase', 'flash'];
+function ringPart(r) {
+  r = r && typeof r === 'object' ? r : {};
+  const st = RING.stops, pick = (v, o, d) => Object.prototype.hasOwnProperty.call(o, v) ? v : d;
+  return { fx: RING_FX.includes(r.fx) ? r.fx : 'off', pal: pick(r.pal, RING.palettes, 'warm'),
+    speed: pick(r.speed, st.speed, 'medium'), bright: pick(r.bright, st.bright, 'medium'), size: pick(r.size, st.size, 'medium') };
+}
+// The sky option (0.11.1), on any look; Paper takes the wall only, at A hint (MATRIX.sky).
+function skyPart(k, m) {
+  k = k && typeof k === 'object' ? k : {};
+  const light = m.light, strength = light ? 'hint' : Object.prototype.hasOwnProperty.call(SKY.strength, k.strength) ? k.strength : 'room';
+  return { on: !!k.on, wall: k.wall !== false, ring: light ? false : k.ring !== false, ink: light ? false : k.ink !== false, strength };
 }
 // What a look is called, and whether the sheet offers it.
 export const isLookId = id => id === 'default' || id === 'custom' || Object.prototype.hasOwnProperty.call(LOOKS, id);
@@ -447,10 +596,12 @@ export function lookFor(page, pin, setting, preview) {
 }
 // The renderer's theme for a look. Classic, Paper and Solari are drawn with the 0.10 themes
 // themselves, so every board from before 0.11 is exact; any other look is composed.
-const LEGACY_DRAW = { classic: 'black', paper: 'white', solari: 'solari' };
-export function drawFor(l) {
-  if (LEGACY_DRAW[l.id]) return { id: LEGACY_DRAW[l.id], legacy: true };
-  const p = l.parts || partsOf(l.id), wall = wallFor(p, null), T = themeFor(p, null, wall);
+const LEGACY_DRAW = { classic: 'black', rgb: 'black', paper: 'white', solari: 'solari' };   // Classic RGB's ring is CSS: its board is Classic's
+// sk: the sky now (skyAt), for a look that follows it, else null.
+export function drawFor(l, sk = null) {
+  const p = l.parts || partsOf(l.id), sky = sk && p.sky && p.sky.on ? sk : null;
+  if (LEGACY_DRAW[l.id] && !sky) return { id: LEGACY_DRAW[l.id], legacy: true, wall: wallFor(p, null) };
+  const wall = wallFor(p, sky), T = themeFor(p, sky, wall);
   T.wallBg = wall.kind === 'room' ? null : { a: wall.a, b: wall.b, c: wall.c, base: wall.base, kind: wall.kind };
   T.lookLight = !!MATERIALS[p.material].light;
   return { id: T.id, theme: T, wall };
@@ -466,6 +617,6 @@ export function motionOf(l) { const m = (l.parts || partsOf(l.id)).motion; retur
 // A template's look: its own from TEMPLATE_LOOKS once that look has shipped, else none.
 export function templateLook(id) { const l = TEMPLATE_LOOKS[id]; return l && SHIPPED.includes(l) ? l : null; }
 
-export { MATERIALS, TYPES, MOTION, RING, SKY, LOOKS, ORDER, SHIPPED, TEMPLATE_LOOKS, MATRIX,
-  partsOf, inkHex, wallFor, themeFor, ringFor, smokeFor, letterContrast, swatch, boardChip };
+export { MATERIALS, TYPES, MOTION, RING, SKY, METER, QUALITY, LOOKS, ORDER, SHIPPED, TEMPLATE_LOOKS, MATRIX,
+  partsOf, phaseAt, skyAt, inkHex, wallFor, themeFor, ringFor, smokeFor, letterContrast, swatch, boardChip };
 export const color = { parse, hex, mix, rgba, over, lum, contrast };

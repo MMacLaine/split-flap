@@ -5,7 +5,17 @@ export const STR = {
   en: {
     // 0.11.0: looks. From the design handover's strings (_local/plans/0.11/handoff/strings-0.11.en.json).
     lk: {
-      names: { classic: ['Classic', 'Today’s board'], calm: ['Calm', 'Glass over slow light'], paper: ['Paper', 'Light, matte, as 0.10 drew it'], solari: ['Solari', 'Amber on a station board, as 0.10 drew it'] },
+      // 0.11.1: the ring, the sky and the quality ladder
+      light: 'Light', colours: 'Colours', speedStop: 'Speed', brightness: 'Brightness', sizeStop: 'Size', sky: 'Sky', followSky: 'Follow the sky', skyChanges: 'It changes', skyWall: 'The wall', skyRing: 'The light', skyInk: 'The letters', strength: 'How much',
+      effects: { off: 'Off', glow: 'Glow', breathe: 'Breathe', chase: 'Chase', flash: 'Flash on change', music: 'Music' },
+      palettes: { warm: 'Warm white', amber: 'Amber', ember: 'Ember', rose: 'Rose', ocean: 'Ocean', mint: 'Mint', rainbow: 'Rainbow', board: 'From the board', sky: 'From the sky' },
+      stops: { slow: 'Slow', medium: 'Medium', quick: 'Quick', low: 'Low', high: 'High', close: 'Close', wide: 'Wide' }, strengths: { hint: 'A hint', room: 'The room', weather: 'The weather' },
+      stSkyNone: 'Following the sun here. Add a place for its weather', stSkyStale: h => `The weather is ${h} hours old, so the sky follows the sun alone`,
+      stQuality: w => `This screen dropped ${w} to keep the flaps smooth`, qualityRow: 'Smoothness', qualityAuto: 'Automatic',
+      quality: { full: 'nothing', still: 'the moving wall', noweather: 'the rain and snow on the wall', noring: 'the light round the frame', lowres: 'the sharpness of the board' },
+      qualityNames: { full: 'Everything', still: 'The wall holds still', noweather: 'No rain or snow on the wall', noring: 'No light round the frame', lowres: 'The board at lower sharpness' },
+      qualityHint: 'Automatic steps down one at a time when this screen can’t keep the flaps smooth. Kept on this screen only.',
+      names: { backlit: ['Backlit', 'Light when it changes'], rgb: ['Classic RGB', 'Today’s board in a ring of colour'], signal: ['Signal', 'The light reads the board'], outside: ['Outside', 'Your sky, live'], sunday: ['Sunday', 'Paper in daylight'], party: ['Party', 'Lights to the music'], classic: ['Classic', 'Today’s board'], calm: ['Calm', 'Glass over slow light'], paper: ['Paper', 'Light, matte, as 0.10 drew it'], solari: ['Solari', 'Amber on a station board, as 0.10 drew it'] },
       mats: { flap: 'Flap', solari: 'Solari', paper: 'Paper', glass: 'Glass', smoke: 'Smoke' }, types: { mono: 'Mono', grotesk: 'Grotesk', round: 'Round', serif: 'Serif' },
       motions: { classic: 'Classic', gentle: 'Gentle', wave: 'Wave', curtain: 'Curtain', ripple: 'Ripple', shimmer: 'Shimmer' },
       inks: { warm: 'Warm white', white: 'White', amber: 'Amber', ice: 'Ice', ink: 'Ink', navy: 'Navy', oxblood: 'Oxblood', rose: 'Rose', lime: 'Lime' },
@@ -197,7 +207,16 @@ export const STR = {
   sv: {
     // 0.11.0: utseenden.
     lk: {
-      names: { classic: ['Klassisk', 'Tavlan som den är'], calm: ['Lugn', 'Glas över långsamt ljus'], paper: ['Papper', 'Ljus och matt, som 0.10 ritade den'], solari: ['Solari', 'Bärnsten på en stationstavla, som 0.10 ritade den'] },
+      light: 'Ljus', colours: 'Färger', speedStop: 'Hastighet', brightness: 'Ljusstyrka', sizeStop: 'Storlek', sky: 'Himmel', followSky: 'Följ himlen', skyChanges: 'Det ändrar', skyWall: 'Väggen', skyRing: 'Ljuset', skyInk: 'Bokstäverna', strength: 'Hur mycket',
+      effects: { off: 'Av', glow: 'Lyser', breathe: 'Andas', chase: 'Jagar', flash: 'Blinkar vid ändring', music: 'Musik' },
+      palettes: { warm: 'Varmvit', amber: 'Bärnsten', ember: 'Glöd', rose: 'Rosa', ocean: 'Hav', mint: 'Mint', rainbow: 'Regnbåge', board: 'Från tavlan', sky: 'Från himlen' },
+      stops: { slow: 'Långsam', medium: 'Mellan', quick: 'Snabb', low: 'Låg', high: 'Hög', close: 'Nära', wide: 'Bred' }, strengths: { hint: 'En aning', room: 'Rummet', weather: 'Vädret' },
+      stSkyNone: 'Följer solen här. Lägg till en plats för dess väder', stSkyStale: h => `Vädret är ${h} timmar gammalt, så himlen följer bara solen`,
+      stQuality: w => `Skärmen tog bort ${w} för att flapparna ska gå jämnt`, qualityRow: 'Jämnhet', qualityAuto: 'Automatiskt',
+      quality: { full: 'ingenting', still: 'den rörliga väggen', noweather: 'regnet och snön på väggen', noring: 'ljuset runt ramen', lowres: 'tavlans skärpa' },
+      qualityNames: { full: 'Allt', still: 'Väggen står still', noweather: 'Inget regn eller snö på väggen', noring: 'Inget ljus runt ramen', lowres: 'Tavlan med lägre skärpa' },
+      qualityHint: 'Automatiskt tar bort en sak i taget när skärmen inte hinner med flapparna. Sparas bara på den här skärmen.',
+      names: { backlit: ['Bakljus', 'Ljus när den ändras'], rgb: ['Klassisk RGB', 'Tavlan i en ring av färg'], signal: ['Signal', 'Ljuset läser tavlan'], outside: ['Ute', 'Din himmel, live'], sunday: ['Söndag', 'Papper i dagsljus'], party: ['Fest', 'Ljus till musiken'], classic: ['Klassisk', 'Tavlan som den är'], calm: ['Lugn', 'Glas över långsamt ljus'], paper: ['Papper', 'Ljus och matt, som 0.10 ritade den'], solari: ['Solari', 'Bärnsten på en stationstavla, som 0.10 ritade den'] },
       mats: { flap: 'Flapp', solari: 'Solari', paper: 'Papper', glass: 'Glas', smoke: 'Rök' }, types: { mono: 'Mono', grotesk: 'Grotesk', round: 'Rund', serif: 'Antikva' },
       motions: { classic: 'Klassisk', gentle: 'Mjuk', wave: 'Våg', curtain: 'Ridå', ripple: 'Krusning', shimmer: 'Skimmer' },
       inks: { warm: 'Varmvit', white: 'Vit', amber: 'Bärnsten', ice: 'Is', ink: 'Bläck', navy: 'Marinblå', oxblood: 'Oxblod', rose: 'Rosa', lime: 'Lime' },

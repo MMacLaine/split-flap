@@ -97,6 +97,8 @@ export class Live {
     this.data.loc = board && board.loc && board.loc.lat != null ? board.loc : null;
     this.data.cc = placeOf(board, { langs: typeof navigator !== 'undefined' ? navigator.languages : [] }).cc;
     const ownHolidays = !this.data.cc || this.data.cc === 'SE';   // Sweden's red and flag days are worked out here
+    // the sky (0.11.1): the weather where the board is, for a look that follows it, the same fetch a tile makes
+    if (this.skyPlace && this.skyPlace.lat != null) wx.set(wxKey(this.skyPlace), { lat: this.skyPlace.lat, lon: this.skyPlace.lon });
     for (const p of (board && board.pages) || []) for (const z of p.zones) {
       const o = z.o || {};
       if (z.ch === 'sl') for (const st of slStations(o, this.data)) for (const id of st.sites) sl.set(id, true);

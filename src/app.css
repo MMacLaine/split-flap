@@ -679,3 +679,17 @@ html.sf-transparent .sf-wall, html.sf-transparent .sf-plate { display: none; }
 .sf-lk-own { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
 .sf-pinned { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; background: rgba(0,0,0,0.35); pointer-events: none; z-index: 4; }
 html.sf-transparent .sf-pinned { display: none; }
+/* 0.11.1: the ring behind the board, inside the quiet-hours wrapper; the weather on the wall */
+.sf-ring { position: absolute; z-index: 1; mix-blend-mode: screen; pointer-events: none; opacity: 0; overflow: hidden; mask-size: 100% 100%; -webkit-mask-size: 100% 100%; transition: opacity 0.9s ease; display: none; }
+.sf-ring.on { display: block; }
+.sf-ring-tex { position: absolute; left: 50%; top: 50%; will-change: transform; transform: translate(-50%, -50%); }
+.sf-wx { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s ease; pointer-events: none; overflow: hidden; }
+.sf-wx-l { position: absolute; inset: -140px 0 0 0; will-change: transform; display: none; }
+.sf-wx-band { position: absolute; left: 0; top: 0; width: 200%; height: 100%; will-change: transform; display: none; }
+.sf-bolt { position: absolute; inset: 0; background: #DCE6FF; opacity: 0; pointer-events: none; }
+@keyframes sf11-fall { to { transform: translateY(120px); } }
+@keyframes sf11-drift { to { transform: translateX(-50%); } }
+@keyframes sf11-turn { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sf-wx-l, .sf-wx-band, .sf-ring-tex { animation-play-state: paused !important; } }
+html.sf-transparent .sf-ring { display: none !important; }
+.sf-ink-dot.wide { width: 40px; border-radius: 8px; }
