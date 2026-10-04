@@ -11,6 +11,8 @@ import { METER, RING } from './looks.js';
 import { HALF } from './charset.js';
 
 const blank = (R, C) => Array.from({ length: R }, () => Array(C).fill(' '));
+// words that don't fit a narrow board wrap at a space, never mid-word (0.11.2 review L1)
+const fit = (s, C) => { const out = []; let line = ''; for (const w of String(s).split(' ')) { if (!line) line = w.slice(0, C); else if ((line + ' ' + w).length <= C) line += ' ' + w; else { out.push(line); line = w.slice(0, C); } } out.push(line); return out; };
 const centreRow = (g, r, s) => { if (!g[r]) return; const C = g[r].length, c0 = Math.max(0, Math.floor((C - s.length) / 2)); [...s].forEach((ch, i) => { if (c0 + i < C) g[r][c0 + i] = ch; }); };
 export const STYLES = ['mixer', 'bars', 'mirror'];
 
@@ -23,7 +25,7 @@ export class Meter {
   zone(f) { const z = this.M.zones; return f <= z.green ? 'g' : f <= z.amber ? 'y' : 'r'; }
   // One tick: called exactly once per METER.tick, since each call moves the columns.
   grid(bands, now, style, overlay) {
-    const R = this.R, C = this.C, h = HALF, g = blank(R, C), mirror = style === 'mirror', max = mirror ? R : R * 2;
+    const R = this.R, C = this.C, h = HALF, g = blank(R, C), mirror = style === 'mirror', max = mirror ? Math.max(1, Math.floor(R / 2) * 2) : R * 2;
     const halfUp = { g: h.gBottom, y: h.yBottom, r: h.rBottom, f: h.fBottom }, halfTop = { g: h.gTop, y: h.yTop, r: h.rTop, f: h.fTop };
     for (let b = 0; b < this.nb; b++) {
       const src = bands.length ? bands[Math.min(bands.length - 1, Math.floor(b * bands.length / this.nb))] : 0;
@@ -32,10 +34,13 @@ export class Meter {
       for (let k = 0; k < this.M.bandCols; k++) {
         const c = this.off + b * (this.M.bandCols + this.M.bandGap) + k; if (c >= C) continue;
         if (mirror) {
-          const Hh = R / 2;
+          // from the middle out; on an odd number of rows the middle row is its own, lit with any
+          // sound (0.11.2 review H1: R / 2 was fractional, and the top write went to row -1)
+          const Hh = Math.floor(R / 2), odd = R % 2, mid = Hh;
+          if (odd) g[mid][c] = u > 0 ? 'f' : '~f';   // the column's base
           for (let d = 0; d < Hh; d++) {
-            const n = Math.max(0, Math.min(2, u - 2 * d)), up = Math.floor(Hh - 1 - d), dn = Math.floor(Hh + d);
-            g[up][c] = n === 2 ? 'f' : n === 1 ? h.fBottom : '~f'; if (g[dn]) g[dn][c] = n === 2 ? 'f' : n === 1 ? h.fTop : '~f';
+            const n = Math.max(0, Math.min(2, u - 2 * d)), up = Hh - 1 - d, dn = Hh + odd + d;
+            g[up][c] = n === 2 ? 'f' : n === 1 ? h.fBottom : '~f'; g[dn][c] = n === 2 ? 'f' : n === 1 ? h.fTop : '~f';
           }
           continue;
         }
@@ -57,18 +62,16 @@ export class Meter {
 }
 
 // The board's own words for each state, centred, over the meter.
-export function overlayFor(state, R, words) {
-  const at = lines => { const top = Math.max(0, Math.floor((R - lines.length) / 2)); return lines.map((text, i) => ({ row: top + i, text })); };
-  if (state === 'quiet') return [{ row: 0, text: words.listening }];
-  if (state === 'stopped') return [{ row: Math.max(0, Math.floor(R / 2) - 1), text: words.stopped }];
-  if (state === 'refused') return at(words.refused);
-  if (state === 'nomic') return at(words.noMic);
-  if (state === 'idle') return at(words.idle);
-  return null;
+export function overlayFor(state, R, words, C = 40) {
+  const at = lines => { lines = [].concat(...lines.map(l => l ? fit(l, C) : [''])).slice(0, R); const top = Math.max(0, Math.floor((R - lines.length) / 2)); return lines.map((text, i) => ({ row: top + i, text })); };
+  if (state === 'quiet') return [{ row: 0, text: fit(words.listening, C)[0] }];
+  if (state === 'stopped') return [{ row: Math.max(0, Math.floor(R / 2) - 1), text: fit(words.stopped, C)[0] }];
+  const say = { refused: words.refused, nomic: words.noMic, busy: words.busy, insecure: words.insecure, idle: words.idle }[state];
+  return say ? at(say) : null;
 }
 // A meter at rest, for a board nobody is listening to, and for thumbnails.
 export function restGrid(R, C, style, state, words) {
-  return new Meter(R, C).grid([], 0, STYLES.includes(style) ? style : 'mixer', overlayFor(state, R, words));
+  return new Meter(R, C).grid([], 0, STYLES.includes(style) ? style : 'mixer', overlayFor(state, R, words, C));
 }
 
 // The 15 log bands from 40 Hz to 12 kHz, as the prototype's analyser has them.
@@ -91,13 +94,23 @@ export class Listen {
   }
   active() { return this.state === 'listening' || this.state === 'quiet'; }
   running() { return this.active() || this.state === 'stopped'; }
-  set(state, line) { this.state = state; this.on.change(state, line); }
+  // the 90 ms timer runs only while listening, quiet or showing Stopped: every other way out
+  // clears it (0.11.2 review M3)
+  set(state, line) {
+    this.state = state;
+    if (!this.running() && this.timer) { clearInterval(this.timer); this.timer = 0; this.meters.clear(); this.grids.clear(); }
+    this.on.change(state, line);
+  }
   press() { if (this.active()) this.stop(); else this.start(); }
   async start() {
     if (this.starting) return; this.starting = true;
+    // the microphone needs https (localhost aside): on plain http there is no mediaDevices at all
+    if (window.isSecureContext === false) { this.starting = false; return this.set('insecure', 'stInsecure'); }
     const AC = window.AudioContext || window.webkitAudioContext;
     let ac = null;
-    try { ac = new AC(); } catch { /* no Web Audio: refused below */ }
+    // made and resumed here, inside the press, before anything is awaited: Safari only lets a
+    // context start during the gesture (0.11.2 review M5)
+    try { ac = new AC(); if (ac.state === 'suspended') ac.resume().catch(() => {}); } catch { /* no Web Audio: no microphone below */ }
     let stream;
     try {
       if (!ac || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw Object.assign(new Error('none'), { name: 'NotFoundError' });
@@ -105,12 +118,13 @@ export class Listen {
     } catch (e) {
       if (ac) ac.close().catch(() => {});
       this.starting = false;
-      return this.set(e && e.name === 'NotFoundError' ? 'nomic' : 'refused', e && e.name === 'NotFoundError' ? 'stNoMic' : 'stRefused');
+      // refused, no microphone, or one that is taken or failing, each said as it is (review M4)
+      const n = e && e.name, st = n === 'NotFoundError' || n === 'OverconstrainedError' ? 'nomic' : n === 'NotReadableError' || n === 'AbortError' ? 'busy' : 'refused';
+      return this.set(st, { nomic: 'stNoMic', busy: 'stBusy', refused: 'stRefused' }[st]);
     }
-    if (ac.state === 'suspended') await ac.resume().catch(() => {});
     const an = Object.assign(ac.createAnalyser(), { fftSize: 2048, smoothingTimeConstant: 0.72 });
     ac.createMediaStreamSource(stream).connect(an);
-    Object.assign(this, { ac, an, stream, buf: new Uint8Array(an.frequencyBinCount), muted: false, starting: false });
+    Object.assign(this, { ac, an, stream, buf: new Uint8Array(an.frequencyBinCount), muted: false, starting: false, pausedTicks: 0, saidPaused: false });
     // iOS mutes the track and suspends the context with the screen locked: that is a pause,
     // never Quiet, and a track that ends (the mic taken away) is Stopped (plan review 5.5)
     const track = stream.getAudioTracks()[0];
@@ -134,13 +148,17 @@ export class Listen {
     this.set('stopped', 'stStopped');
   }
   // A reload or a page hide ends it silently: Listen is never kept.
-  end() { this.release(); clearInterval(this.timer); this.timer = 0; this.state = 'idle'; this.meters.clear(); this.grids.clear(); }
+  // the bar and the board hear about it, so a page restored from the back-forward cache on iOS
+  // doesn't show Stop with nothing listening (0.11.2 review)
+  end() { this.release(); clearInterval(this.timer); this.timer = 0; this.meters.clear(); this.grids.clear(); if (this.state !== 'idle') this.set('idle', null); }
   paused() { return this.muted || (this.ac && this.ac.state !== 'running'); }
   step() {
     const now = performance.now(), M = METER;
     let bands = new Float32Array(15);
     if (this.active() && this.an && !this.paused()) { this.an.getByteFrequencyData(this.buf); bands = bandsOf(this.buf, this.ac.sampleRate, this.an.fftSize); }
     const loud = Math.max.apply(null, bands) > 0.06; if (loud || this.paused()) this.loudAt = now;
+    // a context the browser holds suspended with the track live: said once, never a silent board
+    if (this.active() && !this.muted && this.ac && this.ac.state === 'suspended') { if (++this.pausedTicks > 20 && !this.saidPaused) { this.saidPaused = true; this.on.change(this.state, 'stPaused'); } } else this.pausedTicks = 0;
     if (this.state === 'listening' && now - this.loudAt > M.quietAfter) this.set('quiet', 'stQuiet');
     else if (this.state === 'quiet' && loud) this.set('listening', 'stListen');
     const bass = (bands[0] + bands[1] + bands[2]) / 3; this.avg = this.avg * 0.95 + bass * 0.05;
@@ -158,7 +176,7 @@ export class Listen {
     const key = `${R}x${C}:${style}`;
     if (this.grids.has(key)) return this.grids.get(key);
     let m = this.meters.get(key); if (!m) { m = new Meter(R, C); this.meters.set(key, m); }
-    const g = m.grid(this.bands, this.now || 0, STYLES.includes(style) ? style : 'mixer', overlayFor(this.state, R, words));
+    const g = m.grid(this.bands, this.now || 0, STYLES.includes(style) ? style : 'mixer', overlayFor(this.state, R, words, C));
     this.grids.set(key, g); return g;
   }
   // The Music light: how far past the last beat, 0 to 1.

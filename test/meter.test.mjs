@@ -7,7 +7,7 @@ import { compose } from '../src/content.js';
 import { sanitizeBoard } from '../src/store.js';
 import { METER } from '../src/looks.js';
 
-const words = { idle: ['MUSIC METER', '', 'PRESS LISTEN'], listening: 'LISTENING', stopped: 'STOPPED', refused: ['NO MICROPHONE', '', 'PRESS LISTEN TO ASK AGAIN'], noMic: ['NO MICROPHONE'] };
+const words = { idle: ['MUSIC METER', '', 'PRESS LISTEN'], listening: 'LISTENING', stopped: 'STOPPED', refused: ['NO MICROPHONE', '', 'PRESS LISTEN AGAIN'], noMic: ['NO MICROPHONE'], busy: ['MICROPHONE IN USE', '', 'PRESS LISTEN AGAIN'], insecure: ['NO MICROPHONE', '', 'NEEDS HTTPS'] };
 const col = (g, c) => g.map(r => r[c]);
 
 test('13 bands of two columns across 40, centred', () => {
@@ -63,7 +63,8 @@ test('the words over the meter, for each state', () => {
   assert.deepEqual(overlayFor('quiet', 12, words), [{ row: 0, text: 'LISTENING' }]);
   assert.deepEqual(overlayFor('stopped', 12, words), [{ row: 5, text: 'STOPPED' }]);
   assert.equal(overlayFor('listening', 12, words), null);
-  assert.equal(overlayFor('refused', 12, words)[2].text, 'PRESS LISTEN TO ASK AGAIN');
+  assert.equal(overlayFor('refused', 12, words)[2].text, 'PRESS LISTEN AGAIN');
+  assert.equal(overlayFor('busy', 12, words)[0].text, 'MICROPHONE IN USE');
 });
 
 test('the analyser\'s 15 log bands: silence is nothing, a loud low tone lights the bass only', () => {
@@ -101,4 +102,26 @@ test('a Meter board keeps its style through the store, and Mixer is the default'
   b.pages[0].zones[0].o.style = 'disco';
   assert.equal(sanitizeBoard(b).pages[0].zones[0].o.style, undefined);
   assert.equal(METER.tick, 90);
+});
+
+test('every style on every height, odd ones too: no row out of range, Mirror from the middle (0.11.2 review H1)', () => {
+  for (let R = 1; R <= 13; R++) for (const style of STYLES) {
+    const m = new Meter(R, 15), loud = new Float32Array(15).fill(1);
+    let g; for (let i = 0; i < 14; i++) g = m.grid(loud, i * 90, style);
+    assert.equal(g.length, R); assert.ok(g.every(r => r.length === 15 && r.every(c => typeof c === 'string')), `${style} ${R}`);
+    assert.doesNotThrow(() => restGrid(R, 15, style, 'idle', words));
+    // the shape at full level: a lit column, all of it, in every style
+    assert.ok(g.every(r => /^[gyrf]$/.test(r[1])), `${style} ${R}: ${g.map(r => r[1]).join(',')}`);
+    const quiet = new Meter(R, 15).grid([], 0, style);
+    assert.ok(quiet.every(r => /^~[gyrf]$/.test(r[1])), `${style} ${R} at rest`);
+  }
+  const m = new Meter(5, 15); const g = m.grid(new Float32Array(15).fill(0.2), 0, 'mirror');   // a little sound: the middle row lights first
+  assert.equal(g[2][1], 'f'); assert.equal(g[0][1], '~f'); assert.equal(g[4][1], '~f');
+});
+
+test('words that do not fit a narrow board wrap at a space, never mid-word (review L1)', () => {
+  const sv = { refused: ['INGEN MIKROFON', '', 'TRYCK PÅ LYSSNA IGEN'] };
+  const o = overlayFor('refused', 11, sv, 15).map(l => l.text);
+  assert.deepEqual(o, ['INGEN MIKROFON', '', 'TRYCK PÅ LYSSNA', 'IGEN']);   // 15 wide: as much as fits, then the rest
+  assert.ok(restGrid(11, 15, 'mixer', 'idle', words).map(r => r.join('')).join('|').includes('PRESS LISTEN'));
 });

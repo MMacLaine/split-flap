@@ -566,7 +566,16 @@ export class App {
   isMeter() { const p = this.currentPage(); return !!(p && (p.zones || []).some(z => z && z.ch === 'meter')); }
   meterRunning() { return !!(this.listen && this.listen.running() && this.isMeter()); }
   // Listen shows whenever the board is a Meter or the look's light is Music
-  listenWanted() { const p = this.lookNow().parts || {}; return this.isMeter() || !!(p.ring && p.ring.fx === 'music'); }
+  // Listen is offered while any page of the shown playlist is a Meter or has a Music light, so a
+  // playlist that turns past its Meter keeps listening (0.11.2 review M1)
+  listenWanted() {
+    const music = l => { const p = (l && (l.parts || partsOf(l.id))) || {}; return !!(p.ring && p.ring.fx === 'music'); };
+    if (this.isMeter() || music(this.lookNow())) return true;
+    const pin = this.pin();
+    return (this.cur().pages || []).some(p => (p.zones || []).some(z => z && z.ch === 'meter') || music(lookFor(p, pin, this.lookSetting(), null)));
+  }
+  // what Listen was started for: the playlist and its boards' looks. A change of either stops it.
+  listenKey() { const b = this.cur(); return b.id + '|' + (b.pages || []).map(p => (p.look || '') + (p.lookParts ? JSON.stringify(p.lookParts) : '')).join(',') + '|' + JSON.stringify(this.pin()); }
   // One tick of Listen: the meter's grid straight to the board, and the Music light
   meterFrame() {
     if (this.isMeter() && !this.previewing && this.quietMode() !== 'blank') this.board.setGrid(this.grid());
@@ -660,7 +669,8 @@ export class App {
     const g = this.grid();
     if (!this.previewing && this.board.o.transition !== this.transitionNow()) this.board.setOptions({ transition: this.transitionNow() });
     if (!this.previewing) this.board.setGrid(g);
-    if (this.ambient) { const gk = g.map(r => r.join('')).join('|'); if (gk !== this.lastGridKey) { const first = !this.lastGridKey; this.lastGridKey = gk; if (!first) this.ambient.gridChanged(g); else this.ambient.grid = g; } this.ambient.paint(); }
+    // a meter tick is not a change of board: Flash and From the board wait while it runs (0.11.2 review)
+    if (this.ambient) { const gk = g.map(r => r.join('')).join('|'); if (!this.meterRunning() && gk !== this.lastGridKey) { const first = !this.lastGridKey; this.lastGridKey = gk; if (!first) this.ambient.gridChanged(g); else this.ambient.grid = g; } this.ambient.paint(); }
     this.paintHighlight();
     if (this.S.editing && !this.account.state.user) {   // editor time, for the sign-in prompt
       this.editMs = (this.editMs || 0) + Math.min(now - (this.lastEditTick || now), 1000); this.lastEditTick = now;
@@ -677,7 +687,10 @@ export class App {
     // Listen is offered only on a Meter or a Music light; moving off them stops it, so the
     // microphone is never on with no Stop in sight (0.11.2)
     const lw = this.listenWanted();
-    if (lw !== this.lastListenWanted) { const first = this.lastListenWanted === undefined; this.lastListenWanted = lw; if (!lw && this.listen.active()) this.listen.stop(); if (!first) this.renderOverlay(); }
+    if (lw !== this.lastListenWanted) { const first = this.lastListenWanted === undefined; this.lastListenWanted = lw; if (!first) this.renderOverlay(); }
+    const lkey = this.listenKey();
+    if (this.listen.active() && (!lw || (this.listenFor && lkey !== this.listenFor))) this.listen.stop();
+    if (!this.listen.active()) this.listenFor = null; else if (!this.listenFor) this.listenFor = lkey;
     if (pageKey !== this.lastPageKey) {
       this.lastPageKey = pageKey; this.stage.setAttribute('aria-label', this.stageLabel()); this.stage.setAttribute('aria-roledescription', this.t.stageRole);
       // Spoken only when a person caused the change: the first load, a board picked, the
@@ -852,7 +865,7 @@ export class App {
     this.wake();
     const k = e.key.toLowerCase();
     if (k === 'r') { this.announce(); return; }   // read the board aloud, kiosk or not
-    if (k === 'l' && this.listenWanted()) { this.listen.press(); return; }   // Listen, kiosk or not: a key is a gesture, so the microphone can ask (0.11.2)
+    if (k === 'l' && (this.listenWanted() || this.listen.active())) { this.listen.press(); return; }   // Listen, kiosk or not: a key is a gesture, so the microphone can ask (0.11.2)
     if (this.kioskStrict) return;
     if (k === 'e') this.toggleEdit(); else if (k === 'f') this.toggleFull(); else if (k === 's') this.toggleSound();
   }
@@ -996,8 +1009,8 @@ export class App {
         h('button', { class: 'sf-bar-btn', 'aria-keyshortcuts': 'F', 'data-k': 'bar-full', onclick: () => this.toggleFull() }, S.isFull ? t.exitFs : t.fullscreen),
         h('button', { class: 'sf-bar-btn', 'aria-pressed': String(!!b.sound), 'aria-keyshortcuts': 'S', 'data-k': 'bar-sound', onclick: () => this.toggleSound() },
           h('span', null, t.sound), h('span', { class: 'state' }, b.sound ? t.on : t.off)),
-        this.listenWanted() ? h('button', { class: 'sf-bar-btn' + (this.listen.active() ? ' live' : ''), 'aria-pressed': String(this.listen.active()), 'aria-keyshortcuts': 'L', 'data-k': 'bar-listen', onclick: () => this.listen.press() },
-          this.listen.active() ? [h('span', { class: 'sf-rec', 'aria-hidden': 'true' }), t.lk.stop] : t.lk.listen) : null,
+        this.listenWanted() || this.listen.active() ? h('button', { class: 'sf-bar-btn' + (this.listen.active() ? ' live' : ''), 'aria-pressed': String(this.listen.active()), 'aria-keyshortcuts': 'L', 'data-k': 'bar-listen', onclick: () => this.listen.press() },
+          this.listen.active() ? [h('span', { class: 'sf-rec', 'aria-hidden': 'true' }), `${t.lk.listening} · ${t.lk.stop}`] : t.lk.listen) : null,
         h('button', { class: 'sf-bar-btn', 'aria-expanded': String(S.share), 'data-k': 'bar-share', onclick: () => this.openShare() }, t.share),
         this.account && this.account.available ? h('button', { class: 'sf-bar-btn' + (this.account.signedIn() ? ' named' : ' signin'), 'data-k': 'bar-account', onclick: () => this.openAccount(),
             title: this.account.status === 'failed' || this.account.status === 'signedout' ? this.editor.accountStatus() : null },

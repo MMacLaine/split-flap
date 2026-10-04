@@ -1180,7 +1180,8 @@ export class Editor {
         h('div', { class: 'sf-row' }, seg(Object.entries(t.transitions), b.transition, v => { app.upd(bb => { bb.transition = v; }); app.previewTransition(); }, 'tr')),
         h('div', { class: 'sf-row' }, h('span', { class: 'sf-label muted w' }, t.speed), seg([['fast', t.speeds.fast], ['gentle', t.speeds.gentle], ['authentic', t.speeds.authentic]], b.speed, v => { app.upd(bb => { bb.speed = v; }); app.previewTransition(); }, 'sp')),
         // a look with its own motion wins over the playlist's (0.11), so say so here (review 3)
-        motionOf(app.lookNow()) ? h('span', { class: 'sf-hint', 'data-k': 'motion-by-look' }, t.motionByLook(lookLabel(app, app.lookNow()))) : null,
+        app.isMeter() ? h('span', { class: 'sf-hint', 'data-k': 'motion-by-meter' }, t.lk.meterMotion)
+          : motionOf(app.lookNow()) ? h('span', { class: 'sf-hint', 'data-k': 'motion-by-look' }, t.motionByLook(lookLabel(app, app.lookNow()))) : null,
         h('div', null, h('button', { class: 'sf-small-btn', 'data-k': 'tr-preview', onclick: () => app.previewTransition() }, t.preview))),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.boardLoc),
         loc && loc.lat != null ? h('div', { class: 'sf-chosen' }, h('span', null, loc.city), h('button', { class: 'sf-icon', 'aria-label': t.remove, 'data-k': 'loc-clear', onclick: () => app.upd(bb => { delete bb.loc; }) }, '×')) : null,
