@@ -152,7 +152,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'lobby', fit: '12x40', section: 'work', works: 'anywhere', needs: [],
+    id: 'lobby', fit: '10x32', section: 'work', works: 'anywhere', needs: [],
     name: { en: 'Office lobby', sv: 'Kontorsentré' },
     desc: { en: 'A welcome that takes turns with notices, the time in three cities, and room prices.', sv: 'Ett välkommen som turas om med meddelanden, tiden i tre städer och rumspriser.' },
     make: a => { const c = ctx(a), sv = a.sv; return base(sv ? 'Entré' : 'Lobby', { ...c.loc, quiet: { on: true, from: '20:00', to: '07:00', mode: 'dim' }, pages: [
@@ -181,7 +181,7 @@ export const TEMPLATES = [
     ] }); }
   },
   {
-    id: 'money', fit: '12x40', section: 'finance', group: 'currency', works: 'anywhere', needs: ['fx'],
+    id: 'money', fit: '6x22', section: 'finance', group: 'currency', works: 'anywhere', needs: ['fx'],
     name: { en: 'Currency board', sv: 'Valutatavla' },
     desc: { en: 'Exchange rates in your currency, and bitcoin and ether with a green or red flap for their day.', sv: 'Växelkurser i din valuta, och bitcoin och ether med en grön eller röd flapp för dygnet.' },
     make: a => { const c = ctx(a), sv = a.sv, cur = c.cur && ['EUR', 'USD', 'GBP', 'SEK', 'NOK', 'DKK', 'CHF', 'JPY', 'PLN', 'CZK', 'AUD', 'CAD'].includes(c.cur) ? c.cur : 'SEK';

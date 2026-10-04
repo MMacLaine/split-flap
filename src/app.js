@@ -97,9 +97,11 @@ export class App {
     const fresh = getFlag('sf_fresh'), started = getFlag('sf_started') === '1';
     this.hadBoards = boards.length > 0 && !(boards.length === 1 && boards[0].id === fresh);
     this.firstRun = !started && (!boards.length || (boards.length === 1 && boards[0].id === fresh));
-    // the untouched filler, the first visit's demo or the blank left at sign-out (0.10.3), kept by
-    // sf_fresh across reloads (a sign-in is one), so a sign-in drops it rather than offering it
-    this.freshId = this.firstRun || (fresh && boards.length === 1 && boards[0].id === fresh) ? this.boards[0].id : null;
+    // the untouched filler: the first visit's demo, as before, or the blank left at sign-out
+    // (0.10.3), kept by its own flag sf_filler across reloads (a sign-in is one), so a sign-in
+    // drops it rather than offering it. A started guest's demo is offered, as in 0.10.2.
+    this.freshId = this.firstRun ? this.boards[0].id : this.fillerId();
+    this.snapFresh();
     if (!boards.length) { this.save(); setFlag('sf_fresh', this.boards[0].id); setFlag('sf_words_070', '1'); }
     this.connections = loadConns();       // your own sources (0.9.2), kept in this browser and synced
     this.editor = new Editor(this);
@@ -247,6 +249,14 @@ export class App {
     this.resolveAll();
     return libChanged;
   }
+  // ---------- the untouched filler (0.10.3 review) ----------
+  // The sign-out blank, if this browser holds only it: its id, else null.
+  fillerId() { const f = getFlag('sf_filler'); return f && this.playlists.length === 1 && this.playlists[0].id === f ? f : null; }
+  // What the filler's boards were when it was marked, so any edit to them, by any route (a
+  // playlist, Boards, another tab), makes it the person's.
+  snapFresh() { const p = this.freshId && this.playlists.find(x => x.id === this.freshId); this.freshSnap = p ? JSON.stringify(p.items.map(it => this.blueprints.find(b => b.id === it.id) || null)) : null; }
+  checkFresh() { if (!this.freshId || this.freshSnap == null) return; const was = this.freshSnap; this.snapFresh(); if (this.freshSnap !== was) this.touchFresh(); }
+  touchFresh() { this.freshId = null; this.freshSnap = null; setFlag('sf_fresh', ''); setFlag('sf_filler', ''); }
   save() {
     const libChanged = this.commit();
     savePlaylists(this.playlists); if (libChanged) saveLibrary(this.blueprints); saveShown(this.shown() && this.shown().id);
@@ -378,7 +388,7 @@ export class App {
   removeConnection(id) { const i = this.connections.findIndex(c => c.id === id); if (i < 0) return; this.connections.splice(i, 1); this.account.deletedConn(id); this.saveConns(); this.render(); }
   // A board edited, added or removed in your Boards: saved, and every playlist that shows it
   // shows the change.
-  saveMy() { saveLibrary(this.blueprints); this.resolveAll(); if (this.account) { this.account.changedMy(); if (!this.account.state.user) this.keepStorage(); } }
+  saveMy() { saveLibrary(this.blueprints); this.checkFresh(); this.resolveAll(); if (this.account) { this.account.changedMy(); if (!this.account.state.user) this.keepStorage(); } }
   replaceBlueprints(list) { this.account.my.replacing = true; this.blueprints = list || []; saveLibrary(this.blueprints); this.resolveAll(); this.account.my.replacing = false; }
   deleteBlueprint(id) { this.deleteLibBoard(id); }
   // Another tab saved (0.6.4). Its list and its sync state are newer than this tab's, so
@@ -390,6 +400,8 @@ export class App {
     const pls = loadPlaylists(), lib = loadLibrary(), curId = this.shown() && this.shown().id;
     if (lib) this.blueprints = lib;
     if (pls && pls.length) this.playlists = pls;
+    // the other tab may have signed out and left the filler, or made it its own (0.10.3 review)
+    if (!this.firstRun) { this.freshId = this.fillerId(); this.snapFresh(); }
     this.settings = loadSettings();
     this.resolveAll();
     if (!this.boards.some(b => b.id === curId)) Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() });
@@ -410,7 +422,7 @@ export class App {
     if (!this.boards.length) { this.boards = [fromTemplate('blank', this.S.lang, this.live.data.home)]; filler = this.boards[0].id; }
     if (!this.boards.some(b => b.id === curId)) { Object.assign(this.S, { sel: 0, pageIdx: 0, pageStart: Date.now() }); this.active = 0; }
     this.save(); this.account.replacing = false;
-    if (filler) { this.freshId = filler; setFlag('sf_fresh', filler); }
+    if (filler) { this.freshId = filler; setFlag('sf_filler', filler); this.snapFresh(); }
     this.refresh();
   }
   replaceBoards(list) { this.replacePlaylists(list); }
@@ -439,7 +451,7 @@ export class App {
   upd(fn, quiet) {
     if (this.S.editing && this.lookTpl) { const b = clone(this.lookTpl); fn(b); this.lookTpl = b; this.refresh(quiet); return; }   // a template is only looked at
     const i = this.curIdx(), b = clone(this.boards[i] || this.cur()); fn(b); this.boards[i] = b; this.save();
-    if (b.id === this.freshId) { this.freshId = null; setFlag('sf_fresh', ''); }
+    if (b.id === this.freshId || b.id === getFlag('sf_filler')) this.touchFresh();
     if (this.S.editing) this.saved();
     this.refresh(quiet);
   }
@@ -681,7 +693,7 @@ export class App {
     document.addEventListener('visibilitychange', () => { if (!document.hidden) { this.lock(); if (this.readHome()) this.refresh(); else this.tick(true); } });
     addEventListener('storage', e => {
       if (e.key === 'slmap_home' && this.readHome()) this.refresh();
-      if (['sf_playlists', 'sf_library', 'sf_sync_pl', 'sf_sync_lib', 'sf_settings', 'sf_sync_st'].includes(e.key)) this.fromOtherTab();
+      if (['sf_playlists', 'sf_library', 'sf_sync_pl', 'sf_sync_lib', 'sf_settings', 'sf_sync_st', 'sf_filler'].includes(e.key)) this.fromOtherTab();
       if (e.key === 'sf_conns' || e.key === 'sf_sync_conn') { this.connections = loadConns(); this.account.cn.state = loadMyState('sf_sync_conn'); this.account.cn.remember(); this.render(); }
     });
     addEventListener('hashchange', () => { if (location.hash === '#log') return this.openLog(); if (parseRoute(location.hash)) return; this.openLink().then(() => this.refresh()); });
@@ -1055,7 +1067,7 @@ export class App {
       // the demo is built again for the place, with the same ids, so it stays one demo
       const nb = fromTemplate('demo', this.S.lang, this.live.data.home, p), old = this.boards[this.active]; nb.id = this.freshId;
       nb.pages.forEach((pg, k) => { if (old.pages[k]) pg.id = old.pages[k].id; });
-      this.boards[this.active] = nb; this.save();
+      this.boards[this.active] = nb; this.save(); this.snapFresh();   // still the untouched demo
     }
     // choosing a place is a choice (0.10): the first visit is over, and the line says what changed
     this.markStarted();

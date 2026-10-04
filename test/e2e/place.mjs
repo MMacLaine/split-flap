@@ -5,9 +5,9 @@
 // worker/ (the data routes are the Worker's). It asks Open-Meteo and Transitous for real,
 // so it is not run in CI. npm run e2e:place
 import { spawn } from 'node:child_process';
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', PORT = 9300 + Math.floor(Math.random() * 90);
+import { launchChrome } from './chrome.mjs';
 const URL0 = process.env.APP || 'http://localhost:8787/';
-const proc = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=/tmp/nav-${Date.now()}`, 'about:blank'], { stdio: 'ignore' });
+const { proc, PORT } = await launchChrome('nav', []);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let tabs; for (let i = 0; i < 50 && !tabs; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json(); } catch { await sleep(200); } }
 const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
@@ -43,7 +43,7 @@ try {
   check('the nearest stops come back through the Worker', nearOk, await ev(`JSON.stringify(Object.values(splitFlap.live.data.near).map(n => (n.stops || []).slice(0, 2).map(s => s.name)))`));
   const depOk = await waitFor(`Object.values(splitFlap.live.data.tr).some(e => e.deps && e.deps.length)`, 30000);
   const board = await composed(`app.cur().pages.find(p => p.zones.some(z => z.ch === 'departures'))`);
-  check('and the departures board prints a London stop with times', depOk && /MIN|NOW/.test(board) && !/PICK A STOP|LOADING/.test(board), board.replace(/\s{2,}/g, ' '));
+  check('and the departures board prints a London stop with times', depOk && /MIN|NOW/.test(board) && !/LOADING/.test(board) && !/DEPARTURES +- /.test(board), board.replace(/\s{2,}/g, ' '));
 
   // a template for the place: the café prices in pounds, the station board uses the station look
   await ev(`splitFlap.useTemplate('cafe')`); await sleep(500);

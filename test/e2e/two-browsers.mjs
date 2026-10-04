@@ -3,8 +3,8 @@
 // `wrangler dev --env dev --port 8787 --var DEV_TEST:1` in worker/. npm run e2e
 // Exits non-zero if any step fails.
 import { spawn } from 'node:child_process';
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', PORT = 9400 + Math.floor(Math.random() * 300);
-const proc = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=/tmp/two-${Date.now()}`, 'about:blank'], { stdio: 'ignore' });
+import { launchChrome } from './chrome.mjs';
+const { proc, PORT } = await launchChrome('two', []);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let ws; for (let i = 0; i < 50 && !ws; i++) { try { const v = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json(); ws = new WebSocket(v.webSocketDebuggerUrl); } catch { await sleep(200); } }
 await new Promise(r => ws.addEventListener('open', r));
@@ -176,6 +176,32 @@ try {
   check('and nothing is offered', (await E.ev('splitFlap.account.offerCount()')) === 0, String(await E.ev('splitFlap.account.offerCount()')));
   check('and no board went to the account on its own', (await serverMy(E)) === libBefore, `${libBefore} then ${await serverMy(E)}`);
   check('and the migrated playlist is what the screen shows', (await E.ev('splitFlap.shown().id')) === 'bm_old');
+
+  // 0.10.3 review, 1: the sign-out blank edited through Boards is the person's, and is offered
+  await E.ev(`splitFlap.account.signOut()`); await sleep(3000);
+  const blankBoard = await E.ev(`splitFlap.shown().pages[0].id`);
+  await E.ev(`(() => { const app = splitFlap; app.S.editing = true; app.editor.go({ sec: 'my', lv: 'bp', bp: '${blankBoard}' }); app.updPage(p => { p.zones = [{ ch: 'message', o: { text: 'MY OWN WORDS' } }]; }); })()`); await sleep(500);
+  check('an edit through Boards makes the blank the person\'s', (await E.ev(`String(splitFlap.freshId)`)) === 'null' && (await E.ev(`localStorage.getItem('sf_filler')`)) === '');
+  await E.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailE}', name: 'Re Sign' }) }).then(r => r.status)`);
+  await E.go('http://localhost:8787/'); await sleep(4500);
+  check('and at the next sign-in it is offered, never dropped', (await E.ev('splitFlap.account.offerCount()')) > 0 && (await E.ev(`String(splitFlap.blueprints.some(b => JSON.stringify(b.page).includes('MY OWN WORDS')))`)) === 'true');
+  await E.ev(`splitFlap.account.answerOffer(false)`); await sleep(2000);
+
+  // 0.10.3 review, 2: two tabs. One signs out; the other edits the blank; it is kept and offered
+  const F = await browser('F'), emailF = `twotab-${Date.now()}@example.com`;
+  await F.go('http://localhost:8787/'); await F.ev(`localStorage.setItem('sf_cue_seen','1')`);
+  await F.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailF}', name: 'Two Tabs' }) }).then(r => r.status)`);
+  await F.ev(`fetch('/split-flap/api/boards/mine_1', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ baseRev: 0, board: { id: 'mine_1', name: 'Mine', size: '6x22', pages: [{ id: 'mp1', name: 'Mine', layout: 'full', dur: 10, wins: [], zones: [{ ch: 'clock', o: {} }] }] } }) }).then(r => r.status)`);
+  await F.go('http://localhost:8787/'); await sleep(4500);
+  const F2 = await browser('F2', F); await F2.go('http://localhost:8787/'); await sleep(4000);
+  check('two tabs on one account', (await names(F)) === JSON.stringify(['Mine']) && (await names(F2)) === JSON.stringify(['Mine']), `${await names(F)} ${await names(F2)}`);
+  await F.ev(`splitFlap.account.signOut()`); await sleep(3500);
+  check('the other tab sees the blank and knows it is filler', (await F2.ev(`String(!!splitFlap.freshId && splitFlap.freshId === localStorage.getItem('sf_filler'))`)) === 'true', await F2.ev(`JSON.stringify([splitFlap.freshId, localStorage.getItem('sf_filler'), splitFlap.shown().name])`));
+  await F2.ev(`splitFlap.upd(b => { b.name = 'T2 words'; })`); await sleep(500);
+  check('an edit there makes it the person\'s', (await F2.ev(`localStorage.getItem('sf_filler')`)) === '' && (await F2.ev(`String(splitFlap.freshId)`)) === 'null');
+  await F2.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailF}', name: 'Two Tabs' }) }).then(r => r.status)`);
+  await F2.go('http://localhost:8787/'); await sleep(4500);
+  check('and it is still there after signing in again', (await names(F2)).includes('T2 words'), await names(F2));
 
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);

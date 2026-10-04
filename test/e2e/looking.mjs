@@ -3,9 +3,9 @@
 // a preview ends by itself, and the first visit ends when a place is picked.
 // Needs Chrome and `node _dev/serve.mjs` on 8801 (no Worker needed). npm run e2e:look
 import { spawn } from 'node:child_process';
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', PORT = 9300 + Math.floor(Math.random() * 90);
+import { launchChrome } from './chrome.mjs';
 const URL0 = process.env.APP || 'http://localhost:8801/';
-const proc = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=/tmp/look-${Date.now()}`, 'about:blank'], { stdio: 'ignore' });
+const { proc, PORT } = await launchChrome('look', []);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let tabs; for (let i = 0; i < 50 && !tabs; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json(); } catch { await sleep(200); } }
 const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
@@ -152,6 +152,10 @@ try {
   check('a blank board prints a greeting, never TYPE HERE', /HELLO/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)) && !/TYPE/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)));
   await ev(`(() => { const app = splitFlap; app.updPage(p => { p.zones = [{ ch: 'message', o: {} }]; }); app.editor.openZone(0); })()`); await sleep(500);
   check('an empty message shows the instruction in the editor only', (await ev(`(() => { const h = document.querySelector('[data-k=comp-hint]'); return !!h && !h.hidden && /type/i.test(h.textContent); })()`)) === true && !/TAP|TYPE/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)));
+
+  // an unset tile prints its name and a dash; what it needs is said in the editor
+  await ev(`(() => { const app = splitFlap; app.updPage(p => { p.zones = [{ ch: 'headlines', o: { feeds: [] } }]; }); app.editor.openZone(0); })()`); await sleep(500);
+  check('an unset tile shows its name and a dash, and the editor says what it needs', /HEADLINES/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)) && !/ADD|PICK/.test(await ev(`splitFlap.grid().map(r => r.join('')).join('|')`)) && /add a feed/i.test(await ev(`(document.querySelector('[data-k=unset-hint]') || {}).textContent || ''`)));
 
   // a first visit that picks a template: the demo leaves no boards behind
   await go('about:blank'); await go(URL0); await ev('localStorage.clear()'); await go(URL0);
