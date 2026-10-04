@@ -67,7 +67,7 @@ export class Composer {
 
   // ---------- the element ----------
   render(zone, zd) {
-    const t = this.t, T = THEMES[this.app.cur().theme], mode = this.mode(zone), n = zd.h * zd.w, key = this.key();
+    const t = this.t, T = THEMES[this.app.themeNow()], mode = this.mode(zone), n = zd.h * zd.w, key = this.key();
     this.zd = zd; this.T = T;
     const H = this.ensure(key, toCells(zone.o || {}, zd.h, zd.w));
     const names = CHIP_NAMES[this.app.S.lang];
@@ -76,8 +76,11 @@ export class Composer {
     const redo = h('button', { class: 'sf-small-btn', 'data-k': 'redo', 'aria-keyshortcuts': 'Control+Shift+Z Meta+Shift+Z', disabled: !(H.i < H.st.length - 1), onclick: () => this.redo() }, t.redo);
 
     // the grid, with a hidden input over it so the phone keyboard works in Type mode
-    const avail = (this.ed.phone() ? innerWidth : 412) - 52 - (zd.w - 1) * 2, fs = Math.max(7, Math.min(18, Math.floor(avail / zd.w * 0.66)));
-    const grid = h('div', { class: 'sf-comp-grid ' + mode, style: `grid-template-columns:repeat(${zd.w},minmax(0,1fr));background:${T.housing}` });
+    // 0.10.2 (Q29): on a phone a cell is never smaller than a finger can pick, 22 px; a wider
+    // board scrolls sideways under the finger instead of shrinking to 10 px cells
+    const avail = (this.ed.phone() ? innerWidth : 412) - 52 - (zd.w - 1) * 2, tight = this.ed.phone() && avail / zd.w < 22;
+    const fs = tight ? 14 : Math.max(7, Math.min(18, Math.floor(avail / zd.w * 0.66)));
+    const grid = h('div', { class: 'sf-comp-grid ' + mode + (tight ? ' wide' : ''), style: `grid-template-columns:repeat(${zd.w},${tight ? '22px' : 'minmax(0,1fr)'});background:${T.housing}` });
     const cellEls = [];
     for (let i = 0; i < n; i++) { const c = h('span', { class: 'sf-comp-cell', 'data-i': i, style: `font-size:${fs}px;font-family:${T.font}, 'DM Mono', monospace` }); cellEls.push(c); grid.append(c); }
     const input = h('input', { class: 'sf-comp-input', value: '', 'aria-label': t.typeOnBoard, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', 'data-k': 'comp', tabIndex: mode === 'type' ? 0 : -1,
@@ -95,7 +98,8 @@ export class Composer {
       h('div', { class: 'sf-row' }, undo, redo))];
     if (mode === 'paint') parts.push(this.paintTools(T, names));
     if (mode === 'photo') parts.push(this.photoPick());
-    parts.push(h('div', { class: 'sf-composer' }, grid, input));
+    parts.push(h('div', { class: 'sf-composer' + (tight ? ' scroll' : '') }, grid, input));
+    if (tight) parts.push(h('span', { class: 'sf-hint', 'data-k': 'comp-scroll' }, t.compScroll));
     if (mode === 'type') parts.push(h('div', { class: 'sf-row' },
       CHIP_KEYS.map(k => h('button', { class: 'sf-chip', style: `background:${k === 'f' ? T.filled : CHIPS[k]}`, 'aria-label': t.chip(names[k]), title: t.chip(names[k]), onclick: () => { this.place([k]); input.focus(); } })),
       h('span', { class: 'sf-grow' }),
@@ -205,7 +209,7 @@ export class Composer {
   params() { const k = this.key(); return this.pp[k] || (this.pp[k] = { zoom: 1, px: 0.5, py: 0.5, dither: true, blank: true }); }
   remap(noHist) {
     const src = (this.photos[this.key()] || {}).img || sampleImage(), zd = this.zd;
-    const cells = mapImage(src, zd.h, zd.w, Object.assign({ theme: this.app.cur().theme }, this.params()));
+    const cells = mapImage(src, zd.h, zd.w, Object.assign({ theme: this.app.themeNow() }, this.params()));
     this.write(cells, noHist);
   }
   photoPick() {
@@ -249,7 +253,7 @@ export class Composer {
         h('span', { 'aria-hidden': 'true' }, open ? '−' : '+'), h('span', null, `${t.drafts} (${list.length})`)),
       open ? [h('span', { class: 'sf-hint' }, list.length ? t.draftsNote : t.noDrafts),
         list.map(d => h('div', { class: 'sf-draft' },
-          this.ed.thumb('drf-' + d.id, d.h, d.w, () => d.cells, b.theme),
+          this.ed.thumb('drf-' + d.id, d.h, d.w, () => d.cells, this.app.themeNow()),
           h('span', null, when(d.t)),
           h('button', { class: 'sf-small-btn', 'data-k': 'draft-' + d.id, onclick: () => this.write(toCells({ cells: d.cells }, zd.h, zd.w)) }, t.use)))] : null);
   }

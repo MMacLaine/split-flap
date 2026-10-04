@@ -42,20 +42,21 @@ export function pixelWidth(s) {
 
 // Draw pixel text into a zone of the grid g, centred. color: a chip key, 'f' for the
 // theme's glyph colour, or 'rainbow' (colour by column, shifting with time).
-export function drawPixels(g, z, s, color, now) {
+// k: each pixel as k x k flaps (0.10.2: a 12 x 40 board draws its big clock at 2).
+export function drawPixels(g, z, s, color, now, k = 1) {
   const text = [...s.toUpperCase()].filter(ch => glyph(ch)).join('');
-  const w = pixelWidth(text);
-  const top = z.r + Math.max(0, Math.floor((z.h - 5) / 2));
+  const w = pixelWidth(text) * k;
+  const top = z.r + Math.max(0, Math.floor((z.h - 5 * k) / 2));
   let x = z.c + Math.floor((z.w - w) / 2);
   const shift = Math.floor(now / 2000);
   for (const ch of text) {
     const gl = glyph(ch);
-    for (let r = 0; r < 5 && r < z.h; r++) for (let c = 0; c < gl[r].length; c++) {
+    for (let r = 0; r < 5 * k && r < z.h; r++) for (let c = 0; c < gl[0].length * k; c++) {
       const cx = x + c, cy = top + r;
-      if (gl[r][c] !== '#' || cx < z.c || cx >= z.c + z.w || !g[cy]) continue;
+      if (gl[Math.floor(r / k)][Math.floor(c / k)] !== '#' || cx < z.c || cx >= z.c + z.w || !g[cy]) continue;
       g[cy][cx] = color === 'rainbow' ? RAINBOW[((cx - z.c) + shift) % 6] : color;
     }
-    x += gl[0].length + 1;
+    x += (gl[0].length + 1) * k;
   }
 }
 

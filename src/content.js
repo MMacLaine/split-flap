@@ -21,10 +21,10 @@ const MONTHS = {
   sv: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC']
 };
 const WORDS = {
-  en: { now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
+  en: { tomorrow: 'TOMORROW', yesterday: 'YESTERDAY', now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
     week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'ADD A WEB ADDRESS', empty: 'NOTHING IN THE FEED', noMessages: 'ADD A MESSAGE', otd: 'ON THIS DAY',
     deps: 'DEPARTURES', pickStop: 'PICK A STOP', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', headlines: 'HEADLINES', pickFeed: 'ADD A FEED', feedNotAdded: 'SIGN IN TO ADD THIS FEED', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK', rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
-  sv: { now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
+  sv: { tomorrow: 'I MORGON', yesterday: 'I GÅR', now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
     week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'LÄGG TILL EN WEBBADRESS', empty: 'INGET I FLÖDET', noMessages: 'LÄGG TILL ETT MEDDELANDE', otd: 'DEN HÄR DAGEN',
     deps: 'AVGÅNGAR', pickStop: 'VÄLJ EN HÅLLPLATS', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', headlines: 'RUBRIKER', pickFeed: 'LÄGG TILL ETT FLÖDE', feedNotAdded: 'LOGGA IN FÖR ATT LÄGGA TILL FLÖDET', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA', rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
 };
@@ -402,7 +402,9 @@ function todayLines(o, z, d, W, lang, w, live) {
     sun = s.polar ? (s.polar === 'day' ? w.midnightSun : w.polarNight) : W >= 16 ? `${w.sun} ${hm(s.up)} ${hm(s.down)}` : `${hm(s.up)} ${hm(s.down)}`;
   }
   if (z.h === 1) return { exact: lr(`${day.slice(0, 3)} ${d.getDate()} ${mon}`, o.week !== false ? `${w.week} ${isoWeek(d)}` : '', W) };
-  const lines = [day, date];
+  // in a big zone's panes (0.10.2): under big digits the day and date are one line; under the
+  // day in big letters the day is not printed again
+  const lines = o.dayLine ? [`${day} ${d.getDate()} ${mon}`] : o.noDay ? [date] : [day, date];
   if (special) lines.push(special);
   if (o.week !== false) lines.push(`${w.week} ${isoWeek(d)}`);
   if (sun) lines.push(sun);
@@ -676,7 +678,7 @@ function weatherLines(o, city, d, z, W, lang, w, now) {
     const hrs = (d.hourly || []).slice(0, Math.max(1, Math.floor(W / 3)));
     const cells = f => hrs.flatMap(h => [...f(h).padEnd(3).slice(0, 3)]);
     return { lines: [
-      `${city} ${deg(d.t)}`,
+      ...(o.bare ? [] : [`${city} ${deg(d.t)}`]),
       cells(h => h.time.slice(11, 13)),
       hrs.flatMap(h => [weatherChip(h.code), weatherChip(h.code), ' ']),
       cells(h => deg(h.t)),
@@ -684,8 +686,8 @@ function weatherLines(o, city, d, z, W, lang, w, now) {
     ], align: 'left' };
   }
   if (view === 'days') {
-    const days = (d.daily || []).slice(0, Math.max(1, z.h - 1));
-    return { lines: [city].concat(days.map((f, i) => {
+    const days = (d.daily || []).slice(0, Math.max(1, o.bare ? Math.min(3, z.h) : z.h - 1));
+    return { lines: (o.bare ? [] : [city]).concat(days.map((f, i) => {
       const name = i === 0 ? w.today.slice(0, 5) : dayName(f.date);
       const txt = `${deg(f.max)} ${deg(f.min)}`, rain = f.pp != null && W >= 18 ? ` ${f.pp}%` : '';
       return [...name.padEnd(6), weatherChip(f.code), ' ', ...txt, ...rain];
@@ -730,6 +732,9 @@ export function compose(page, R, C, now, lang, live) {
     }
     // Pixel glyphs are 5 flaps tall; in a shorter zone the big channels print normally.
     if (DRAWN.has(zd.ch) && (zd.ch === 'art' || z.h >= 5)) { drawChannel(g, zd.ch, o, z, now); return; }
+    // 0.10.2: a big zone (12 x 40, or the body under a header) has its own layout for the tiles
+    // people use most, instead of a 6 x 22 block in the middle of the dark (QA C-H1)
+    if (isBig(z) && !o._part && BIG[zd.ch] && BIG[zd.ch](g, z, o, now, lang, live)) return;
     const ch = zd.ch === 'bigclock' ? 'clock' : zd.ch === 'bigtext' ? 'message' : zd.ch;
     // a one-row zone (the ticker) asks the channel for a few rows' worth, then pages through them
     const res = channelLines(ch, o, z.h === 1 ? Object.assign({}, z, { h: 4 }) : z, now, lang, live);
@@ -751,6 +756,75 @@ export function compose(page, R, C, now, lang, live) {
   return g;
 }
 
+// ---------- big zones (0.10.2) ----------
+// A zone at least 9 rows by 30 columns. Each layout is made of panes, and each pane is the
+// tile's own small layout, composed on its own and copied in, so the big boards use the same
+// words, states and formats as the small ones.
+export const isBig = z => z.h >= 9 && z.w >= 30;
+function pane(g, z, r, c, h, w, ch, o, now, lang, live) {
+  if (h < 1 || w < 1) return;
+  const sub = compose({ layout: 'full', zones: [{ ch, o: Object.assign({}, o, { _part: true }) }] }, h, w, now, lang, live);
+  for (let i = 0; i < h; i++) for (let j = 0; j < w; j++) if (z.r + r + i < g.length) g[z.r + r + i][z.c + c + j] = sub[i][j];
+}
+const half = (list, n = Math.ceil(list.length / 2)) => [list.slice(0, n), list.slice(n)];
+const BIG = {
+  // the time in big digits, the day and date under it
+  clock: (g, z, o, now, lang, live) => {
+    const two = z.h >= 12, digits = two ? 10 : 5, top = o.date === false ? Math.floor((z.h - digits) / 2) : two ? 0 : Math.max(0, Math.floor((z.h - 8) / 2));
+    pane(g, z, top, 0, digits, z.w, 'bigclock', { fmt: o.fmt, color: 'f' }, now, lang, live);
+    if (o.date !== false) pane(g, z, top + digits, 0, Math.min(3, z.h - top - digits), z.w, 'today', { dayLine: true, sun: false, days: false, week: !!o.week }, now, lang, live);
+    return true;
+  },
+  // the day in big letters (or its short form), then the date, the holiday, the week and the sun
+  today: (g, z, o, now, lang, live) => {
+    const d = new Date(now), day = DAYS[lang][d.getDay()], word = pixelWidth(day) <= z.w ? day : day.slice(0, 3);
+    pane(g, z, 1, 0, 5, z.w, 'bigtext', { text: word, color: 'f' }, now, lang, live);
+    pane(g, z, 7, 0, z.h - 7, z.w, 'today', Object.assign({}, o, { noDay: true }), now, lang, live);
+    return true;
+  },
+  // a column per city, with its time and its day against this screen's
+  worldtime: (g, z, o, now, lang, live) => {
+    const list = (Array.isArray(o.places) ? o.places : []).filter(p => p && p.tz).slice(0, 4);
+    if (list.length < 2) return false;
+    const cw = Math.floor(z.w / list.length), here = new Date(now).getDay(), w = WORDS[lang] || WORDS.en;
+    list.forEach((p, i) => {
+      let t; try { t = wallIn(p.tz, now); } catch { return; }
+      const hh = o.fmt === '12' ? `${(t.h % 12) || 12}:${two(t.m)}` : `${two(t.h)}:${two(t.m)}`, diff = (t.dow - here + 7) % 7;
+      const lines = [boardText(p.city).toUpperCase().slice(0, cw - 1), '', hh, o.fmt === '12' ? (t.h < 12 ? 'AM' : 'PM') : '', diff === 1 ? w.tomorrow : diff === 6 ? w.yesterday : ''];
+      block(g, { r: z.r, c: z.c + i * cw, h: z.h, w: cw }, lines, 'center');
+    });
+    return true;
+  },
+  // now across the top, the next hours and three days side by side under it
+  weather: (g, z, o, now, lang, live) => {
+    const place = wxPlace(o, live), data = place && live && live.wx && live.wx[wxKey(place)];
+    if (!data || data.t == null) return false;
+    const top = Math.min(6, z.h - 5), hw = Math.floor(z.w / 2);
+    pane(g, z, 0, 0, top, z.w, 'weather', Object.assign({}, o, { view: 'now' }), now, lang, live);
+    pane(g, z, top + 1, 0, z.h - top - 1, hw, 'weather', Object.assign({}, o, { view: 'hours', bare: true }), now, lang, live);
+    pane(g, z, top + 1, hw, z.h - top - 1, z.w - hw, 'weather', Object.assign({}, o, { view: 'days', bare: true }), now, lang, live);
+    return true;
+  },
+  // the pairs in two columns
+  currency: (g, z, o, now, lang, live) => {
+    const pairs = (Array.isArray(o.pairs) && o.pairs.length ? o.pairs : ['EUR', 'USD', 'GBP']).filter(p => p !== (o.base || 'SEK'));
+    if (pairs.length < 3) return false;
+    const [a, b] = half(pairs), hw = Math.floor(z.w / 2), n = a.length, gap = n * 2 - 1 <= z.h ? 2 : 1, top = Math.floor((z.h - (n - 1) * gap - 1) / 2);
+    [a, b].forEach((col, j) => col.forEach((p, i) => pane(g, z, top + i * gap, j ? hw : 0, 2, j ? z.w - hw : hw, 'currency', Object.assign({}, o, { pairs: [p] }), now, lang, live)));
+    return true;
+  },
+  // the title across the top, the items in two columns under it
+  menu: (g, z, o, now, lang, live) => {
+    const items = (o.items || []).filter(x => String(x || '').trim());
+    if (items.length < 4) return false;
+    const title = String(o.title || '').toUpperCase(), [a, b] = half(items), hw = Math.floor(z.w / 2), t0 = title ? 2 : 0;
+    if (title) put(g, z.r, z.c, z.w, title, 'center');
+    const n = a.length, gap = t0 + n * 2 - 1 <= z.h ? 2 : 1, top = t0 + Math.max(0, Math.floor((z.h - t0 - (n - 1) * gap - 1) / 2));
+    [a, b].forEach((col, j) => col.forEach((x, i) => pane(g, z, top + i * gap, j ? hw : 0, 2, j ? z.w - hw : hw, 'menu', Object.assign({}, o, { title: '', items: [x] }), now, lang, live)));
+    return true;
+  }
+};
+
 // Big clock, big text and patterns paint colour chips straight into the grid.
 function drawChannel(g, ch, o, z, now) {
   const color = o.color || 'f';
@@ -758,7 +832,8 @@ function drawChannel(g, ch, o, z, now) {
   if (ch === 'bigclock') {
     const d = new Date(now), hh = d.getHours();
     const time = o.fmt === '12' ? `${(hh % 12) || 12}:${two(d.getMinutes())}` : `${two(hh)}:${two(d.getMinutes())}`;
-    drawPixels(g, z, pixelWidth(time) <= z.w ? time : time.replace(':', ''), color, now);
+    const t = pixelWidth(time) <= z.w ? time : time.replace(':', ''), k = z.h >= 10 && pixelWidth(t) * 2 <= z.w ? 2 : 1;   // twice the size where it fits (0.10.2)
+    drawPixels(g, z, t, color, now, k);
     return;
   }
   // bigtext: word-wrapped pages of pixel text, one page every 4 seconds

@@ -35,16 +35,26 @@ export function nowShowing(b, now, t) {
 export function playlistPanel(ed, day) {
   const t = ed.t, b = ed.app.cur(), now = Date.now(), today = sameDay(day, new Date(now));
   const rows = playlistRows(b, day, t);
+  // 0.10.2 (Q29): on a screen under 500 px tall it folds to one line above the week, and opens on a tap
+  if (ed.phone() && typeof innerHeight !== 'undefined' && innerHeight < 500) {
+    const on = rows.find(r => today && now >= r.from && now < r.to), names = on && on.list.length ? on.list.map(i => name(t, b.pages[i], i)).join(', ') : t.clockOnly;
+    return h('details', { class: 'sf-playlist sf-playlist-fold', 'data-k': 'playlist-fold', open: !!ed.E.plOpen, ontoggle: e => { ed.E.plOpen = e.target.open; } },
+      h('summary', null, h('span', { class: 'sf-eyebrow accent' }, today ? t.todaysPlaylist : t.playlistFor(ed.dayLabel(day))), h('span', { class: 'sf-hint' }, today ? t.nowPlays(names) : t.boardsCount(b.pages.length))),
+      playlistBody(ed, b, rows, today, now, t));
+  }
   return h('section', { class: 'sf-playlist', 'aria-label': t.todaysPlaylist },
     h('div', { class: 'sf-row' }, h('span', { class: 'sf-eyebrow accent' }, today ? t.todaysPlaylist : t.playlistFor(ed.dayLabel(day))), today ? h('span', { class: 'sf-hint' }, ed.dayLabel(day)) : null),
-    h('ol', { class: 'sf-pl-rows' }, rows.map(r => {
+    playlistBody(ed, b, rows, today, now, t));
+}
+function playlistBody(ed, b, rows, today, now, t) {
+  return [h('ol', { class: 'sf-pl-rows' }, rows.map(r => {
       const on = today && now >= r.from && now < r.to, f = new Date(r.from), e = new Date(r.to);
       return h('li', { class: 'sf-pl-row' + (on ? ' now' : '') },
         h('span', { class: 'sf-pl-when' }, `${hm(f.getHours() * 60 + f.getMinutes())} ${t.to} ${e.getDate() !== f.getDate() ? '24:00' : hm(e.getHours() * 60 + e.getMinutes())}`),
         h('span', { class: 'sf-pl-names' }, r.list.length ? r.list.map(i => h('span', { class: 'sf-pl-who', style: `--hue:${hueOf(b, i)}` }, name(t, b.pages[i], i))) : h('span', { class: 'sf-hint' }, t.clockOnly),
           r.alone ? h('span', { class: 'sf-tag' }, t.aloneTag) : null));
     })),
-    h('span', { class: 'sf-hint' }, t.playlistNote));
+    h('span', { class: 'sf-hint' }, t.playlistNote)];
 }
 
 export function weekView(ed) {
