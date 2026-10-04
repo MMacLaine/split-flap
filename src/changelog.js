@@ -3,6 +3,26 @@
 
 export const CHANGELOG = [
   {
+    v: '0.11.4', date: '2026-10-04',
+    tag: { en: 'When it shows', sv: 'När den visas' },
+    desc: {
+      en: 'A board\'s times are on a week you can drag now, at the top of When it shows, instead of a form behind Advanced.',
+      sv: 'En tavlas tider ligger nu på en vecka du kan dra i, överst under När den visas, i stället för ett formulär bakom Avancerat.'
+    },
+    items: {
+      en: [
+        '**Drag to set a time.** Drag down a day to add a time, drag an edge to make it longer or shorter, and tap it to change or remove it. The playlist\'s other boards sit faintly behind, so you can see where this one fits.',
+        '**On a phone** it is one day at a time with arrows, and a finger draws a time without the page scrolling under it.',
+        '**The form is still there,** under the week, for exact times, dates and the keyboard. Both change the same times as the playlist\'s Week, and every change says what it did, with Undo.'
+      ],
+      sv: [
+        '**Dra för att sätta en tid.** Dra nedåt i en dag för att lägga till en tid, dra i en kant för att göra den längre eller kortare, och tryck på den för att ändra eller ta bort den. Spellistans andra tavlor syns svagt bakom, så du ser var den här passar in.',
+        '**På en telefon** är det en dag i taget med pilar, och ett finger ritar en tid utan att sidan rullar under.',
+        '**Formuläret finns kvar,** under veckan, för exakta tider, datum och tangentbordet. Båda ändrar samma tider som spellistans Vecka, och varje ändring säger vad den gjorde, med Ångra.'
+      ]
+    }
+  },
+  {
     v: '0.11.3', date: '2026-10-04',
     tag: { en: 'Finishing', sv: 'Det sista' },
     desc: {
