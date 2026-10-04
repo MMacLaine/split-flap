@@ -462,6 +462,13 @@ export class App {
     const mark = d.querySelector('[data-sync-fail]'); if (mark) mark.hidden = this.account.status !== 'failed';
   }
   // The bar's account button: opens the Account panel, which explains guest or signed in.
+  // Help from anywhere (0.11.5): the bar, the editor's head, or the ? key
+  openHelp(from) {
+    this.ev('help_open', from);
+    this.S.switcher = false; this.S.share = false;
+    if (!this.S.editing) { this.S.editing = true; this.dismissCue(false); this.editor.open(); }
+    this.editor.go({ sec: 'acc', lv: 'help' });
+  }
   openAccount() {
     this.S.switcher = false;
     if (!this.S.editing) { this.S.editing = true; this.dismissCue(false); }
@@ -905,7 +912,7 @@ export class App {
     if (k === 'r') { this.announce(); return; }   // read the board aloud, kiosk or not
     if (k === 'l' && (this.listenWanted() || this.listen.active())) { this.listen.press(); return; }   // Listen, kiosk or not: a key is a gesture, so the microphone can ask (0.11.2)
     if (this.kioskStrict) return;
-    if (k === 'e') this.toggleEdit(); else if (k === 'f') this.toggleFull(); else if (k === 's') this.toggleSound();
+    if (k === 'e') this.toggleEdit(); else if (k === 'f') this.toggleFull(); else if (k === 's') this.toggleSound(); else if (e.key === '?') this.openHelp('key');
   }
   toggleEdit(fromHistory) {
     const editing = !this.S.editing;
@@ -1051,6 +1058,7 @@ export class App {
         this.listenWanted() || this.listen.active() ? h('button', { class: 'sf-bar-btn' + (this.listen.active() ? ' live' : ''), 'aria-pressed': String(this.listen.active()), 'aria-keyshortcuts': 'L', 'data-k': 'bar-listen', onclick: () => this.listen.press() },
           this.listen.active() ? [h('span', { class: 'sf-rec', 'aria-hidden': 'true' }), `${t.lk.listening} · ${t.lk.stop}`] : t.lk.listen) : null,
         h('button', { class: 'sf-bar-btn', 'aria-expanded': String(S.share), 'data-k': 'bar-share', onclick: () => this.openShare() }, t.share),
+        h('button', { class: 'sf-bar-btn', 'aria-keyshortcuts': '?', 'data-k': 'bar-help', onclick: () => this.openHelp('bar') }, t.help),
         this.account && this.account.available ? h('button', { class: 'sf-bar-btn' + (this.account.signedIn() ? ' named' : ' signin'), 'data-k': 'bar-account', onclick: () => this.openAccount(),
             title: this.account.status === 'failed' || this.account.status === 'signedout' ? this.editor.accountStatus() : null },
           this.account.signedIn() ? this.account.user.name : this.account.status === 'signedout'

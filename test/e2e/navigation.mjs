@@ -156,6 +156,24 @@ try {
   await ev(`localStorage.setItem('sf_edit_ms', '999999')`); await ev('splitFlap.renderOverlay()');
   check('a visit that came by a board link shows no sign-in prompt', (await ev(`String(!!document.querySelector('[data-k=signin-prompt]'))`)) === 'false' && (await ev('String(splitFlap.linkVisit === true && splitFlap.promptDue() === false)')) === 'true');
 
+  // Help from anywhere (0.11.5): the bar, the ? key, the editor's head, and a list to jump to
+  await go('about:blank'); await go(URL0); await sleep(500);
+  if (await ev('String(splitFlap.S.editing)') === 'true') await ev('splitFlap.toggleEdit()');
+  await ev(`document.querySelector('[data-k=bar-help]').click()`); await sleep(400);
+  check('Help in the bar opens the guide', (await lv()) === 'acc:help');
+  check('the guide starts with Start here and lists every section', (await ev(`document.querySelector('.sf-help-sec h3').textContent`)) === 'Start here'
+    && (await ev(`document.querySelectorAll('[data-k^=help-toc-]').length`)) === (await ev(`document.querySelectorAll('.sf-help-sec').length`)));
+  await ev(`document.querySelector('[data-k=help-toc-3]').click()`); await sleep(700);
+  check('a line in the list moves focus to its section', (await ev(`document.activeElement === document.querySelector('[data-help="3"] h3') ? 'yes' : 'no'`)) === 'yes');
+  check('the editor head has no ? on Help itself', (await ev(`String(!!document.querySelector('[data-k=head-help]'))`)) === 'false');
+  await ev('splitFlap.editor.go({ sec: "ex", lv: "list" })'); await sleep(300);
+  await ev(`document.querySelector('[data-k=head-help]').click()`); await sleep(300);
+  check("the editor head's ? opens Help", (await lv()) === 'acc:help');
+  await ev('splitFlap.toggleEdit()'); await sleep(300);
+  await ev(`document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true }))`); await sleep(300);
+  check('? on the keyboard opens Help with the editor closed', (await lv()) === 'acc:help');
+  await ev('splitFlap.toggleEdit()');
+
   // the phone: the same levels, one day of the week at a time
   await go(URL0);
   await send('Emulation.setDeviceMetricsOverride', { width: 400, height: 860, deviceScaleFactor: 1, mobile: true });

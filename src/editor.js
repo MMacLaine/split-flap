@@ -266,6 +266,7 @@ export class Editor {
       up ? h('button', { class: 'sf-back', 'data-k': 'back', onclick: () => this.back() }, h('span', { 'aria-hidden': 'true' }, '‹'), h('span', null, upLabel)) : null,
       h('div', { class: 'sf-panel-title', role: 'heading', 'aria-level': '2', tabindex: '-1' }, h('span', { class: 'sf-eyebrow' }, kicker),
         E.sec === 'sb' && E.lv === 'sb' ? this.boardName() : h('strong', null, title)),
+      E.sec === 'acc' && E.lv === 'help' ? null : h('button', { class: 'sf-head-help', 'data-k': 'head-help', 'aria-label': t.help, title: t.help, onclick: () => this.app.openHelp('head') }, '?'),
       h('button', { class: 'sf-btn primary caps', 'data-k': 'done', 'aria-keyshortcuts': 'E', onclick: () => this.app.toggleEdit() }, t.done));
   }
   // The four sections, on every level, and the place for search.
@@ -1443,11 +1444,16 @@ export class Editor {
   helpLevel() {
     const intro = INTRO[this.lang] || INTRO.en, part = x => typeof x === 'string' ? x : x.href === 'privacy' ? h('a', { href: this.privacyHref() }, x.t)
       : h('button', { class: 'sf-link-btn inline', 'data-k': 'help-' + x.k, onclick: () => this.go(x.k) }, x.t);
+    const secs = HELP[this.lang] || HELP.en;
+    // the sections as a list to jump to, so a long guide is one tap from what you came for (0.11.5)
+    const jump = i => { this.app.ev('help_jump', String(i + 1)); const el = this.app.drawer && this.app.drawer.querySelector(`[data-help="${i}"]`); if (el) { el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); const hd = el.querySelector('h3'); if (hd) hd.focus({ preventScroll: true }); } };
     return h('div', { class: 'sf-level sf-help' },
       h('div', { class: 'sf-start-head' }, h('h2', null, intro.title), h('p', null, intro.lede)),
-      (HELP[this.lang] || HELP.en).map((sec, i) => h('section', { class: 'sf-help-sec' },
+      h('nav', { class: 'sf-help-toc', 'aria-label': intro.toc }, h('ol', null, secs.map((sec, i) => h('li', null,
+        h('button', { class: 'sf-link-btn', 'data-k': 'help-toc-' + i, onclick: () => jump(i) }, sec.h))))),
+      secs.map((sec, i) => h('section', { class: 'sf-help-sec', 'data-help': String(i) },
         h('span', { class: 'sf-help-num' }, String(i + 1).padStart(2, '0')),
-        h('h3', null, sec.h),
+        h('h3', { tabindex: '-1' }, sec.h),
         sec.fig ? this.helpFig(sec.fig) : null,
         (sec.p || []).map(p => h('p', null, Array.isArray(p) ? p.map(part) : p)),
         sec.sources ? h('ul', { class: 'sf-sources' }, Object.values(SOURCES).map(x => h('li', null, h('a', { href: x.link, target: '_blank', rel: 'noopener' }, x.name), ' ', x.credit[this.lang] || x.credit.en))) : null,
