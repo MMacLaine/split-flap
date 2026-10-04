@@ -62,8 +62,8 @@ export function lastChange(series) {
 
 // ---------- the zone ----------
 const WORDS = {
-  en: { since: 'SINCE', loading: 'LOADING', nodata: 'NO DATA YET', pick: 'PICK A BANK', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'], years: n => n === 1 ? '1 YEAR' : `${n} YEARS`, off: 'NOT AVAILABLE' },
-  sv: { since: 'SEDAN', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', pick: 'VÄLJ EN BANK', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'], years: n => n === 1 ? '1 ÅR' : `${n} ÅR`, off: 'INTE TILLGÄNGLIG' }
+  en: { since: 'SINCE', loading: 'LOADING', nodata: 'NO DATA YET', pick: '-', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'], years: n => n === 1 ? '1 YEAR' : `${n} YEARS`, off: 'NOT AVAILABLE' },
+  sv: { since: 'SEDAN', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', pick: '-', months: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'], years: n => n === 1 ? '1 ÅR' : `${n} ÅR`, off: 'INTE TILLGÄNGLIG' }
 };
 const pct = (v, lang) => { const s = (Math.round(v * 100) / 100).toFixed(2); return (lang === 'sv' ? s.replace('.', ',') : s) + '%'; };
 export function rateText(bank, s, lang) {

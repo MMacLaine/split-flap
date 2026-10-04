@@ -20,13 +20,16 @@ const MONTHS = {
   en: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
   sv: ['JAN', 'FEB', 'MAR', 'APR', 'MAJ', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC']
 };
+// 0.10.3: a tile with nothing set prints its name and a dash, never an instruction; what to
+// do is said in the editor beside the tile (unsetOf, below).
+export const UNSET = '-';
 const WORDS = {
-  en: { tomorrow: 'TOMORROW', yesterday: 'YESTERDAY', now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', pick: 'PICK A STATION', pickCity: 'PICK A CITY', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
-    week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'ADD A WEB ADDRESS', empty: 'NOTHING IN THE FEED', noMessages: 'ADD A MESSAGE', otd: 'ON THIS DAY',
-    deps: 'DEPARTURES', pickStop: 'PICK A STOP', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', headlines: 'HEADLINES', pickFeed: 'ADD A FEED', feedNotAdded: 'SIGN IN TO ADD THIS FEED', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK', rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
-  sv: { tomorrow: 'I MORGON', yesterday: 'I GÅR', now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', pick: 'VÄLJ EN STATION', pickCity: 'VÄLJ EN STAD', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
-    week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', noUrl: 'LÄGG TILL EN WEBBADRESS', empty: 'INGET I FLÖDET', noMessages: 'LÄGG TILL ETT MEDDELANDE', otd: 'DEN HÄR DAGEN',
-    deps: 'AVGÅNGAR', pickStop: 'VÄLJ EN HÅLLPLATS', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', headlines: 'RUBRIKER', pickFeed: 'LÄGG TILL ETT FLÖDE', feedNotAdded: 'LOGGA IN FÖR ATT LÄGGA TILL FLÖDET', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA', rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
+  en: { tomorrow: 'TOMORROW', yesterday: 'YESTERDAY', now: 'NOW', min: 'MIN', today: 'TODAY', days: 'DAYS', day: 'DAY', hours: 'HOURS', hour: 'HOUR', togo: 'TO GO', loading: 'LOADING', nodata: 'NO DATA YET', nodeps: 'NO DEPARTURES', messages: 'MESSAGES', web: 'FROM THE WEB', nohome: 'NO HOME STATION', feels: 'FEELS', wind: 'WIND', rain: 'RAIN', sun: 'SUN', weather: 'WEATHER', dry: 'DRY',
+    week: 'WEEK', midnightSun: 'MIDNIGHT SUN', polarNight: 'POLAR NIGHT', power: 'POWER', ore: 'ÖRE', kwh: 'ÖRE/KWH', empty: 'NOTHING IN THE FEED', otd: 'ON THIS DAY',
+    deps: 'DEPARTURES', canc: 'CANC', cancelled: 'CANCELLED', onTime: 'ON TIME', plat: 'PLAT', off: 'NOT AVAILABLE', headlines: 'HEADLINES', holiday: 'NEXT HOLIDAY', worldClock: 'WORLD CLOCK', rainIn: m => `RAIN IN ${m} MIN`, dryIn: m => `DRY IN ${m} MIN`, rainNow: 'RAIN NOW' },
+  sv: { tomorrow: 'I MORGON', yesterday: 'I GÅR', now: 'NU', min: 'MIN', today: 'IDAG', days: 'DAGAR', day: 'DAG', hours: 'TIMMAR', hour: 'TIMME', togo: 'KVAR', loading: 'LADDAR', nodata: 'INGEN DATA ÄN', nodeps: 'INGA AVGÅNGAR', messages: 'MEDDELANDEN', web: 'FRÅN WEBBEN', nohome: 'INGEN HEMSTATION', feels: 'KÄNNS', wind: 'VIND', rain: 'REGN', sun: 'SOL', weather: 'VÄDER', dry: 'TORRT',
+    week: 'VECKA', midnightSun: 'MIDNATTSSOL', polarNight: 'POLARNATT', power: 'EL', ore: 'ÖRE', kwh: 'ÖRE/KWH', empty: 'INGET I FLÖDET', otd: 'DEN HÄR DAGEN',
+    deps: 'AVGÅNGAR', canc: 'INST', cancelled: 'INSTÄLLD', onTime: 'I TID', plat: 'SPÅR', off: 'INTE TILLGÄNGLIG', headlines: 'RUBRIKER', holiday: 'NÄSTA HELGDAG', worldClock: 'VÄRLDSKLOCKA', rainIn: m => `REGN OM ${m} MIN`, dryIn: m => `UPPEHÅLL OM ${m} MIN`, rainNow: 'REGN NU' }
 };
 
 // Hours in words for the word clock, twelve first so hour % 12 indexes it.
@@ -304,7 +307,7 @@ export function channelLines(ch, o, z, now, lang, live) {
     closedOn: (ex, day) => { const cc = EXCHANGES[ex] && EXCHANGES[ex].cc, hd = cc && live && live.hol && live.hol[cc]; return !!(hd && hd.days && hd.days[day]); } }) };
   if (ch === 'weather') {
     const place = wxPlace(o, live);
-    if (!place) return { lines: [w.weather, w.pickCity], align: 'center' };
+    if (!place) return { lines: [w.weather, UNSET], align: 'center' };
     const city = (place.city || '').toUpperCase(), data = live && live.wx && live.wx[wxKey(place)];
     if (!data || data.t == null) return { lines: [city, '', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
     return weatherLines(o, city, data, z, W, lang, w, now);
@@ -315,7 +318,7 @@ export function channelLines(ch, o, z, now, lang, live) {
   }
   if (ch === 'rotating') {
     const msgs = (o.messages || []).map(m => String(m || '').trim()).filter(Boolean);
-    if (!msgs.length) return { lines: [w.noMessages], align: 'center' };
+    if (!msgs.length) return { lines: [w.messages, UNSET], align: 'center' };
     const slot = Math.floor(now / 1000 / Math.max(3, +o.interval || 8)), n = msgs.length;
     const i = o.order === 'shuffle' ? order(n, Math.floor(slot / n))[slot % n] : slot % n;
     return { lines: wrap(msgs[i].toUpperCase(), W), align: 'center' };
@@ -341,7 +344,7 @@ export function channelLines(ch, o, z, now, lang, live) {
     return { lines: [String(it.year)].concat(wrap(it.text.toUpperCase(), W).slice(0, rows)), align: 'center' };
   }
   if (ch === 'url') {
-    if (!o.url) return { lines: [w.noUrl], align: 'center' };
+    if (!o.url) return { lines: [w.web, UNSET], align: 'center' };
     const data = live && live.url && live.url[o.url];
     if (!data || !data.items) return { lines: ['', data && (data.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
     const lines = (o.header ? [String(o.header).toUpperCase()] : []).concat(data.items.slice(0, o.max || 4).map(it => applyTemplate(o.tpl, it)));
@@ -429,7 +432,7 @@ export function slSource(o, live) {
 
 function slLines(o, z, now, W, w, live) {
   const stations = slStations(o, live);
-  if (!stations.length) return { lines: ['SL', o.home ? w.nohome : w.pick], align: 'center' };
+  if (!stations.length) return { lines: ['SL', o.home ? w.nohome : UNSET], align: 'center' };
   const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null, walk = +o.walk || 0;
   // Minutes away, or the clock time in 24 h or 12 h. SL timestamps are Stockholm local.
   // 'cycle' alternates the two every six seconds, so a glance gets both.
@@ -476,7 +479,7 @@ function slLines(o, z, now, W, w, live) {
 // In a ticker row the lines are packed and page through as the ticker does.
 export function headlineLines(o, z, now, W, w, live) {
   const feeds = (Array.isArray(o.feeds) ? o.feeds : []).filter(f => f && f.url);
-  if (!feeds.length) return { lines: [w.headlines, w.pickFeed], align: 'center' };
+  if (!feeds.length) return { lines: [w.headlines, UNSET], align: 'center' };
   const per = Math.max(1, Math.min(10, +o.count || 5)), all = [];
   for (const f of feeds) {
     const d = live && live.feeds && live.feeds[f.url];
@@ -484,7 +487,7 @@ export function headlineLines(o, z, now, W, w, live) {
   }
   if (!all.length) {
     const d = live && live.feeds && live.feeds[feeds[0].url];
-    return { lines: [boardText(feeds[0].name || '').toUpperCase(), '', d && d.notAdded ? w.feedNotAdded : d && (d.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
+    return { lines: [boardText(feeds[0].name || '').toUpperCase(), '', d && d.notAdded ? w.off : d && (d.fails || 0) >= 4 ? w.nodata : w.loading], align: 'center' };
   }
   const it = all[Math.floor(now / 1000 / Math.max(5, +o.every || 10)) % all.length];
   const body = wrap(it.text, W).slice(0, Math.max(1, z.h - (z.h >= 3 ? 2 : 0)));
@@ -496,7 +499,7 @@ export function headlineLines(o, z, now, W, w, live) {
 // source. A city a day ahead of or behind this screen gets +1 or -1 after its time.
 export function worldLines(o, z, now, W, w) {
   const list = (Array.isArray(o.places) ? o.places : []).filter(p => p && p.tz).slice(0, 6);
-  if (!list.length) return { lines: [w.worldClock, w.pickCity], align: 'center' };
+  if (!list.length) return { lines: [w.worldClock, UNSET], align: 'center' };
   const here = new Date(now).getDay();
   const rows = list.map(p => {
     let t; try { t = wallIn(p.tz, now); } catch { return lr(boardText(p.city).toUpperCase(), '--:--', W); }
@@ -580,7 +583,7 @@ export function stopDeps(stop, now, fmt, live) {
 }
 function depLines(o, z, now, W, w, live) {
   const stops = depStops(o, live);
-  if (!stops.length) return { lines: [w.deps, o.near && live && live.loc ? w.loading : w.pickStop], align: 'center' };
+  if (!stops.length) return { lines: [w.deps, o.near && live && live.loc ? w.loading : UNSET], align: 'center' };
   const modes = Array.isArray(o.modes) && o.modes.length ? o.modes : null, walk = +o.walk || 0;
   const only = String(o.lines || '').toUpperCase().split(/[\s,]+/).filter(Boolean);
   const showClock = o.eta === 'clock' || (o.eta === 'cycle' && Math.floor(now / 6000) % 2 === 1);
@@ -912,4 +915,20 @@ export function vestaboard(text, rows, cols) {
   const lines = String(text || '').toUpperCase().split(/\r?\n/).map(l => l.trim().slice(0, cols)).slice(0, rows);
   while (lines.length && !lines[lines.length - 1]) lines.pop();
   return { layout: 'full', dur: 10, zones: [{ ch: 'message', o: { lines } }] };
+}
+
+// What a tile still needs before it can show anything, for the editor's hint beside it (0.10.3),
+// or null when it is set. The board itself prints only the tile's name and a dash.
+export function unsetOf(zone, live) {
+  const ch = zone && zone.ch, o = (zone && zone.o) || {};
+  if (ch === 'weather') return wxPlace(o, live) ? null : 'weather';
+  if (ch === 'rotating') return (o.messages || []).some(m => String(m || '').trim()) ? null : 'rotating';
+  if (ch === 'url') return o.url ? null : 'url';
+  if (ch === 'sl') return o.home || (o.stations && o.stations.length) || (o.sites && o.sites.length) || o.site ? null : 'sl';
+  if (ch === 'headlines') return (o.feeds || []).length ? null : 'headlines';
+  if (ch === 'worldtime') return (o.places || []).some(p => p && p.tz) ? null : 'worldtime';
+  if (ch === 'departures') return (o.stops || []).length || o.near ? null : 'departures';
+  if (ch === 'markets') return (o.symbols || []).length ? null : 'markets';
+  if (ch === 'rates') return (o.banks || []).length ? null : 'rates';
+  return null;
 }

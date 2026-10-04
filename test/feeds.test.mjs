@@ -43,7 +43,7 @@ test('the Headlines zone: the feed\'s name, then the headline wrapped, one at a 
   assert.deepEqual(headlineLines(o, { h: 6, w: 22 }, 0, 20, { headlines: 'HEADLINES' }, live).lines, ['FEED A', '', 'FIRST STORY ABOUT', 'LODZ']);
   assert.deepEqual(headlineLines(o, { h: 6, w: 22 }, 10e3, 20, {}, live).lines, ['FEED A', '', 'SECOND STORY']);
   assert.deepEqual(headlineLines(o, { h: 6, w: 22 }, 0, 20, { loading: 'LOADING' }, { feeds: {} }).lines, ['FEED A', '', 'LOADING']);
-  assert.equal(headlineLines(o, { h: 6, w: 22 }, 0, 20, { feedNotAdded: 'SIGN IN TO ADD THIS FEED' }, { feeds: { 'https://f.example/a': { notAdded: true } } }).lines[2], 'SIGN IN TO ADD THIS FEED');
+  assert.equal(headlineLines(o, { h: 6, w: 22 }, 0, 20, { off: 'NOT AVAILABLE' }, { feeds: { 'https://f.example/a': { notAdded: true } } }).lines[2], 'NOT AVAILABLE');   // 0.10.3: a state, never an instruction
 });
 
 test('a feed connection and a Headlines zone keep only fetchable addresses', () => {
