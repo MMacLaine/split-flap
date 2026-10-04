@@ -8,13 +8,15 @@
   "scripts": {
     "test": "TZ=Europe/Stockholm node --test test/*.test.mjs",
     "serve": "node _dev/serve.mjs",
-    "e2e": "node test/e2e/two-browsers.mjs && node test/e2e/navigation.mjs && node test/e2e/looking.mjs && node test/e2e/myboards.mjs && node test/e2e/place.mjs && node test/e2e/markets.mjs && node test/e2e/connections.mjs && node test/e2e/phone.mjs",
+    "e2e": "node test/e2e/two-browsers.mjs && node test/e2e/navigation.mjs && node test/e2e/looking.mjs && node test/e2e/myboards.mjs && node test/e2e/place.mjs && node test/e2e/markets.mjs && node test/e2e/connections.mjs && node test/e2e/phone.mjs && node test/e2e/looks.mjs && node test/e2e/pixels.mjs",
     "e2e:my": "node test/e2e/myboards.mjs",
     "e2e:nav": "node test/e2e/navigation.mjs",
     "e2e:look": "node test/e2e/looking.mjs",
     "e2e:place": "node test/e2e/place.mjs",
     "e2e:markets": "node test/e2e/markets.mjs",
     "e2e:connections": "node test/e2e/connections.mjs",
-    "e2e:phone": "node test/e2e/phone.mjs"
+    "e2e:phone": "node test/e2e/phone.mjs",
+    "e2e:looks": "node test/e2e/looks.mjs",
+    "e2e:pixels": "node test/e2e/pixels.mjs"
   }
 }

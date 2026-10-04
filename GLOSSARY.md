@@ -9,6 +9,9 @@ They came into the app with 0.7.0. In 0.10.0 "storyboard" became "playlist", and
 | Board | Tavla | One designed screen: a layout, its zones and their content, at its own size and theme. Kept once, in Boards. | a blueprint, `app.blueprints`, `sf_library`, the `blueprint` table; in a resolved playlist, `board.pages[i]` |
 | Boards | Tavlor | Your playlists, then every board you have. Called My boards from 0.7.1 to 0.10.0. | `my:list`, `#/my-boards` |
 | Playlist | Spellista | Boards shown in turn: which boards, in what order, how long and when each shows, and the display settings. It points at boards in Boards. Called a storyboard from 0.7 to 0.9. | `app.playlists`, `sf_playlists`, the `playlist` table; resolved with its boards as `app.boards` |
+| Look | Utseende | How a board is made: its material, type, letters, motion and wall. A board has its own, or Default, which follows the account's default look. Never "theme" or "mood". | `look`, `lookParts` on a board; `src/looks.js` |
+| Default look | Standardutseende | The look new boards start as, and every board on Default shows, chosen in Account. | settings row `look` |
+| Pinned | Fäst | A look held on one screen, over every board it shows. | `sf_look_pin`, never synced |
 | Home | Hem | The city, stops and currency new tiles start from, under Account. | `settings` row `home`, `sf_settings` |
 | Showing | Visas | This screen: what it runs now, and the first tab of the editor. | `sb:showing`, `#/showing` |
 | Previewing | Förhandsvisar | Looking at something that is not on the screen yet. The screen shows it with the gold bar, and Show on this screen makes it real. | `app.looking()` |
