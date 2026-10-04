@@ -428,7 +428,7 @@ export class Editor {
       h('div', { class: 'sf-sb-list' }, app.boards.map((bd, i) => bd.solo ? null : h('button', { class: 'sf-sb-open row', 'data-k': 'pick-sb-' + i, disabled: bd.pages.length >= 50 || bd.pages.some(p => p.id === S.bp),
         onclick: () => { this.go({ sec: 'sb', lv: 'sb', sb: bd.id, view: 'boards' }); this.E.sheet = { kind: 'add', tab: 'my', src: { kind: 'blueprint', id: S.bp } }; this.previewAdd(); app.render(); } },
         h('span', { class: 'sf-board-text' }, h('strong', null, bd.name), h('span', { class: 'sf-meta' }, bd.pages.some(p => p.id === S.bp) ? t.alreadyIn : t.sbMeta(app.sizeLabel(bd), THEMES[bd.theme].label, bd.pages.length)))))),
-      h('button', { class: 'sf-add', 'data-k': 'pick-sb-new', disabled: app.playlists.length >= MAX_PL, onclick: () => this.newPlaylistWith(S.bp) }, '+ ' + t.newStoryboard));
+      h('button', { class: 'sf-add', 'data-k': 'pick-sb-new', disabled: app.plCount() >= MAX_PL, onclick: () => this.newPlaylistWith(S.bp) }, '+ ' + t.newStoryboard));
     if (S.kind === 'copy') {
       const src = S.tplPage ? S.tplPage : app.cur().pages[S.page], here = bd => !S.tplPage && bd.pages.some(p => p.id === src.id);
       return h('div', { class: 'sf-level sf-sheet' },
@@ -449,7 +449,7 @@ export class Editor {
   }
   // A new playlist that starts with one of your boards, opened at its boards.
   newPlaylistWith(id) {
-    const app = this.app, lb = app.blueprints.find(x => x.id === id); if (!lb || app.playlists.length >= MAX_PL) return;
+    const app = this.app, lb = app.blueprints.find(x => x.id === id); if (!lb || app.plCount() >= MAX_PL) return;
     const nb = { id: newId('b'), name: this.t.newPlaylistName, size: sizeOf(lb), rows: lb.rows, cols: lb.cols, theme: lb.theme, transition: 'classic', speed: 'fast', sound: false,
       quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, pages: [Object.assign(clone(lb.page), { id: lb.id, name: lb.page.name || lb.name, wins: [], size: sizeOf(lb), rows: lb.rows, cols: lb.cols, theme: lb.theme })] };
     if (app.newPlace()) nb.loc = app.newPlace();
@@ -531,7 +531,7 @@ export class Editor {
       h('div', { class: 'sf-row nowrap' }, search, h('button', { class: 'sf-btn', 'data-k': 'my-import', onclick: () => { E.sheet = { kind: 'import', tab: 'file' }; app.render(); } }, t.importShort)),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.secStoryboards),
         plRows.length ? h('div', { class: 'sf-sb-list' }, plRows) : h('p', { class: 'sf-note' }, t.noPlaylists),
-        h('div', { class: 'sf-row' }, h('button', { class: 'sf-add', 'data-k': 'new-sb', disabled: app.playlists.length >= MAX_PL, onclick: () => this.newPlaylistWith(onNow && !onNow.missing ? onNow.id : list[0] && list[0].id) }, '+ ' + t.newStoryboard))),
+        h('div', { class: 'sf-row' }, h('button', { class: 'sf-add', 'data-k': 'new-sb', disabled: app.plCount() >= MAX_PL, onclick: () => this.newPlaylistWith(onNow && !onNow.missing ? onNow.id : list[0] && list[0].id) }, '+ ' + t.newStoryboard))),
       h('section', { class: 'sf-field' }, h('h3', { class: 'sf-eyebrow' }, t.boards),
         sizes.length > 1 ? h('div', { class: 'sf-row wrap', role: 'group', 'aria-label': t.size }, [['', t.allSizes], ...sizes.map(z => [z, z])].map(([z, label]) =>
           h('button', { class: 'sf-seg', 'aria-pressed': String((E.mySize || '') === z), 'data-k': 'my-size-' + (z ? z.replace(/\W+/g, '') : 'all'), onclick: () => { E.mySize = z; app.render(); } }, label))) : null,
@@ -1224,7 +1224,7 @@ export class Editor {
     const t = this.t, app = this.app, tp = TEMPLATES.find(x => x.id === this.E.tpl), nb = this.tplBoard(tp.id), d = app.dimsOf(nb), now = Date.now();
     return h('div', { class: 'sf-level' },
       h('p', { class: 'sf-note big' }, tp.desc[this.lang]),
-      h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'use-tpl', disabled: app.playlists.length >= MAX_PL, onclick: () => app.useTemplate(tp.id) }, t.showOn)),
+      h('div', { class: 'sf-row' }, h('button', { class: 'sf-btn primary', 'data-k': 'use-tpl', disabled: app.plCount() >= MAX_PL, onclick: () => app.useTemplate(tp.id) }, t.showOn)),
       h('p', { class: 'sf-hint' }, t.tplCopyNote),
       h('ol', { class: 'sf-pls' }, nb.pages.map((p, i) => h('li', { class: 'sf-pl tpl-row', style: `--hue:${hueOf(nb, i)}` },
         h('div', { class: 'sf-pl-open static' },

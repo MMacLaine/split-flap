@@ -54,7 +54,7 @@ export function boardFromPage(p, sb, id, old) {
 
 // A playlist's settings from a resolved one (or a storyboard), and its items from its pages.
 const SETTINGS = ['transition', 'speed', 'sound', 'soundStyle', 'volume', 'quiet', 'loc', 'roll', 'from'];
-function settingsOf(sb) { const o = {}; for (const k of SETTINGS) if (sb[k] !== undefined) o[k] = clone(sb[k]); return o; }
+export function settingsOf(sb) { const o = {}; for (const k of SETTINGS) if (sb[k] !== undefined) o[k] = clone(sb[k]); return o; }
 const itemOf = (p, id) => Object.assign({ id, dur: p.dur, wins: clone(p.wins || []) }, p.alone ? { alone: true } : {}, Number.isInteger(p.hue) ? { hue: p.hue } : {});
 
 // A playlist with its boards in place, in the shape the renderer, the week and the editor
@@ -112,6 +112,10 @@ export const soloOf = (id, playlists) => playlists.find(pl => pl.solo && pl.item
 //   or made from a template, is a one-board playlist and shows as that board
 // taken: ids that may not be used (deleted rows on the server). Nothing is dropped.
 export function migrateData(storyboards, blueprints, taken = []) {
+  // by id, so the browser (its list order) and the server (its row order) name every board
+  // the same: who keeps a shared page id, and which of two identical boards stays (0.10.1 review)
+  const byId = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  storyboards = [...storyboards].sort(byId); blueprints = [...blueprints].sort(byId);
   const library = [], byKey = new Map(), used = new Set(taken), added = [], from = {};
   for (const bp of blueprints) { if (used.has(bp.id)) continue; library.push(bp); used.add(bp.id); if (!byKey.has(contentKey(bp))) byKey.set(contentKey(bp), bp.id); }
   const playlists = [];
