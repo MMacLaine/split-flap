@@ -31,7 +31,14 @@ It prints the current bookmark. Keep it with the change. If the change goes wron
 2. Check the damage is what you think, before undoing everyone's writes since:
 
    ```sh
-   npx wrangler d1 execute split-flap --remote --command "SELECT count(*) FROM board WHERE deleted = 0"
+   npx wrangler d1 execute split-flap --remote --command "SELECT (SELECT count(*) FROM playlist WHERE deleted = 0) AS playlists, (SELECT count(*) FROM blueprint WHERE deleted = 0) AS boards"
+   ```
+
+   Count playlists and boards, not the `board` table: from 0.11.3 the old storyboard rows are removed two weeks after the version reaches an account, so `board` reads 0 for most accounts. Their copy from before 0.11.3 is the `board-before-0.11.3.sql` export, below.
+
+   ```sh
+   # kept from the 0.11.3 deploy, before the Worker went out
+   npx wrangler d1 export split-flap --remote --table board --output board-before-0.11.3.sql
    ```
 
 3. Restore:

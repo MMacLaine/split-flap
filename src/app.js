@@ -562,7 +562,14 @@ export class App {
   speedNow() { if (this.isMeter()) return 'meter'; const m = motionOf(this.lookNow()); return (m && m.speed) || this.cur().speed; }
   // The Meter (0.11.2) has its own fold and no stagger, over the page, the look and the playlist
   // The playlist's sound, or the look's material's when the playlist's is the default Clack (0.11.3)
-  soundNow() { const l = this.lookNow(), p = l.parts || partsOf(l.id) || {}; return sound.soundFor(this.cur().soundStyle, p.material); }
+  // b and l are a playlist and a look being edited: Display's preview plays that playlist's
+  // sound in its own board's material, whatever the screen shows (0.11.3 review). style is a
+  // sound just picked, before it is saved.
+  soundNow(b = this.cur(), l = null, style) {
+    if (!l) l = b === this.cur() ? this.lookNow() : this.lookOfBoard((b.pages || [])[0] || b);
+    const p = l.parts || partsOf(l.id) || {};
+    return sound.soundFor(style || b.soundStyle, p.material);
+  }
   isMeter() { const p = this.currentPage(); return !!(p && (p.zones || []).some(z => z && z.ch === 'meter')); }
   meterRunning() { return !!(this.listen && this.listen.running() && this.isMeter()); }
   // Listen shows whenever the board is a Meter or the look's light is Music
@@ -1262,7 +1269,7 @@ export class App {
     const input = h('input', {
       type: 'range', class: 'sf-vol', min: 0, max: 100, step: 5, value: v, 'aria-label': t.volume, 'data-k': 'volume',
       oninput: e => { out.textContent = e.target.value; sound.setVolume(e.target.value); },
-      onchange: e => { const nv = +e.target.value; this.upd(bb => { bb.volume = nv; }, true); if (nv > 0) sound.preview(this.soundNow()); }
+      onchange: e => { const nv = +e.target.value; this.upd(bb => { bb.volume = nv; }, true); if (nv > 0) sound.preview(this.soundNow(b)); }
     });
     return h('div', { class: 'sf-row' }, h('span', { style: 'font-size:12px;color:var(--muted);width:72px' }, t.volume), input, out);
   }
