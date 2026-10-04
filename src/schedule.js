@@ -106,7 +106,7 @@ export function blocksFor(pages, day) {
     if (f === t) { if (winDay(w, d)) out.push({ page: i, win: wi, s: 0, e: 1440 }); return; }
     if (f < t) { if (winDay(w, d)) out.push({ page: i, win: wi, s: f, e: t }); return; }
     if (winDay(w, d)) out.push({ page: i, win: wi, s: f, e: 1440, cont: 'next' });
-    if (winDay(w, addDays(d, -1))) out.push({ page: i, win: wi, s: 0, e: t, cont: 'prev' });
+    if (t > 0 && winDay(w, addDays(d, -1))) out.push({ page: i, win: wi, s: 0, e: t, cont: 'prev' });   // a time to midnight has nothing on the next day (0.11.4 review)
   }));
   out.sort((a, b) => a.s - b.s || b.e - a.e);
   const ends = [];
@@ -134,10 +134,13 @@ export function comingDates(pages, now) {
 // midnight belongs to the day it now starts on. A copy.
 const hmOf = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 export function movedWin(win, mode, dm, dd = 0, snap = 15) {
+  // the end on the same clock as the start: past midnight for an overnight time, and a whole
+  // day (from equal to to) is 1440 long, never zero (0.11.4 reviews)
   const w = Object.assign({}, win); let f = toMin(w.from), to = toMin(w.to);
+  if (to <= f) to += 1440;
   if (mode === 'move') { f += dm; to += dm; }
-  else if (mode === 'start') f = Math.min(f + dm, (to <= f ? to + 1440 : to) - snap);
-  else to = Math.max(to + dm, f + snap);
+  else if (mode === 'start') f = Math.max(to - 1440, Math.min(f + dm, to - snap));   // never longer than a day
+  else to = Math.min(f + 1440, Math.max(to + dm, f + snap));
   const k = dd + Math.floor(f / 1440);
   w.from = hmOf(f); w.to = hmOf(to);
   return shiftWin(w, k);

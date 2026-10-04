@@ -751,10 +751,11 @@ export class Editor {
   windowsEl(p) {
     const t = this.t, wins = pageWins(p);
     // every change answers in the status line, with Undo (0.11.4), as the strip's do
-    const setWins = fn => {
-      const before = clone(pageWins(p)), alone = !!p.alone, id = p.id, app = this.app;
-      app.updPage(pp => { const list = clone(pageWins(pp)); fn(list); pp.wins = list; delete pp.win; if (!list.length) delete pp.alone; });
-      app.say(t.stTimesSaved(p.name || t.page), { action: { label: t.undo, fn: () => app.upd(bb => { const q = bb.pages.find(x => x.id === id); if (!q) return; q.wins = before; delete q.win; if (alone) q.alone = true; else delete q.alone; }) } });
+    // alone, when given, is Show alone's new state, said and undone the same way (0.11.4 review 9)
+    const setWins = (fn, aloneTo) => {
+      const before = clone(pageWins(p)), alone = !!p.alone, id = p.id, app = this.app, nm = p.name || `${t.page} ${app.selIdx() + 1}`;
+      app.updPage(pp => { const list = clone(pageWins(pp)); fn(list); pp.wins = list; delete pp.win; if (aloneTo === true) pp.alone = true; else if (aloneTo === false) delete pp.alone; if (!list.length) delete pp.alone; });
+      app.say(aloneTo === undefined ? t.stTimesSaved(nm) : aloneTo ? t.aloneOn(nm) : t.aloneOff(nm), { action: { label: t.undo, fn: () => app.upd(bb => { const q = bb.pages.find(x => x.id === id); if (!q) return; q.wins = before; delete q.win; if (alone) q.alone = true; else delete q.alone; }) } });
     };
     const card = (w, i) => {
       const days = w.days && w.days.length ? w.days : [];
@@ -787,7 +788,7 @@ export class Editor {
       wins.map(card),
       wins.length < 8 ? h('div', null, h('button', { class: 'sf-link-btn', 'data-k': 'win-add', onclick: () => setWins(list => { const last = list[list.length - 1]; list.push(last ? { from: last.from, to: last.to, days: [] } : { from: '07:00', to: '09:00', days: [] }); }) }, '+ ' + t.addTime)) : null,
       wins.length ? h('div', { class: 'sf-field' },
-        h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!p.alone, 'data-k': 'win-alone', onchange: e => this.app.updPage(pp => { if (e.target.checked) pp.alone = true; else delete pp.alone; }) }), h('span', null, t.showAlone)),
+        h('label', { class: 'sf-check' }, h('input', { type: 'checkbox', checked: !!p.alone, 'data-k': 'win-alone', onchange: e => setWins(() => {}, e.target.checked) }), h('span', null, t.showAlone)),
         h('span', { class: 'sf-hint' }, t.showAloneHint)) : null
     ];
   }

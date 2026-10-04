@@ -23,8 +23,9 @@ const mouse = async (x, y0, y1) => {
   for (let k = 1; k <= 6; k++) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y: y0 + (y1 - y0) * k / 6, button: 'left', buttons: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y: y1, button: 'left', buttons: 0, clickCount: 1 }); await sleep(400);
 };
-const finger = async (x, y0, y1) => {
+const finger = async (x, y0, y1, hold = 0) => {
   await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: y0 }] });
+  if (hold) await sleep(hold);
   for (let k = 1; k <= 6; k++) { await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y0 + (y1 - y0) * k / 6 }] }); await sleep(20); }
   await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(400);
 };
@@ -48,7 +49,7 @@ try {
   await mouse(a.x, a.y, b.y);
   const day2 = await ev(`(() => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 2); return d.getDay(); })()`);
   check('drag on an empty slot adds a time', (await wins()) === JSON.stringify([{ from: '09:00', to: '11:00', days: [day2] }]), await wins());
-  check('and says so, with Undo', /now shows/.test(await st()) && !!(await ev(`String(!!document.querySelector('.sf-status [data-k=status-action], [data-k=status-line] button'))`)).match(/true/), await st());
+  check('and says so, as every week, with Undo', /^Big clock: Wednesdays 09:00 to 11:00/.test(await st()) && !!(await ev(`String(!!document.querySelector('.sf-status [data-k=status-action], [data-k=status-line] button'))`)).match(/true/), await st());
   check('the block is solid, in the strip', (await ev(`document.querySelectorAll('[data-k=strip] .sf-block.mine').length`)) === 1);
   check('the form under the strip has the same time', (await ev(`document.querySelector('[data-k=win-from-0]').value + '-' + document.querySelector('[data-k=win-to-0]').value`)) === '09:00-11:00');
   await ev(`(document.querySelector('[data-k=status-line] button') || document.querySelector('[data-k=status-action]')).click()`); await sleep(400);
@@ -58,7 +59,15 @@ try {
   await shot('d-strip-time');
 
   // drag the bottom edge: a later end
+  // a two-hour block's middle moves it; then a one-hour one's (0.11.4 review)
   let bl = await box(`[data-k=strip-0-2]`);
+  await mouse(bl.x, bl.bottom - 2, bl.bottom - 2 - 14);
+  bl = await box(`[data-k=strip-0-2]`);
+  await mouse(bl.x, (bl.top + bl.bottom) / 2, (bl.top + bl.bottom) / 2 + 28);
+  check('the middle of a one-hour block moves it: 28 px is two hours', JSON.stringify(JSON.parse(await wins())[0]).includes('"from":"11:00","to":"12:00"'), await wins());
+  await ev(`(document.querySelector('[data-k=status-line] button')).click()`); await sleep(400);
+  await ev(`(document.querySelector('[data-k=status-line] button')).click()`); await sleep(400);
+  bl = await box(`[data-k=strip-0-2]`);
   await mouse(bl.x, bl.bottom - 2, bl.bottom - 2 + 14);
   check('drag an edge to change the end', JSON.parse(await wins())[0].to === '12:00', await wins());
   bl = await box(`[data-k=strip-0-2]`);
@@ -92,7 +101,7 @@ try {
   // tap a block: a card to edit or remove it
   bl = await box(`[data-k=strip-0-2]`);
   await mouse(bl.x, (bl.top + bl.bottom) / 2, (bl.top + bl.bottom) / 2);
-  check('a tap on a block opens its card', (await ev(`String(!!document.querySelector('[data-k=strip-card]'))`)) === 'true');
+  check('a tap on a block opens its card, with focus on its heading, not the time', (await ev(`String(!!document.querySelector('[data-k=strip-card]'))`)) === 'true' && (await ev(`document.activeElement.dataset.k`)) === 'strip-card-title');
   await shot('d-strip-card');
   await ev(`(() => { const i = document.querySelector('[data-k=strip-card-to]'); i.value = '13:30'; i.dispatchEvent(new Event('change', { bubbles: true })); })()`); await sleep(400);
   check('the card changes the end', JSON.parse(await wins())[0].to === '13:30', await wins());
@@ -102,6 +111,24 @@ try {
   check('Undo puts it back', JSON.parse(await wins()).length === 1);
   await ev(`document.querySelector('[data-k=strip-0-2]').focus()`); await key('Delete');
   check('Delete on a focused block removes it', (await wins()) === '[]');
+  // Done gives focus back to the block; Show alone says what it did, with Undo
+  a = await at(2, 540); b = await at(2, 600); await mouse(a.x, a.y, b.y);
+  bl = await box(`[data-k=strip-0-2]`); await mouse(bl.x, (bl.top + bl.bottom) / 2, (bl.top + bl.bottom) / 2);
+  await ev(`document.querySelector('[data-k=strip-card-done]').click()`); await sleep(300);
+  check('Done returns focus to the block', (await ev(`document.activeElement.dataset.k`)) === 'strip-0-2', await ev(`document.activeElement.dataset.k`));
+  check('the faint boards are named under the strip', /^Faint: /.test(await ev(`(document.querySelector('[data-k=strip-others]') || {}).textContent || ''`)) && (await ev(`document.querySelector('[data-k=strip]').getAttribute('role')`)) === 'group');
+  check('the block says 09:00 to 10:00, no dash', /09:00 to 10:00/.test(await ev(`document.querySelector('[data-k=strip-0-2]').textContent`)));
+  await ev(`document.querySelector('[data-k=win-alone]').click()`); await sleep(400);
+  check('Show alone answers in the status line, with Undo', /shows alone/.test(await st()) && (await ev('String(!!splitFlap.cur().pages[1].alone)')) === 'true', await st());
+  await ev(`document.querySelector('[data-k=status-line] button').click()`); await sleep(400);
+  check('and Undo turns it off again', (await ev('String(!!splitFlap.cur().pages[1].alone)')) === 'false');
+  await ev(`document.querySelector('[data-k=strip-0-2]').focus()`); await key('Delete');
+  // a week ahead: a drag there is every week, and says so
+  await ev(`document.querySelector('[data-k=strip-next]').click()`); await sleep(300);
+  a = await at(1, 540); b = await at(1, 600); await mouse(a.x, a.y, b.y);
+  check('a drag in a week ahead says it is every week', /: Tuesdays 09:00 to 10:00/.test(await st()), await st());
+  await ev(`document.querySelector('[data-k=status-line] button').click()`); await sleep(300);
+  await ev(`document.querySelector('[data-k=strip-prev]').click()`); await sleep(300);
   await ev('splitFlap.toggleEdit()'); await sleep(300);
 
   // a phone: one day with arrows, a finger draws a time, and the page doesn't scroll
@@ -113,12 +140,31 @@ try {
   await ev(`document.querySelector('[data-k=strip-next]').click()`); await sleep(300);
   check('the arrows go a day on', (await ev(`+document.querySelector('[data-k=strip] .sf-day-col').dataset.day`)) === (k0 + 1) % 7);
   await ev(`document.querySelector('[data-k=strip-prev]').click()`); await sleep(300);
+  check('the phone hint says tap and hold', /Tap to add an hour, hold to draw/.test(await ev(`document.querySelector('[data-k=strip]').textContent`)));
+  const scrollTop = () => ev(`(document.querySelector('[data-k=strip]').closest('.sf-panel-body') || document.scrollingElement).scrollTop`);
+  // a swipe over the strip scrolls the page and saves nothing (the coordinator's decision)
+  a = await at(k0, 900); b = await at(k0, 300);
+  const sw0 = await scrollTop(); await finger(a.x, a.y, b.y); const sw1 = await scrollTop();
+  check('a swipe over the strip scrolls and saves nothing', (await wins()) === '[]' && sw1 !== sw0, `${await wins()} ${sw0} ${sw1}`);
+  // a tap adds an hour
+  a = await at(k0, 300);
+  await finger(a.x, a.y, a.y);
+  const tapped = JSON.parse(await wins());
+  check('a tap adds an hour', tapped.length === 1 && tapped[0].from === '05:00' && tapped[0].to === '06:00', await wins());
+  check('a phone has no second row of days', (await ev(`String(!document.querySelector('[data-k=strip] .sf-strip-days'))`)) === 'true');
+  // a finger on the middle of that hour moves it
+  bl = await box(`[data-k=strip] .sf-block.mine`);
+  await finger(bl.x, (bl.top + bl.bottom) / 2, (bl.top + bl.bottom) / 2 + 28);
+  check('a finger on the middle of a one-hour block moves it', JSON.parse(await wins())[0].from === '07:00' && JSON.parse(await wins())[0].to === '08:00', await wins());
+  await ev(`(document.querySelector('[data-k=status-line] button')).click()`); await sleep(400);
+  await ev(`(document.querySelector('[data-k=status-line] button')).click()`); await sleep(400);
+  // a hold and then a draw: the time, and the page holds still under it
   a = await at(k0, 600); b = await at(k0, 720);
-  const scroll0 = await ev(`(document.querySelector('[data-k=strip]').closest('.sf-panel-body') || document.scrollingElement).scrollTop`);
-  await finger(a.x, a.y, b.y);
-  const scroll1 = await ev(`(document.querySelector('[data-k=strip]').closest('.sf-panel-body') || document.scrollingElement).scrollTop`);
-  check('a finger drags a time on a phone', JSON.parse(await wins()).length === 1 && JSON.parse(await wins())[0].from === '10:00' && JSON.parse(await wins())[0].to === '12:00', await wins());
-  check('with no scroll fight: the panel scrolls, but not under the drag', scroll0 === scroll1 && (await ev(`(() => { const p = document.querySelector('[data-k=strip]').closest('.sf-panel-body'); return p && p.scrollHeight > p.clientHeight; })()`)) === true, `${scroll0} ${scroll1}`);
+  const scroll0 = await scrollTop();
+  await finger(a.x, a.y, b.y, 450);
+  const scroll1 = await scrollTop();
+  check('a hold then a drag draws a time on a phone', JSON.parse(await wins()).length === 1 && JSON.parse(await wins())[0].from === '10:00' && JSON.parse(await wins())[0].to === '12:00', await wins());
+  check('and the page holds still while it draws', scroll0 === scroll1, `${scroll0} ${scroll1}`);
   await shot('p-strip');
   bl = await box(`[data-k=strip] .sf-block.mine`);
   await finger(bl.x, bl.bottom - 3, bl.bottom - 3 + 14);

@@ -11,7 +11,7 @@ const HUES = [250, 190, 145, 35, 300, 0, 85, 110];
 export const hueOf = (b, i) => { const p = b.pages && b.pages[i]; return p && Number.isInteger(p.hue) ? p.hue : HUES[i % HUES.length]; };
 // The first colour no board in the storyboard has yet, for a board being added.
 export function nextHue(b) { const used = new Set((b.pages || []).map((p, i) => hueOf(b, i))); return HUES.find(x => !used.has(x)) ?? HUES[(b.pages || []).length % HUES.length]; }
-const SNAP = 15, DAY = 1440;
+const SNAP = 15, DAY = 1440, HOLD_MS = 300;
 const hm = m => { m = ((Math.round(m) % DAY) + DAY) % DAY; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 const snap = m => Math.round(m / SNAP) * SNAP;
 const monday = (now, off) => { const d = new Date(now); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + off * 7); return d; };
@@ -97,8 +97,8 @@ export function weekView(ed) {
       const label = x.cont === 'prev' ? t.fromYesterday : `${w.from} ${t.to} ${w.to}`;
       const px = (x.e - x.s) / 60 * H;
       return h('button', { class: 'sf-block' + (p.alone ? ' alone' : '') + (x.cont ? ' cont-' + x.cont : '') + (px < 30 ? ' short' : ''), style: `--hue:${hueOf(b, x.page)};top:${x.s / 60 * H}px;height:${Math.max(12, (x.e - x.s) / 60 * H - 2)}px;left:calc(${x.lane * lw}% + 2px);width:calc(${lw}% - 4px)`,
-        'data-k': `block-${x.page}-${x.win}-${k}${x.cont === 'prev' ? '-p' : ''}`, 'data-page': x.page, 'data-win': x.win, 'aria-label': `${name(t, p, x.page)}, ${ed.winLabel(w)}${p.alone ? ', ' + t.aloneTag : ''}`,
-        onpointerdown: e => dragBlock(ed, e, x, k, H, phone), onkeydown: e => blockKey(ed, e, x) },
+        'data-k': `block-${x.page}-${x.win}-${k}${x.cont === 'prev' ? '-p' : ''}`, 'data-page': x.page, 'data-win': x.win, 'data-day': k, 'aria-label': `${name(t, p, x.page)}, ${ed.winLabel(w)}${p.alone ? ', ' + t.aloneTag : ''}`,
+        onpointerdown: e => dragBlock(ed, e, x, k, H, phone), onkeydown: e => blockKey(ed, e, Object.assign({}, x, { day: k })) },
         h('strong', null, name(t, p, x.page)), px >= 30 ? h('span', null, label) : null, p.alone && px >= 48 ? h('span', { class: 'sf-tag' }, t.aloneTag) : null);
     });
     const nowMin = new Date(now).getHours() * 60 + new Date(now).getMinutes();
@@ -133,7 +133,14 @@ function setWin(ed, i, wi, fn, msg) {
   const p1 = app.cur().pages[i];
   app.say(msg(name(t, p1, i), pageWins(p1)), { action: { label: t.undo, fn: () => app.upd(bb => { const p = bb.pages.find(x => x.id === id); if (!p) return; p.wins = before; delete p.win; if (alone) p.alone = true; else delete p.alone; }) } });
 }
-const said = (ed, kind, wi) => (bd, list) => { const t = ed.t, w = list[wi < 0 ? list.length - 1 : wi]; return kind === 'rm' ? t.stTimeRemoved(bd) : t[kind === 'add' ? 'stTimeAdded' : 'stTimeChanged'](bd, w ? ed.winLabel(w) : ''); };
+// "Big clock: Wednesdays 09:00 to 11:00": a time on one weekday reads as every week, which is
+// what it is, even when the strip shows a week ahead (0.11.4 review 6 and 11)
+export function winSay(ed, w) {
+  const t = ed.t;
+  if (!w.date && Array.isArray(w.days) && w.days.length === 1) { const d = t.dayPlural[w.days[0]]; return `${d[0].toUpperCase() + d.slice(1)} ${w.from} ${t.to} ${w.to}`; }
+  return ed.winLabel(w);
+}
+const said = (ed, kind, wi) => (bd, list) => { const t = ed.t, w = list[wi < 0 ? list.length - 1 : wi]; return kind === 'rm' ? t.stTimeRemoved(bd) : t[kind === 'add' ? 'stTimeAdded' : 'stTimeChanged'](bd, w ? winSay(ed, w) : ''); };
 // Drag down an empty part of a day: a time from where you pressed to where you let go.
 // o.strip is a board's own strip (0.11.4): the time is this board's at once, and a finger
 // draws too, since the strip's days take no scrolling (touch-action: none).
@@ -150,9 +157,22 @@ function dragNew(ed, e, day, H, o = {}) {
     addEventListener('pointerup', up); addEventListener('pointercancel', up);
     return;
   }
-  e.preventDefault();
   const col = e.currentTarget, top = col.getBoundingClientRect().top, at = y => Math.max(0, Math.min(DAY, snap((y - top) / H * 60)));
   const s0 = Math.min(DAY - SNAP, at(e.clientY)), y0 = e.clientY; let e0 = s0 + 60, moved = false;
+  // a finger in the strip (0.11.4 review): a tap adds an hour, a swipe scrolls the page (the day
+  // is pan-y), and drawing starts only after a hold, when the touch's moves stop scrolling
+  if (e.pointerType === 'touch') {
+    let drawing = false, gone = false; const ghost = h('span', { class: 'sf-block ghost', style: `top:${s0 / 60 * H}px;height:${H}px;left:2px;right:2px` });
+    const hold = setTimeout(() => { if (gone) return; drawing = true; col.append(ghost); }, HOLD_MS);
+    const tm = ev => { if (drawing) ev.preventDefault(); };
+    const done = () => { clearTimeout(hold); ghost.remove(); col.removeEventListener('touchmove', tm); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+    const mv = ev => { if (!drawing) { if (Math.abs(ev.clientY - y0) > 8) { gone = true; done(); } return; } e0 = Math.max(s0 + SNAP, at(ev.clientY)); ghost.style.height = `${(e0 - s0) / 60 * H}px`; };
+    const up = ev => { done(); if (gone || ev.type === 'pointercancel') return; o.add(s0, Math.min(DAY, drawing ? e0 : s0 + 60)); };
+    col.addEventListener('touchmove', tm, { passive: false });
+    addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    return;
+  }
+  e.preventDefault();
   const ghost = h('span', { class: 'sf-block ghost', style: `top:${s0 / 60 * H}px;height:${H}px;left:2px;right:2px` }); col.append(ghost);
   const mv = ev => { if (Math.abs(ev.clientY - y0) > 4) moved = true; if (!moved) return; e0 = Math.max(s0 + SNAP, at(ev.clientY)); ghost.style.height = `${(e0 - s0) / 60 * H}px`; };
   const up = ev => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); ghost.remove();
@@ -167,7 +187,7 @@ function dragNew(ed, e, day, H, o = {}) {
 // own strip the card to edit or remove the time.
 function dragBlock(ed, e, x, day, H, phone, o = {}) {
   if (e.button > 0) return;
-  const tap = () => (o.strip ? openStripCard(ed, x.win) : ed.openBoard(x.page, 'week'));
+  const tap = () => (o.strip ? openStripCard(ed, x.win, day) : ed.openBoard(x.page, 'week'));
   if (e.pointerType === 'touch' && !o.strip) {   // in the week, on touch: a tap opens the board, a swipe scrolls
     const y0 = e.clientY, t0 = Date.now();
     const up = ev => { removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
@@ -177,7 +197,9 @@ function dragBlock(ed, e, x, day, H, phone, o = {}) {
   }
   e.preventDefault(); e.stopPropagation();
   const el = e.currentTarget, r = el.getBoundingClientRect(), y0 = e.clientY, x0 = e.clientX;
-  const edge = e.pointerType === 'touch' ? 10 : 6;   // a finger gets a wider edge
+  // a finger gets a wider edge, but never more than a third of the block, so a short block
+  // still has a middle to move it by (0.11.4 review)
+  const edge = Math.min(e.pointerType === 'touch' ? 10 : 6, Math.max(3, Math.floor(r.height / 3)));
   const mode = x.cont === 'prev' ? (r.bottom - e.clientY < edge ? 'end' : 'move') : x.cont === 'next' ? (e.clientY - r.top < edge ? 'start' : 'move')
     : e.clientY - r.top < edge ? 'start' : r.bottom - e.clientY < edge ? 'end' : 'move';
   const colW = el.parentElement.getBoundingClientRect().width;
@@ -207,10 +229,14 @@ function blockKey(ed, e, x) {
   const k = e.key, sh = e.shiftKey;
   const act = k === 'ArrowUp' ? () => moveWin(ed, x, sh ? 'end' : 'move', -SNAP, 0) : k === 'ArrowDown' ? () => moveWin(ed, x, sh ? 'end' : 'move', SNAP, 0)
     : k === 'ArrowLeft' ? () => moveWin(ed, x, 'move', 0, -1) : k === 'ArrowRight' ? () => moveWin(ed, x, 'move', 0, 1)
-    : k === 'Enter' ? () => (x.strip ? openStripCard(ed, x.win) : ed.openBoard(x.page, 'week')) : k === 'Delete' || k === 'Backspace' ? () => setWin(ed, x.page, x.win, list => { list.splice(x.win, 1); }, said(ed, 'rm')) : null;
+    : k === 'Enter' ? () => (x.strip ? openStripCard(ed, x.win, x.day) : ed.openBoard(x.page, 'week')) : k === 'Delete' || k === 'Backspace' ? () => setWin(ed, x.page, x.win, list => { list.splice(x.win, 1); }, said(ed, 'rm')) : null;
   if (!act) return;
   e.preventDefault(); act();
-  if (k !== 'Enter' && k !== 'Delete' && k !== 'Backspace') { const el = ed.app.drawer && ed.app.drawer.querySelector(`[data-page="${x.page}"][data-win="${x.win}"]`); if (el) el.focus(); }
+  // focus stays on the block that moved, on its day (left and right move it a day)
+  if (k !== 'Enter' && k !== 'Delete' && k !== 'Backspace') {
+    const dr = ed.app.drawer, day = (x.day + (k === 'ArrowLeft' ? -1 : k === 'ArrowRight' ? 1 : 0) + 7) % 7, sel = `[data-page="${x.page}"][data-win="${x.win}"]`;
+    const el = dr && (dr.querySelector(`${sel}[data-day="${day}"]`) || dr.querySelector(sel)); if (el) el.focus();
+  }
 }
 // The card after a drag or + Add a time: which board shows then, and its day and times.
 function timeCard(ed, days) {
@@ -258,8 +284,8 @@ export function weekStrip(ed, i) {
     h('strong', null, phone ? `${t.dayShort[days[E.stripDay].getDay()]} ${days[E.stripDay].getDate()} ${t.monthShort[days[E.stripDay].getMonth()]}` : t.weekOf(ed.dayLabel(days[0]), ed.dayLabel(days[6]))),
     h('button', { class: 'sf-icon', 'aria-label': phone ? t.nextDay : t.nextWeek, 'data-k': 'strip-next', onclick: () => step(1) }, '›'),
     h('span', { class: 'sf-grow' }),
-    h('span', { class: 'sf-hint' }, full ? t.maxTimes : t.stripHint));
-  const heads = h('div', { class: 'sf-strip-days' + (phone ? ' one' : '') }, h('span'), ks.map(k => h('span', { class: sameDay(days[k], new Date(now)) ? 'today' : '' }, `${t.dayShort[days[k].getDay()]} ${days[k].getDate()}`)));
+    h('span', { class: 'sf-hint' }, full ? t.maxTimes : phone ? t.stripHintTouch : t.stripHint));
+  const heads = phone ? null : h('div', { class: 'sf-strip-days' }, h('span'), ks.map(k => h('span', { class: sameDay(days[k], new Date(now)) ? 'today' : '' }, `${t.dayShort[days[k].getDay()]} ${days[k].getDate()}`)));
   const hours = h('div', { class: 'sf-hours', 'aria-hidden': 'true' }, [0, 6, 12, 18].map(k => h('span', { style: `top:${k * H}px` }, String(k).padStart(2, '0'))));
   const cols = ks.map(k => {
     const d = days[k], isToday = sameDay(d, new Date(now));
@@ -267,33 +293,44 @@ export function weekStrip(ed, i) {
       const q = b.pages[x.page], w = pageWins(q)[x.win], mine = x.page === i, lw = 100 / x.lanes;
       const style = `--hue:${hueOf(b, x.page)};top:${x.s / 60 * H}px;height:${Math.max(6, (x.e - x.s) / 60 * H - 1)}px;left:calc(${x.lane * lw}% + 1px);width:calc(${lw}% - 2px)`;
       if (!mine) return h('span', { class: 'sf-block faint', style, 'aria-hidden': 'true', title: name(t, q, x.page) });
-      const sx = Object.assign({}, x, { strip: true });
-      return h('button', { class: 'sf-block mine' + (x.cont ? ' cont-' + x.cont : ''), style, 'data-k': `strip-${x.win}-${k}${x.cont === 'prev' ? '-p' : ''}`, 'data-page': x.page, 'data-win': x.win,
+      const sx = Object.assign({}, x, { strip: true, day: k });
+      return h('button', { class: 'sf-block mine' + (x.cont ? ' cont-' + x.cont : ''), style, 'data-k': `strip-${x.win}-${k}${x.cont === 'prev' ? '-p' : ''}`, 'data-page': x.page, 'data-win': x.win, 'data-day': k,
         'aria-label': `${ed.winLabel(w)}. ${t.stripBlockHelp}`,
         onpointerdown: e => dragBlock(ed, e, sx, k, H, phone, { strip: true }), onkeydown: e => blockKey(ed, e, sx) },
-        (x.e - x.s) / 60 * H >= 14 ? h('span', null, x.cont === 'prev' ? t.fromYesterday : `${w.from}–${w.to}`) : null);
+        (x.e - x.s) / 60 * H >= 14 ? h('span', null, x.cont === 'prev' ? t.fromYesterday : `${w.from} ${t.to} ${w.to}`) : null);
     });
     return h('div', { class: 'sf-day-col strip' + (isToday ? ' today' : ''), 'data-day': k, 'data-k': 'strip-day-' + k, style: `height:${24 * H}px`,
       onpointerdown: e => { if (e.target === e.currentTarget) dragNew(ed, e, k, H, { strip: true, add: (s, en) => add(k, s, en) }); } }, blocks);
   });
-  return h('div', { class: 'sf-strip', 'data-k': 'strip' },
+  // the faint boards by name, since their blocks can't be pointed at (0.11.4 review 12)
+  const others = b.pages.map((q, j) => j !== i && pageWins(q).length ? name(t, q, j) : null).filter(Boolean);
+  const label = `${t.whenShows}, ${phone ? `${t.dayShort[days[E.stripDay].getDay()]} ${days[E.stripDay].getDate()} ${t.monthShort[days[E.stripDay].getMonth()]}` : t.weekOf(ed.dayLabel(days[0]), ed.dayLabel(days[6]))}`;
+  return h('div', { class: 'sf-strip', 'data-k': 'strip', role: 'group', 'aria-label': label },
     head, heads, h('div', { class: 'sf-week-grid sf-strip-grid' + (phone ? ' one' : ''), style: `height:${24 * H}px` }, hours, cols),
+    others.length ? h('span', { class: 'sf-hint', 'data-k': 'strip-others' }, t.stripOthers(others.join(', '))) : null,
     E.stripCard ? stripCard(ed, i) : null);
 }
-function openStripCard(ed, wi) { ed.E.stripCard = { win: wi }; ed.app.render(); const el = ed.app.drawer && ed.app.drawer.querySelector('[data-k=strip-card-from]'); if (el) el.focus(); }
+// The card takes focus on its heading, not the From input, so iOS doesn't raise the time wheel
+// on a tap; Done and Remove give focus back to the block, or the day (0.11.4 review 15)
+function openStripCard(ed, wi, day) { const p = ed.app.cur().pages[ed.app.selIdx()]; ed.E.stripCard = { win: wi, page: p && p.id, day }; ed.app.render(); const el = ed.app.drawer && ed.app.drawer.querySelector('[data-k=strip-card-title]'); if (el) el.focus(); }
+function backToStrip(ed, wi, day) {
+  const dr = ed.app.drawer; if (!dr) return;
+  const el = dr.querySelector(`[data-k=strip] [data-win="${wi}"][data-day="${day}"]`) || dr.querySelector('[data-k=strip] .sf-block.mine') || dr.querySelector(`[data-k=strip-day-${day}]`);
+  if (el) { if (!el.hasAttribute('tabindex') && el.tagName !== 'BUTTON') el.setAttribute('tabindex', '-1'); el.focus(); }
+}
 // The card for one time in the strip: its start and end, Remove and Done. The form below
 // has the days and dates.
 function stripCard(ed, i) {
-  const t = ed.t, app = ed.app, C = ed.E.stripCard, p = app.cur().pages[i], w = p && pageWins(p)[C.win];
+  const t = ed.t, app = ed.app, C = ed.E.stripCard, p = app.cur().pages[i], w = p && p.id === C.page && pageWins(p)[C.win];   // another board's card is never shown
   if (!w) { ed.E.stripCard = null; return null; }
   const set = fn => setWin(ed, i, C.win, list => { fn(list[C.win]); }, said(ed, 'move', C.win));
   return h('div', { class: 'sf-card sf-pop', role: 'dialog', 'aria-label': ed.winLabel(w), 'data-k': 'strip-card' },
-    h('strong', null, ed.winLabel(w)),
+    h('strong', { tabindex: '-1', 'data-k': 'strip-card-title' }, ed.winLabel(w)),
     h('div', { class: 'sf-row' },
       h('input', { type: 'time', class: 'sf-time', value: w.from, 'aria-label': t.from, 'data-k': 'strip-card-from', onchange: e => { if (e.target.value) set(ww => { ww.from = e.target.value; }); } }),
       h('span', { class: 'sf-label muted' }, t.to),
       h('input', { type: 'time', class: 'sf-time', value: w.to, 'aria-label': t.to, 'data-k': 'strip-card-to', onchange: e => { if (e.target.value) set(ww => { ww.to = e.target.value; }); } })),
     h('div', { class: 'sf-row' },
-      h('button', { class: 'sf-btn', 'data-k': 'strip-card-rm', onclick: () => { ed.E.stripCard = null; setWin(ed, i, C.win, list => { list.splice(C.win, 1); }, said(ed, 'rm')); app.render(); } }, t.removeTime),
-      h('button', { class: 'sf-btn primary', 'data-k': 'strip-card-done', onclick: () => { ed.E.stripCard = null; app.render(); } }, t.done)));
+      h('button', { class: 'sf-btn', 'data-k': 'strip-card-rm', onclick: () => { ed.E.stripCard = null; setWin(ed, i, C.win, list => { list.splice(C.win, 1); }, said(ed, 'rm')); app.render(); backToStrip(ed, -1, C.day); } }, t.removeTime),
+      h('button', { class: 'sf-btn primary', 'data-k': 'strip-card-done', onclick: () => { ed.E.stripCard = null; app.render(); backToStrip(ed, C.win, C.day); } }, t.done)));
 }
