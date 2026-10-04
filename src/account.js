@@ -353,6 +353,10 @@ export class Account {
   offerConn() { return this.cn.state.offer || []; }
   offerCount() { return this.offer.length + this.offerMy().length + this.offerConn().length; }
   answerOffer(keep) {
+    // a one-board playlist is not shown in the offer: it goes with its board (0.10.1)
+    for (const id of this.offer) { const pl = this.app.playlists.find(x => x.id === id); if (pl && pl.solo) { if (this.unticked.has(pl.items[0].id)) this.unticked.add(id); else this.unticked.delete(id); } }
+    // and a playlist taken takes the boards it shows, so it never arrives blank on another device
+    if (keep) for (const id of this.offer) { const pl = this.app.playlists.find(x => x.id === id); if (pl && !this.unticked.has(id)) for (const it of pl.items) this.unticked.delete(it.id); }
     const one = (st, list) => {
       const take = keep ? list.filter(id => !this.unticked.has(id)) : [], leave = list.filter(id => !take.includes(id));
       if (take.length) st = adopt(st, take, this.user.id);
