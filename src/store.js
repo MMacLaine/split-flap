@@ -14,7 +14,10 @@ import { COINS } from './content.js';
 import { STOP_ID } from './transit.js';
 import { feedUrl } from './feeds.js';
 
-const K = { boards: 'sf_boards', active: 'sf_active', my: 'sf_myboards' };
+// Before 0.10.1: storyboards (sf_boards, sf_active) and My boards (sf_myboards). They are
+// read once, by the migration, and never written again, so a tab still running 0.10.0
+// and a 0.10.1 tab never talk through the same key.
+const K = { boards: 'sf_boards', active: 'sf_active', my: 'sf_myboards', library: 'sf_library', playlists: 'sf_playlists', shown: 'sf_shown', settings: 'sf_settings' };
 const SIZES = ['6x22', '3x15', '12x40', 'fill', 'custom'];
 const THEMES = ['black', 'white', 'solari'];
 const SPEEDS = ['fast', 'gentle', 'authentic'];
@@ -179,15 +182,76 @@ function sanitizePage(p, withTimes = true) {
   const base = { id: str(p && p.id, 40) || newId('p'), name: str(p && p.name, 80), layout, dur: int(p && p.dur, 3, 3600, 10) };
   const extra = { ...(TRANSITIONS.includes(p && p.tr) ? { tr: p.tr } : {}), ...hueOf(p && p.hue), ...origin(p && p.from) };
   if (!withTimes) return Object.assign(base, extra, { zones });
+  // 0.10.1: a board in a playlist has its own size and theme, so a link carries them. A page
+  // without them is at its storyboard's size, as before.
+  if (p && SIZES.includes(p.size)) Object.assign(extra, { size: p.size, rows: int(p.rows, 1, 24, 6), cols: int(p.cols, 4, 60, 22) });
+  if (p && THEMES.includes(p.theme)) extra.theme = p.theme;
   const wins = sanitizeWins(p);
   return Object.assign(base, { wins, win: legacyWin(wins) }, p && p.alone === true && wins.length ? { alone: true } : {}, extra, { zones });
 }
 // A blueprint in My boards (0.7.1): one board with the size and theme it was made at.
+// From 0.10.1 every board is one of these, in your Boards, and may say its size by name
+// (fill follows the screen); one without a size is at its rows and columns.
 export function sanitizeBlueprint(x) {
   if (!x || typeof x !== 'object' || !x.page || typeof x.page !== 'object') return null;
   return { id: str(x.id, 40) || newId('m'), name: str(x.name, 80) || str(x.page.name, 80) || 'Board',
+    ...(SIZES.includes(x.size) ? { size: x.size } : {}),
     rows: int(x.rows, 1, 24, 6), cols: int(x.cols, 4, 60, 22), theme: pick(x.theme, THEMES, 'black'),
     ...origin(x.from), page: sanitizePage(x.page, false) };
+}
+// A board's size by name: the one it says, else the preset its rows and columns match.
+export function sizeOf(x) {
+  if (x && SIZES.includes(x.size)) return x.size;
+  const k = `${x && x.rows}x${x && x.cols}`;
+  return ['6x22', '3x15', '12x40'].includes(k) ? k : 'custom';
+}
+// Rows and columns for a size by name. Fill has no fixed answer: the app measures the screen.
+export function dimsOfSize(x) {
+  const s = sizeOf(x);
+  if (s === 'custom' || s === 'fill') return { rows: int(x.rows, 1, 24, 6), cols: int(x.cols, 4, 60, 22) };
+  const [r, c] = s.split('x').map(Number); return { rows: r, cols: c };
+}
+// A playlist (0.10.1): its settings, and the boards it shows by id, each with its times.
+export function sanitizePlaylist(x) {
+  if (!x || typeof x !== 'object' || !Array.isArray(x.items)) return null;
+  const q = (x.quiet && typeof x.quiet === 'object') ? x.quiet : {}, seen = new Set();
+  const items = x.items.slice(0, 50).map(it => {
+    const id = it && typeof it === 'object' ? str(it.id, 40) : '';
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(id) || seen.has(id)) return null;
+    seen.add(id);
+    const wins = sanitizeWins(it);
+    return Object.assign({ id, dur: int(it.dur, 3, 3600, 10), wins }, it.alone === true && wins.length ? { alone: true } : {}, hueOf(it.hue));
+  }).filter(Boolean);
+  return {
+    id: str(x.id, 40) || newId('b'), name: str(x.name, 80) || 'Playlist',
+    ...(x.solo === true && items.length === 1 ? { solo: true } : {}),
+    transition: pick(x.transition, TRANSITIONS, 'classic'), speed: pick(x.speed, SPEEDS, 'fast'),
+    sound: !!x.sound, soundStyle: pick(x.soundStyle, PROFILE_IDS, 'clack'), volume: int(x.volume, 0, 100, 70),
+    ...(typeof x.from === 'string' && /^[a-z]{2,12}$/.test(x.from) ? { from: x.from } : {}),
+    quiet: { on: !!q.on, from: time(q.from, '23:00'), to: time(q.to, '07:00'), mode: q.mode === 'blank' ? 'blank' : 'dim' },
+    ...(x.loc && typeof x.loc === 'object' && place(x.loc) ? { loc: place(x.loc) } : {}),
+    ...(x.roll && (x.roll.start === true || x.roll.hourly === true) ? { roll: { start: x.roll.start === true, hourly: x.roll.hourly === true } } : {}),
+    items
+  };
+}
+// Settings kept with the account (0.10.1), one row each: home (the city, stops and currency
+// new tiles start from) and last (what this account last put on a screen).
+export function sanitizeSettings(x) {
+  if (!x || typeof x !== 'object') return null;
+  if (x.id === 'home') {
+    const stops = (Array.isArray(x.stops) ? x.stops : []).slice(0, 4).map(s => {
+      if (!s || typeof s !== 'object') return null;
+      if (s.src === 'sl') { const id = int(s.id, 1, 99999999, null); return id ? { src: 'sl', id, name: str(s.name, 80) } : null; }
+      return s.src === 'tr' && STOP_ID.test(s.id || '') ? { src: 'tr', id: s.id, name: str(s.name, 80) } : null;
+    }).filter(Boolean);
+    return Object.assign({ id: 'home' }, x.place && typeof x.place === 'object' && place(x.place) ? { place: place(x.place) } : {},
+      { stops }, FX_CURRENCIES.includes(x.cur) ? { cur: x.cur } : {});
+  }
+  if (x.id === 'last') {
+    const pl = str(x.pl, 40);
+    return /^[A-Za-z0-9_-]{1,40}$/.test(pl) ? { id: 'last', pl, name: str(x.name, 80), at: int(x.at, 0, 1e14, 0) } : null;
+  }
+  return null;
 }
 export function sanitizeBoard(b) {
   if (!b || typeof b !== 'object' || !Array.isArray(b.pages)) return null;
@@ -228,6 +292,18 @@ export function saveBoards(boards, active) {
   try { s.setItem(K.boards, JSON.stringify(boards)); s.setItem(K.active, String(active)); } catch { /* storage full or blocked: the board still runs */ }
 }
 export function saveActiveOnly(active) { try { ls().setItem(K.active, String(active)); } catch { /* storage blocked */ } }
+
+// --- 0.10.1: the library, the playlists, what this screen shows, and the settings ---
+const loadList = (key, ok) => { let raw; try { raw = JSON.parse(ls().getItem(key)); } catch { return null; } if (!Array.isArray(raw)) return null; return raw.map(x => { try { return ok(x); } catch { return null; } }).filter(Boolean); };
+export const loadLibrary = () => loadList(K.library, sanitizeBlueprint);
+export const loadPlaylists = () => loadList(K.playlists, sanitizePlaylist);
+export const loadSettings = () => loadList(K.settings, sanitizeSettings) || [];
+export function saveLibrary(list) { try { ls().setItem(K.library, JSON.stringify(list)); } catch { /* storage full or blocked */ } }
+export function savePlaylists(list) { try { ls().setItem(K.playlists, JSON.stringify(list)); } catch { /* storage full or blocked: the board still runs */ } }
+export function saveSettings(list) { try { ls().setItem(K.settings, JSON.stringify(list)); } catch { /* storage blocked */ } }
+// What this screen shows, by playlist id: each screen keeps its own, never synced.
+export const loadShown = () => getFlag(K.shown) || '';
+export function saveShown(id) { setFlag(K.shown, id || ''); }
 export function getFlag(k) { try { return ls().getItem(k); } catch { return null; } }
 export function setFlag(k, v) { try { ls().setItem(k, v); } catch { /* ignore */ } }
 

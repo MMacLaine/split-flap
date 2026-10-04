@@ -5,6 +5,8 @@ Companion to `DESIGN-HANDOVER.md` (how the board looks) and `DESIGN-HANDOVER-edi
 
 ## Where it stands
 
+0.10.1 makes everything one kind of thing. Every board is kept once, in Boards, with its own size and theme, and a playlist points at boards there. Templates, board links and files are copied in. The account's storyboards move over on the server in one batch on the first request, and the old rows stay as the way back, to be removed in 0.10.3 or later. Home (city, stops, currency) is kept with the account, and a new device offers what was shown last. The plan is `_local/plans/0.10/`, and the build notes are `_local/plans/HANDOVER-0.10.1-for-review-2026-10-04.md`.
+
 0.8 makes it work outside Stockholm. The board's location became a Place with a country and a time zone, and every new tile and template starts from it. Departures comes from Transitous, through a cached route on the Worker, with SL kept for Stockholm. Names in any Latin alphabet, Greek and Cyrillic print on the flaps. Holidays by country, a world clock, currency with any base and crypto coins, rain in the next hour, and Explore grouped by use. Every outside source is listed in `src/sources.js`, and the Worker can switch one off with `SOURCES_OFF`. The ideation and Fable's review are in `_local/plans/IDEATION-0.8-content-2026-09-29.md` and `REVIEW-0.8-ideation-2026-09-29.md`.
 
 0.5 adds optional accounts: sign in with Google, boards kept with the account and synced, local first, with guests working as before. A Cloudflare Worker in `worker/` with D1 in the EU jurisdiction and Better Auth. Its own privacy notice. The relay (wall screens following an account live) builds on this and is next.

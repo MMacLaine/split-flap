@@ -28,7 +28,7 @@ async function browser(name, shareWith) {
 }
 const names = b => b.ev(`JSON.stringify(splitFlap.boards.map(x => x.name).sort())`);
 const serverMy = b => b.ev(`fetch('/split-flap/api/blueprints').then(r => r.json()).then(j => JSON.stringify(j.blueprints.filter(x => !x.deleted).map(x => x.board.name).sort()))`);
-const server = b => b.ev(`fetch('/split-flap/api/boards').then(r => r.json()).then(j => JSON.stringify(j.boards.filter(x => !x.deleted).map(x => x.board.name).sort()))`);
+const server = b => b.ev(`fetch('/split-flap/api/playlists').then(r => r.json()).then(j => JSON.stringify(j.playlists.filter(x => !x.deleted).map(x => x.board.name).sort()))`);
 const results = []; const check = (label, ok, detail) => { results.push(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '  ' + detail : ''}`); };
 
 try {
@@ -85,7 +85,7 @@ try {
   // the API down at load, one edit. That must never read as deleting the missing boards.
   const liveBefore = JSON.parse(await server(A)).length;
   await A.blockApi(true);
-  await A.ev(`(() => { const all = JSON.parse(localStorage.getItem('sf_boards')); localStorage.setItem('sf_boards', JSON.stringify(all.slice(0, 1))); })()`);
+  await A.ev(`(() => { const all = JSON.parse(localStorage.getItem('sf_playlists')); localStorage.setItem('sf_playlists', JSON.stringify(all.slice(0, 1))); })()`);
   await A.go('http://localhost:8787/');
   await A.ev(`splitFlap.upd(b => { b.name = 'Edited with a short list'; })`); await sleep(1000);
   await A.blockApi(false); await A.ev(`dispatchEvent(new Event('online'))`); await sleep(5000);
@@ -109,8 +109,8 @@ try {
   await C.ev(`fetch('/split-flap/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: '${emailC}', name: 'Guest Person' }) }).then(r => r.status)`);
   await C.go('http://localhost:8787/'); await sleep(2500);
   check('the offer shows on the first sign-in', (await C.ev(`splitFlap.account.offer.length`)) === 3);
-  check('and covers My boards as its second group', (await C.ev(`splitFlap.account.offerMy().length`)) === 1);
-  check('a safety copy of the guest boards is kept', (await C.ev(`JSON.parse(localStorage.getItem('sf_guest_backup') || '{"boards":[]}').boards.length`)) === 3);
+  check('and covers its boards as its second group: the demo\'s six and the one saved', (await C.ev(`splitFlap.account.offerMy().length`)) === 7, String(await C.ev(`splitFlap.account.offerMy().length`)));
+  check('a safety copy of the guest boards is kept', (await C.ev(`JSON.parse(localStorage.getItem('sf_guest_backup') || '{"playlists":[]}').playlists.length`)) === 3);
   await C.go('http://localhost:8787/'); await sleep(2500);   // the tab closed with the question showing
   check('closed during the offer and reopened, the offer is back', (await C.ev(`splitFlap.account.offer.length`)) === 3);
   check('and nothing was taken into the account unasked', JSON.parse(await server(C)).length === 0, await server(C));
@@ -121,8 +121,8 @@ try {
   check('the unticked board stays here', (await names(C)).includes('Guest leave'));
   check('the safety copy is gone once the server has them', (await C.ev(`String(localStorage.getItem('sf_guest_backup'))`)) === 'null');
   const said = await C.ev(`splitFlap.flashes.join(' / ')`);
-  check('the count shown matches the server', said === `${cServer.length} playlists and 1 board from My boards are now in your account.`, said);
-  check('the guest blueprint reached the account', (await serverMy(C)) === JSON.stringify(['Guest blueprint']), await serverMy(C));
+  check('the count shown matches the server', said === `${cServer.length} playlists and 7 boards are now in your account.`, said);
+  check('the guest\'s boards reached the account', JSON.parse(await serverMy(C)).includes('Guest blueprint') && JSON.parse(await serverMy(C)).length === 7, await serverMy(C));
 
   // 0.6.4: two tabs of one guest browser. A board made in one tab must survive an edit in
   // an older tab that was left open.
@@ -130,7 +130,7 @@ try {
   const T2 = await browser('T2', T1); await T2.go('http://localhost:8787/');
   await T1.ev(`(() => { splitFlap.duplicateBoard(0); splitFlap.upd(b => { b.name = 'Made in tab one'; }); })()`); await sleep(800);
   await T2.ev(`splitFlap.upd(b => { b.name = 'Edited in tab two'; })`); await sleep(800);
-  const stored = await T2.ev(`JSON.stringify(JSON.parse(localStorage.getItem('sf_boards')).map(b => b.name))`);
+  const stored = await T2.ev(`JSON.stringify(JSON.parse(localStorage.getItem('sf_playlists')).map(b => b.name))`);
   check('a board made in one tab survives an edit in another', stored.includes('Made in tab one') && stored.includes('Edited in tab two'), stored);
   check('and the other tab shows it', (await names(T2)).includes('Made in tab one'), await names(T2));
 
@@ -142,6 +142,23 @@ try {
   check('a new device with only the untouched demo gets no sign-in question', (await D.ev('splitFlap.account.offerCount()')) === 0);
   check('and shows only the account\'s storyboards', !(await names(D)).includes('Demo') && JSON.parse(await names(D)).length === JSON.parse(await server(D)).length, `${await names(D)} vs ${await server(D)}`);
 
+  // 0.10.1: each screen keeps its own Showing, and a new device is offered what was shown last
+  await A.ev(`splitFlap.account.sync()`); await B.ev(`splitFlap.account.sync()`); await sleep(2500);
+  const accIds = JSON.parse(await A.ev(`JSON.stringify(splitFlap.boards.filter(b => b.name !== 'Demo').map(b => b.id))`));
+  const [X, Y] = [accIds[0], accIds[accIds.length - 1]];
+  await A.ev(`splitFlap.pickBoard(splitFlap.boards.findIndex(b => b.id === '${X}'))`); await sleep(2500);
+  await B.ev(`splitFlap.account.sync()`); await sleep(2000);
+  await B.ev(`splitFlap.pickBoard(splitFlap.boards.findIndex(b => b.id === '${Y}'))`); await sleep(2500);
+  await A.ev(`splitFlap.account.sync()`); await sleep(2500);
+  check('two screens on one account each keep what they show', (await A.ev('splitFlap.shown().id')) === X && (await B.ev('splitFlap.shown().id')) === Y && X !== Y, `${await A.ev('splitFlap.shown().id')} ${await B.ev('splitFlap.shown().id')}`);
+  check('the account remembers what was shown last', (await A.ev(`JSON.stringify(splitFlap.setting('last') && splitFlap.setting('last').pl)`)) === JSON.stringify(Y));
+  await D.ev(`splitFlap.account.sync()`); await sleep(2500);
+  await D.ev(`(async () => { if (splitFlap.shown().id === '${Y}') splitFlap.active = splitFlap.boards.findIndex(b => b.id === '${X}'); splitFlap.toggleEdit(); })()`); await sleep(800);
+  const sug = await D.ev(`(document.querySelector('[data-k=last-shown]') || {}).textContent || ''`);
+  check('a device that has chosen nothing is offered it', sug.includes(await B.ev('splitFlap.shown().name')), sug.slice(0, 80));
+  await D.ev(`document.querySelector('[data-k=last-show]').click()`); await sleep(800);
+  check('and one press shows it there', (await D.ev('splitFlap.shown().id')) === Y);
+
   // Sign out while offline with an unsynced edit: nothing may be lost
   await B.offline(true);
   await B.ev(`splitFlap.upd(b => { b.name = 'B unsynced at sign out'; })`); await sleep(2500);
@@ -150,6 +167,7 @@ try {
   await B.ev(`document.querySelector('[data-k=acc-signout]').click()`); await sleep(4000);
   const after = await names(B);
   check('signed out offline, the unsynced board is kept here', after.includes('B unsynced at sign out'), after);
+  check('with the boards it shows, none of them blank', (await B.ev(`String(splitFlap.boards.find(b => b.name === 'B unsynced at sign out').pages.every(p => !p.missing))`)) === 'true');
   check('and the account boards that were safe are gone from B', !after.includes('A online edit'), after);
   check('B is signed out', (await B.ev(`String(splitFlap.account.signedIn())`)) === 'false');
 } catch (e) { results.push('ERROR ' + e.message); }

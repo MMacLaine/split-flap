@@ -72,12 +72,15 @@ test('export has the account and live boards; delete account removes everything'
   await call(c, 'DELETE', '/boards/k2', { baseRev: 1 });
   const ex = await call(c, 'GET', '/export');
   assert.equal(ex.body.account.email, email);
-  assert.deepEqual(ex.body.boards.map(b => b.name), ['Keep']);
+  assert.deepEqual(ex.body.storyboards.map(b => b.name), ['Keep']);   // the rows from before 0.10.1, as they were
+  assert.deepEqual(ex.body.playlists.map(b => b.name), ['Keep']);     // and what they became
+  assert.deepEqual(ex.body.boards.map(b => b.name), ['P']);
   const del = await call(c, 'DELETE', '/account');
   assert.equal(del.status, 200, JSON.stringify(del.body));
   assert.equal((await call(c, 'GET', '/me')).status, 401);
   const again = await session(email);                                  // a new account with the same email starts empty
   assert.deepEqual((await call(again, 'GET', '/boards')).body.boards, []);
+  assert.deepEqual((await call(again, 'GET', '/playlists')).body.playlists, []);
 });
 
 // My boards (0.7.1): blueprints follow the same rules in their own table.
@@ -104,7 +107,7 @@ test('export includes live blueprints, and deleting the account removes them', a
   await call(c, 'PUT', '/blueprints/m1', { board: blueprint('m1', 'Keep'), baseRev: 0 });
   await call(c, 'PUT', '/blueprints/m2', { board: blueprint('m2', 'Gone'), baseRev: 0 });
   await call(c, 'DELETE', '/blueprints/m2', { baseRev: 1 });
-  assert.deepEqual((await call(c, 'GET', '/export')).body.blueprints.map(b => b.name), ['Keep']);
+  assert.deepEqual((await call(c, 'GET', '/export')).body.boards.map(b => b.name), ['Keep']);   // 0.10.1: the blueprints are your Boards
   assert.equal((await call(c, 'DELETE', '/account')).status, 200);
   const again = await session(email);
   assert.deepEqual((await call(again, 'GET', '/blueprints')).body.blueprints, []);
@@ -163,4 +166,32 @@ test('feeds: an address no account has added is not fetched; adding one sets its
   r = await call(a, 'DELETE', '/connections/' + id, { baseRev: 1 });
   assert.equal(r.status, 200);
   assert.match(q(`SELECT lookup FROM connection WHERE id = '${id}'`), /"lookup":\s*null/);
+});
+
+// 0.10.1: playlists point at boards. The first request for them moves the storyboards over.
+const playlist = (id, name, ids) => ({ id, name, transition: 'classic', speed: 'fast', sound: false, quiet: { on: false, from: '23:00', to: '07:00', mode: 'dim' }, items: ids.map(x => ({ id: x, dur: 10, wins: [] })) });
+test('playlists: the first request moves the storyboards over, once', async () => {
+  const c = await session(`pl-${run}@example.com`);
+  await call(c, 'PUT', '/boards/s1', { board: board('s1', 'Morning'), baseRev: 0 });
+  let r = await call(c, 'GET', '/playlists');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.playlists.map(x => [x.id, x.rev, x.board.items.map(i => i.id)]), [['s1', 1, ['p1']]]);
+  r = await call(c, 'GET', '/blueprints');
+  assert.deepEqual(r.body.blueprints.map(x => [x.id, x.rev]), [['p1', 1]]);
+  await call(c, 'PUT', '/boards/s2', { board: board('s2', 'Late'), baseRev: 0 });   // an old tab, after the move
+  assert.equal((await call(c, 'GET', '/playlists')).body.playlists.length, 1);
+  r = await call(c, 'PUT', '/playlists/s1', { board: playlist('s1', 'Morning', ['p1', 'p2']), baseRev: 1 });
+  assert.deepEqual([r.status, r.body.rev], [200, 2]);
+  assert.equal((await call(c, 'PUT', '/playlists/s1', { board: { id: 's1', name: 'x' }, baseRev: 2 })).status, 400);   // no items: not a playlist
+  r = await call(c, 'DELETE', '/playlists/s1', { baseRev: 2 });
+  assert.deepEqual([r.status, r.body.deleted], [200, true]);
+});
+
+test('settings: home and last only, kept per account', async () => {
+  const c = await session(`st-${run}@example.com`);
+  let r = await call(c, 'PUT', '/settings/home', { board: { id: 'home', stops: [], cur: 'GBP' }, baseRev: 0 });
+  assert.equal(r.status, 200);
+  assert.equal((await call(c, 'PUT', '/settings/theme', { board: { id: 'theme' }, baseRev: 0 })).status, 400);
+  r = await call(c, 'GET', '/settings');
+  assert.deepEqual(r.body.settings.map(x => [x.id, x.board.cur]), [['home', 'GBP']]);
 });

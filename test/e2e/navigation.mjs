@@ -46,9 +46,10 @@ try {
   await ev(`document.querySelector('[data-k=back]').click()`); await sleep(400);
   check('Back from the playlist on the screen goes to Showing', (await at()) === '#/showing', await at());
   await ev(`document.querySelector('[data-k=change-shown]').click()`); await sleep(400);
-  check('Change opens the list of playlists', (await at()) === '#/storyboards', await at());
-  await ev(`document.querySelector('[data-k=back]').click()`); await sleep(400);
-  check('and Back from the list goes to Showing', (await at()) === '#/showing', await at());
+  check('Change opens Boards, with the playlists first (0.10.1)', (await at()) === '#/my-boards' && (await ev(`String(!!document.querySelector('[data-k=sb-0]'))`)) === 'true', await at());
+  check('Boards is a tab top, with no Back', (await ev(`String(!!document.querySelector('[data-k=back]'))`)) === 'false');
+  await go(URL0 + '#/storyboards'); 
+  check('the old address of the list lands in Boards', (await lv()) === 'my:list', await lv());
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'list' })`); await sleep(300);
   await ev(`document.querySelector('[data-k=sb-0]').click()`); await sleep(400);
   await ev(`document.querySelector('[data-k=view-boards]').click()`); await sleep(300);
@@ -93,7 +94,7 @@ try {
   // Escape closes a menu first, then the editor
   await ev(`splitFlap.editor.go({ sec: 'sb', lv: 'sb', sb: '${sb}', view: 'boards' })`); await sleep(300);
   await ev(`document.querySelector('[data-k=more-pg-0]').click()`); await sleep(300);
-  check('the more menu opens with its verbs in order', (await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`)) === 'Open,Rename,Duplicate,Save to my boards,Copy to,Share as image,Delete', await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`));
+  check('the more menu opens with its verbs in order', (await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`)) === 'Open,Rename,Duplicate,Add to a playlist,Share as image,Take out of this playlist', await ev(`[...document.querySelectorAll('.sf-more.open .sf-more-item')].map(b => b.textContent).join(',')`));
   await key('Escape');
   check('Escape closes the menu first', (await ev(`String(!!document.querySelector('.sf-more.open'))`)) === 'false' && (await lv()) === 'sb:sb:boards');
   await key('Escape');
@@ -141,8 +142,8 @@ try {
   await go(URL0); await ev('splitFlap.toggleEdit()'); await sleep(500);
   await ev(`(() => { const b = splitFlap.cur(); splitFlap.editor.saveToMy(b.pages[0], null, splitFlap.dims(), b.theme); })()`); await sleep(400);
   const line = await ev(`(document.querySelector('.sf-drawer [data-k=status-line]') || {}).textContent || ''`);
-  check('the status line shows in the editor after Save to my boards', /saved|sparad/i.test(line), line);
-  check('and a screen reader hears it', /saved|sparad/i.test(await ev(`document.querySelector('.sf > [role=status][aria-live=polite]').textContent`)));
+  check('the status line shows in the editor after Save to Boards', /in your Boards/i.test(line), line);
+  check('and a screen reader hears it', /in your Boards/i.test(await ev(`document.querySelector('.sf > [role=status][aria-live=polite]').textContent`)));
   await go(URL0 + '#/my-boards/nope'); await sleep(300);
   check('a bad address is replaced by the level it landed on', (await at()) === '#/my-boards', await at());
   await ev(`document.querySelector('[data-k=done]').click()`); await sleep(600);

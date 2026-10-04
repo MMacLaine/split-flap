@@ -13,11 +13,11 @@ export const HELP = {
     { h: 'Playlists and boards', fig: 'board', p: [
       'A playlist is what a screen plays. It holds boards in order, and says when each one shows.',
       'A board is one screen at a time: a layout of one or two zones, and in each zone one kind of content, like a message, the clock, departures or the weather.',
-      'The editor has its sections along the top: Showing, My boards, Explore for the templates, and Account.'
+      'The editor has its sections along the top: Showing, Boards, Explore for the templates, and Account.'
     ] },
     { h: 'Showing and previewing', p: [
       'Edit opens Showing: what this screen shows now, and the ways to change it.',
-      'Anything you open, a playlist, a board in My boards or a template, is on the screen at once with a gold bar under it. That is a preview. Show on this screen makes it what the screen runs. Leave without pressing and the screen goes back to what it was showing, and a preview left alone for three minutes ends by itself.',
+      'Anything you open, a playlist, a board or a template, is on the screen at once with a gold bar under it. That is a preview. Show on this screen makes it what the screen runs. Leave without pressing and the screen goes back to what it was showing, and a preview left alone for three minutes ends by itself.',
       'Changes are saved as you make them, and the line under the editor\'s title says so.'
     ] },
     { h: 'Making a board', fig: 'layouts', p: [
@@ -25,9 +25,10 @@ export const HELP = {
       'Pick a layout to split the board into two zones, then tap a zone to choose its content. The zone you are working on is outlined on the big board.',
       'Each kind of content has its options under it, and the less used ones are behind More options.'
     ] },
-    { h: 'My boards', p: [
-      "Save to my boards keeps a copy of any board, from a playlist or a template, to use again. Add it to any playlist with + Add a board, and the copy is fitted to that playlist's size. Only flaps typed or painted on the grid can be cut, and the app says how many before you add it.",
-      'A copy stands on its own, so changing it, or the one in My boards, leaves the other as it was. My boards can also import a board file or a pasted Vestaboard message.'
+    { h: 'Boards', p: [
+      'Boards has your playlists, then every board you have, each drawn at its own size. A board you make, or take from a template, is kept there once.',
+      'A playlist points at boards in Boards, so a board in two playlists is the same board in both, and a change shows in each. The board says which playlists it is in. Duplicate it for one of its own.',
+      'Each board has its own size and theme, so one playlist can mix them. Deleting a board takes it out of every playlist, and the line under the title says which, with Undo. Boards can also import a board file or a pasted Vestaboard message.'
     ] },
     { h: 'Messages', fig: 'message', p: [
       'Messages are made straight on the grid, so you see where every letter lands. Type puts letters where you click, Paint drags colour flaps across the grid, and Photo turns a picture into colour flaps.',
@@ -40,7 +41,7 @@ export const HELP = {
       ['Quiet hours in ', { k: 'settings', t: 'Display' }, ' dim or blank the screen overnight.']
     ] },
     { h: 'The display', p: [
-      ['Grid size, theme, transition, sound and the place are in ', { k: 'settings', t: 'Display' }, ', next to Week and Boards on a playlist. Language is under ', { k: 'account', t: 'Account' }, '.'],
+      ['A board\'s size and theme are on the board. A playlist\'s transition, sound and place are in ', { k: 'settings', t: 'Display' }, ', next to Week and Boards, where its theme can also be set for every board at once. Language and Home are under ', { k: 'account', t: 'Account' }, '.'],
       'The place is where the screen is. New boards start from it: the weather, the nearest stop, the holidays, the currency, and 12 or 24 hours. Sunrise and sunset use it too.'
     ] },
     { h: 'Live data, almost anywhere', p: [
@@ -74,11 +75,11 @@ export const HELP = {
     { h: 'Spellistor och tavlor', fig: 'board', p: [
       'En spellista är det en skärm spelar. Den har tavlor i ordning, och säger när var och en visas.',
       'En tavla är en skärm i taget: en layout med en eller två zoner, och i varje zon en sorts innehåll, som ett meddelande, klockan, avgångar eller vädret.',
-      'Redigeraren har sina sektioner längst upp: Visas, Mina tavlor, Utforska för mallarna, och Konto.'
+      'Redigeraren har sina sektioner längst upp: Visas, Tavlor, Utforska för mallarna, och Konto.'
     ] },
     { h: 'Visas och förhandsvisning', p: [
       'Redigera öppnar Visas: det den här skärmen visar nu, och sätten att ändra det.',
-      'Allt du öppnar, en spellista, en tavla i Mina tavlor eller en mall, syns på skärmen direkt med en gyllene rad under. Det är en förhandsvisning. Visa på den här skärmen gör det till det skärmen visar. Går du därifrån utan att trycka går skärmen tillbaka till det den visade, och en förhandsvisning som lämnas orörd i tre minuter slutar av sig själv.',
+      'Allt du öppnar, en spellista, en tavla eller en mall, syns på skärmen direkt med en gyllene rad under. Det är en förhandsvisning. Visa på den här skärmen gör det till det skärmen visar. Går du därifrån utan att trycka går skärmen tillbaka till det den visade, och en förhandsvisning som lämnas orörd i tre minuter slutar av sig själv.',
       'Ändringar sparas medan du gör dem, och raden under redigerarens rubrik säger det.'
     ] },
     { h: 'Göra en tavla', fig: 'layouts', p: [
@@ -86,9 +87,10 @@ export const HELP = {
       'Välj en layout för att dela tavlan i två zoner, och tryck sedan på en zon för att välja dess innehåll. Zonen du arbetar med ramas in på den stora tavlan.',
       'Varje sorts innehåll har sina val under sig, och de som används mer sällan ligger under Fler val.'
     ] },
-    { h: 'Mina tavlor', p: [
-      'Spara i mina tavlor behåller en kopia av vilken tavla som helst, från en spellista eller en mall, att använda igen. Lägg till den i en spellista med + Lägg till en tavla, så anpassas kopian till spellistans storlek. Bara flappar som skrivits eller målats på rutnätet kan klippas bort, och appen säger hur många innan du lägger till den.',
-      'En kopia står för sig själv, så om du ändrar den, eller den i Mina tavlor, är den andra som förut. Mina tavlor kan också importera en tavelfil eller ett inklistrat Vestaboard-meddelande.'
+    { h: 'Tavlor', p: [
+      'Tavlor har dina spellistor, och sedan varje tavla du har, var och en ritad i sin egen storlek. En tavla du gör, eller tar från en mall, sparas där en gång.',
+      'En spellista pekar på tavlor i Tavlor, så en tavla i två spellistor är samma tavla i båda, och en ändring syns i varje. Tavlan säger vilka spellistor den finns i. Duplicera den för en egen.',
+      'Varje tavla har sin egen storlek och sitt eget tema, så en spellista kan blanda dem. Tar du bort en tavla tas den ur varje spellista, och raden under rubriken säger vilka, med Ångra. Tavlor kan också importera en tavelfil eller ett inklistrat Vestaboard-meddelande.'
     ] },
     { h: 'Meddelanden', fig: 'message', p: [
       'Meddelanden görs direkt på rutnätet, så du ser var varje bokstav hamnar. Skriv sätter bokstäver där du klickar, Måla drar färgblad över rutnätet, och Foto gör om en bild till färgblad.',
@@ -101,7 +103,7 @@ export const HELP = {
       ['Tysta timmar under ', { k: 'settings', t: 'Visning' }, ' dämpar eller släcker skärmen över natten.']
     ] },
     { h: 'Skärmen', p: [
-      ['Storlek på rutnätet, tema, övergång, ljud och plats finns under ', { k: 'settings', t: 'Visning' }, ', bredvid Vecka och Tavlor på en spellista. Språk finns under ', { k: 'account', t: 'Konto' }, '.'],
+      ['En tavlas storlek och tema finns på tavlan. En spellistas övergång, ljud och plats finns under ', { k: 'settings', t: 'Visning' }, ', bredvid Vecka och Tavlor, där temat också kan sättas för alla tavlor på en gång. Språk och Hem finns under ', { k: 'account', t: 'Konto' }, '.'],
       'Platsen är där skärmen finns. Nya tavlor utgår från den: vädret, närmaste hållplats, helgdagar, valutan och 12 eller 24 timmar. Soluppgång och solnedgång använder den också.'
     ] },
     { h: 'Livedata, nästan var som helst', p: [

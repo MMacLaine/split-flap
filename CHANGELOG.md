@@ -2,6 +2,17 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.10.1 (2026-10-04): Boards
+
+Testers could not see why templates, examples and My boards were different things. From this release every board is kept once, in Boards, and a playlist shows boards from there.
+
+- **One Boards list.** Your playlists, then every board you have made or taken from a template, each drawn at its own shape. My boards is gone, since everything is in Boards now.
+- **A board is the same board in every playlist.** Change it in one and the others show the change, and the board says which playlists it is in. Duplicate it if you want one of its own. Deleting a board takes it out of each playlist and says which, with Undo.
+- **Each board has its own size and theme.** A playlist can mix a 6 × 22 board with a 12 × 40 one, and the screen takes each at its own size as it comes round.
+- **A tap on a board shows it alone.** On Showing, tapping a board previews it on its own, and Show on this screen puts just that board on. Show another board in turn makes a playlist of the two.
+- **Home in Account.** Your city, your stops and your currency, which new tiles start from. With an account it is kept there, and a new device offers what you showed last.
+- Smaller changes: Type your own message is always on Showing, one status line shows at a time, and before you pick a city the demo shows a world clock instead of departures from Stockholm.
+
 ## v0.10.0 (2026-09-30): Showing
 
 People who had not built Split-Flap found the editor hard to follow. This release changes how it behaves: what you open is on the screen at once, and nothing changes what the screen runs until you press Show on this screen.

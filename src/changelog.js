@@ -3,6 +3,32 @@
 
 export const CHANGELOG = [
   {
+    v: '0.10.1', date: '2026-10-04',
+    tag: { en: 'Boards', sv: 'Tavlor' },
+    desc: {
+      en: 'Testers could not see why templates, examples and My boards were different things. From this release every board is kept once, in Boards, and a playlist shows boards from there.',
+      sv: 'Testarna förstod inte varför mallar, exempel och Mina tavlor var olika saker. Från den här versionen sparas varje tavla en gång, i Tavlor, och en spellista visar tavlor därifrån.'
+    },
+    items: {
+      en: [
+        '**One Boards list.** Your playlists, then every board you have made or taken from a template, each drawn at its own shape. My boards is gone, since everything is in Boards now.',
+        '**A board is the same board in every playlist.** Change it in one and the others show the change, and the board says which playlists it is in. Duplicate it if you want one of its own. Deleting a board takes it out of each playlist and says which, with Undo.',
+        '**Each board has its own size and theme.** A playlist can mix a 6 × 22 board with a 12 × 40 one, and the screen takes each at its own size as it comes round.',
+        '**A tap on a board shows it alone.** On Showing, tapping a board previews it on its own, and Show on this screen puts just that board on. Show another board in turn makes a playlist of the two.',
+        '**Home in Account.** Your city, your stops and your currency, which new tiles start from. With an account it is kept there, and a new device offers what you showed last.',
+        'Smaller changes: Type your own message is always on Showing, one status line shows at a time, and before you pick a city the demo shows a world clock instead of departures from Stockholm.'
+      ],
+      sv: [
+        '**En lista med tavlor.** Dina spellistor, sedan varje tavla du gjort eller tagit från en mall, var och en ritad i sin egen form. Mina tavlor finns inte längre, eftersom allt ligger i Tavlor nu.',
+        '**En tavla är samma tavla i varje spellista.** Ändrar du den i en syns ändringen i de andra, och tavlan säger vilka spellistor den finns i. Duplicera den om du vill ha en egen. Tar du bort en tavla tas den ur varje spellista, och raden säger vilka, med Ångra.',
+        '**Varje tavla har sin egen storlek och sitt eget tema.** En spellista kan blanda en tavla i 6 × 22 med en i 12 × 40, och skärmen visar var och en i sin storlek när den kommer.',
+        '**Ett tryck på en tavla visar den ensam.** På Visas förhandsvisar ett tryck på en tavla den ensam, och Visa på den här skärmen visar bara den. Visa en till tavla i tur gör en spellista av de två.',
+        '**Hem i Konto.** Din stad, dina hållplatser och din valuta, som nya rutor börjar från. Med ett konto sparas det där, och en ny enhet erbjuder det du visade senast.',
+        'Mindre ändringar: Skriv ditt eget meddelande finns alltid på Visas, en statusrad visas åt gången, och innan du valt stad visar demon en världsklocka i stället för avgångar från Stockholm.'
+      ]
+    }
+  },
+  {
     v: '0.10.0', date: '2026-09-30',
     tag: { en: 'Showing', sv: 'Visas' },
     desc: {
