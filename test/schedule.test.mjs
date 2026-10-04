@@ -176,3 +176,29 @@ test('the version is read from the text of changelog.js itself', async () => {
   assert.equal(versionIn("  {\n    v: '0.9', date: '2027-01-01',\n  },\n  {\n    v: '0.8',"), '0.9');
   assert.equal(versionIn('<html>502 Bad Gateway</html>'), null);
 });
+
+// 0.11.4: the drag rules shared by the Week view and a board's own strip
+test('movedWin: move, start and end, never inverted, and a move past midnight changes the day', async () => {
+  const { movedWin, newWin } = await import('../src/schedule.js');
+  const w = { from: '09:00', to: '10:00', days: [1] };
+  assert.deepEqual(movedWin(w, 'move', 30), { from: '09:30', to: '10:30', days: [1] });
+  assert.deepEqual(movedWin(w, 'start', -60), { from: '08:00', to: '10:00', days: [1] });
+  assert.deepEqual(movedWin(w, 'start', 120), { from: '09:45', to: '10:00', days: [1] });   // stops a step before the end
+  assert.deepEqual(movedWin(w, 'end', -120), { from: '09:00', to: '09:15', days: [1] });
+  assert.deepEqual(movedWin(w, 'move', 0, 2), { from: '09:00', to: '10:00', days: [3] });
+  assert.deepEqual(movedWin({ from: '23:00', to: '23:30', days: [5] }, 'move', 90), { from: '00:30', to: '01:00', days: [6] });
+  assert.deepEqual(movedWin({ from: '09:00', to: '10:00', date: '2026-10-05' }, 'move', 0, 1), { from: '09:00', to: '10:00', date: '2026-10-06' });
+  assert.deepEqual(w, { from: '09:00', to: '10:00', days: [1] });   // a copy
+  assert.deepEqual(newWin(new Date(2026, 9, 7), 540, 600), { from: '09:00', to: '10:00', days: [3] });
+  assert.deepEqual(newWin(new Date(2026, 9, 7), 1380, 1440), { from: '23:00', to: '00:00', days: [3] });
+});
+
+test('a time made by newWin is open on the wall exactly when the strip draws it', async () => {
+  const { newWin, inWindow, blocksFor } = await import('../src/schedule.js');
+  const day = new Date(2026, 9, 7), w = newWin(day, 600, 690), pages = [{ wins: [w] }];
+  const b = blocksFor(pages, day);
+  assert.deepEqual([b[0].s, b[0].e], [600, 690]);
+  assert.equal(inWindow(w, new Date(2026, 9, 7, 10, 0).getTime()), true);
+  assert.equal(inWindow(w, new Date(2026, 9, 7, 11, 30).getTime()), false);
+  assert.equal(inWindow(w, new Date(2026, 9, 8, 10, 0).getTime()), false);
+});

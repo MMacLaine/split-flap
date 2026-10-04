@@ -32,7 +32,7 @@ import { Composer } from './composer.js';
 import { CHANGELOG, VERSION } from './changelog.js';
 import { pageWins, dayPlaylist } from './schedule.js';
 import { parseRoute, routeHash, parentRoute } from './route.js';
-import { weekView, hueOf, nextHue } from './week.js';
+import { weekView, weekStrip, hueOf, nextHue } from './week.js';
 import { getFlag, setFlag, sizeOf, dimsOfSize } from './store.js';
 import { HELP, INTRO } from './help.js';
 import { lookSheet, lookRow, lookLabel, ownLook, swatchEl, openLook, closeLook, ctxValue } from './lookSheet.js';
@@ -718,8 +718,8 @@ export class Editor {
       h('p', { class: 'sf-hint', 'data-k': 'in-playlists' }, inPl.length ? t.inPlaylists(inPl.map(x => x.name)) : t.inNoPlaylist),
       h('div', { class: 'sf-field gap ruled' }, h('span', { class: 'sf-eyebrow' }, bp ? t.onScreen : t.inThisPlaylist(b.name)),
         bp ? h('span', { class: 'sf-hint' }, t.bpNoTimes)
-          : h('details', { class: 'sf-adv', open: pageWins(p).length > 0 || !!this.E.advOpen, ontoggle: e => { this.E.advOpen = e.target.open; } },
-            h('summary', { 'data-k': 'when-adv' }, h('span', null, t.whenShows), h('span', { class: 'sf-tag' }, t.advanced)), this.windowsEl(p)),
+          // 0.11.4: a section of its own, the board's week on top and the form for exact times under it
+          : h('div', { class: 'sf-field sf-when', 'data-k': 'when' }, h('h3', { class: 'sf-label' }, t.whenShows), weekStrip(this, this.app.selIdx()), this.windowsEl(p)),
         h('div', { class: 'sf-row between' }, h('span', { class: 'sf-label' }, t.showFor),
           this.stepper(`${p.dur} s`, () => durStep(-1), () => durStep(1), 'dur', di <= 0, p.dur >= DURS[DURS.length - 1])),
         h('div', { class: 'sf-field' }, h('span', { class: 'sf-label' }, t.pageTransition),
@@ -750,7 +750,12 @@ export class Editor {
   // A page's time windows: the tick is the way in, then one card per window.
   windowsEl(p) {
     const t = this.t, wins = pageWins(p);
-    const setWins = fn => this.app.updPage(pp => { const list = clone(pageWins(pp)); fn(list); pp.wins = list; delete pp.win; if (!list.length) delete pp.alone; });
+    // every change answers in the status line, with Undo (0.11.4), as the strip's do
+    const setWins = fn => {
+      const before = clone(pageWins(p)), alone = !!p.alone, id = p.id, app = this.app;
+      app.updPage(pp => { const list = clone(pageWins(pp)); fn(list); pp.wins = list; delete pp.win; if (!list.length) delete pp.alone; });
+      app.say(t.stTimesSaved(p.name || t.page), { action: { label: t.undo, fn: () => app.upd(bb => { const q = bb.pages.find(x => x.id === id); if (!q) return; q.wins = before; delete q.win; if (alone) q.alone = true; else delete q.alone; }) } });
+    };
     const card = (w, i) => {
       const days = w.days && w.days.length ? w.days : [];
       const set = fn => setWins(list => fn(list[i]));

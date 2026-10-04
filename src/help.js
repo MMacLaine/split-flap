@@ -48,6 +48,7 @@ export const HELP = {
     { h: 'The week', fig: 'week', p: [
       "Week is the main view of a playlist, with each board's times as blocks. Drag down a day to give a board a time. A block can be dragged to move it, or by its top or bottom edge to change when it starts or ends.",
       'A board with no time takes turns with the others whenever it can, and sits under Any time. A time can be days of the week, or a date, once or every year, for a birthday. A board keeps the colour of its place in the playlist.',
+      'A board\'s own page has the same week under When it shows, with its times solid and the playlist\'s other boards faint behind. Drag a day to add a time, drag an edge to change it, and tap a block to change or remove it. On a phone it shows a day at a time. The form under it has the exact times and dates.',
       "Show alone on a board with a time keeps the others off while that time is on, which is how the train times get the morning to themselves. Today's playlist beside the week shows what that adds up to. It cannot be edited, so it always matches what plays.",
       ['Quiet hours in ', { k: 'settings', t: 'Display' }, ' dim or blank the screen overnight.']
     ] },
@@ -123,6 +124,7 @@ export const HELP = {
     { h: 'Veckan', fig: 'week', p: [
       'Vecka är spellistans huvudvy, med varje tavlas tider som block. Dra nedåt i en dag för att ge en tavla en tid. Ett block kan dras för att flyttas, eller i över- eller underkanten för att ändra när det börjar eller slutar.',
       'En tavla utan tid turas om med de andra när den kan, och ligger under När som helst. En tid kan vara veckodagar, eller ett datum, en gång eller varje år, för en födelsedag. En tavla har färgen för sin plats i spellistan.',
+      'Tavlans egen sida har samma vecka under När den visas, med dess tider fyllda och spellistans andra tavlor svagt bakom. Dra i en dag för att lägga till en tid, dra i en kant för att ändra den och tryck på ett block för att ändra eller ta bort det. På en telefon visas en dag i taget. Formuläret under har de exakta tiderna och datumen.',
       'Visa ensam på en tavla med en tid håller de andra borta medan tiden pågår, och det är så tågtiderna får morgonen för sig själva. Dagens spellista bredvid veckan visar vad det blir. Den går inte att ändra, så den stämmer alltid med det som spelas.',
       ['Tysta timmar under ', { k: 'settings', t: 'Visning' }, ' dämpar eller släcker skärmen över natten.']
     ] },

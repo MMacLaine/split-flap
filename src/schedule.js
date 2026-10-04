@@ -128,6 +128,24 @@ export function comingDates(pages, now) {
   return res.sort((a, b) => a.day - b.day);
 }
 
+// A time dragged in the week or a board's own strip (0.11.4): moved by dm minutes, or its
+// start or end changed by dm, and dd days sideways. A start never passes the end and the
+// end never comes before the start, by at least snap minutes. A time that moves past
+// midnight belongs to the day it now starts on. A copy.
+const hmOf = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+export function movedWin(win, mode, dm, dd = 0, snap = 15) {
+  const w = Object.assign({}, win); let f = toMin(w.from), to = toMin(w.to);
+  if (mode === 'move') { f += dm; to += dm; }
+  else if (mode === 'start') f = Math.min(f + dm, (to <= f ? to + 1440 : to) - snap);
+  else to = Math.max(to + dm, f + snap);
+  const k = dd + Math.floor(f / 1440);
+  w.from = hmOf(f); w.to = hmOf(to);
+  return shiftWin(w, k);
+}
+// A new time from a drag on day (a Date) from minute s to e: that weekday, or that date
+// for a strip showing dates. An end at 24:00 is stored as 00:00, the whole rest of the day.
+export function newWin(day, s, e) { return { from: hmOf(s), to: hmOf(e >= 1440 ? 0 : e), days: [day.getDay()] }; }
+
 // A time moved k days sideways in the week: its days shift, or its date does. A copy.
 export function shiftWin(win, k) {
   const w = Object.assign({}, win);

@@ -512,6 +512,22 @@ html[data-chrome="light"], html[data-chrome="light"] body { background: #F4F0E7;
 .sf-block.cont-next { border-bottom-style: dashed; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .sf-block.cont-prev { border-top-style: dashed; border-top-left-radius: 0; border-top-right-radius: 0; }
 .sf-block.short { padding: 0 5px; justify-content: center; font-size: 10px; line-height: 1.1; }
+/* 0.11.4: a board's own week, at the top of When it shows */
+.sf-when > h3 { margin: 0 0 4px; }
+.sf-strip { position: relative; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.sf-strip-head { display: flex; align-items: center; gap: 6px; }
+.sf-strip-head strong { font-size: 12px; }
+.sf-strip-days { display: grid; grid-template-columns: 26px repeat(7, minmax(0,1fr)); font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; }
+.sf-strip-days.one { grid-template-columns: 26px minmax(0,1fr); }
+.sf-strip-days .today { color: var(--accent); }
+.sf-strip-grid { grid-template-columns: 26px repeat(7, minmax(0,1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.sf-strip-grid.one { grid-template-columns: 26px minmax(0,1fr); }
+/* the strip's days take no scrolling, so a finger draws a time instead of fighting the page */
+.sf-day-col.strip { touch-action: none; background-size: 100% calc(100% / 4); }
+.sf-block.faint { opacity: 0.32; pointer-events: none; border-style: dashed; }
+.sf-block.mine { padding: 0 3px; font-size: 9px; touch-action: none; cursor: grab; }
+.sf-block.mine span { font-size: 9px; }
+.sf-strip .sf-pop { position: relative; margin-top: 6px; }
 .sf-block.ghost { background: var(--accent-soft); border: 1px dashed var(--accent); pointer-events: none; }
 .sf-block:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sf-block .sf-tag { align-self: flex-start; font-size: 9px; padding: 0 4px; border-color: currentColor; color: inherit; }

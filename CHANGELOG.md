@@ -2,6 +2,14 @@
 
 Each version is a release, newest first. The app shows this log under Edit, at the foot of the page list.
 
+## v0.11.4 (2026-10-04): When it shows
+
+A board's times are on a week you can drag now, at the top of When it shows, instead of a form behind Advanced.
+
+- **Drag to set a time.** Drag down a day to add a time, drag an edge to make it longer or shorter, and tap it to change or remove it. The playlist's other boards sit faintly behind, so you can see where this one fits.
+- **On a phone** it is one day at a time with arrows, and a finger draws a time without the page scrolling under it.
+- **The form is still there,** under the week, for exact times, dates and the keyboard. Both change the same times as the playlist's Week, and every change says what it did, with Undo.
+
 ## v0.11.3 (2026-10-04): Finishing
 
 The last of 0.11: glass, smoke and paper sound like what they are, and old copies of boards are cleared out.
