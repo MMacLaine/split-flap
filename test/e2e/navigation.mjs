@@ -172,6 +172,9 @@ try {
   await ev('splitFlap.toggleEdit()'); await sleep(300);
   await ev(`document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true }))`); await sleep(300);
   check('? on the keyboard opens Help with the editor closed', (await lv()) === 'acc:help');
+  await ev('splitFlap.editor.go({ sec: "ex", lv: "list" })'); await sleep(200);
+  await ev(`document.querySelector('[data-k=tab-acc]').click()`); await sleep(300);
+  check('after Help, the Account tab opens Account, not Help', (await lv()) === 'acc:main');
   await ev('splitFlap.toggleEdit()');
 
   // the phone: the same levels, one day of the week at a time

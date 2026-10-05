@@ -159,7 +159,9 @@ export class Editor {
   top(sec) { return sec === 'ex' ? { sec: 'ex', lv: 'list' } : sec === 'acc' ? { sec: 'acc', lv: 'main' } : sec === 'my' ? { sec: 'my', lv: 'list' } : { sec: 'sb', lv: 'showing' }; }
   // A tab returns to where you last were in that section; the current tab goes to its top.
   // Showing always opens on this screen (0.10).
-  tab(sec) { this.go(sec === this.E.sec || sec === 'sb' ? this.top(sec) : this.E.last[sec] || this.top(sec)); }
+  // Account always opens on Account: Help and the version log are reached from anywhere now (0.11.5),
+  // so remembering them made the tab hide the account behind Help
+  tab(sec) { this.go(sec === this.E.sec || sec === 'sb' || sec === 'acc' ? this.top(sec) : this.E.last[sec] || this.top(sec)); }
   // Opening the editor: Explore on the very first edit, else the board on the wall now.
   open(fresh) {
     this.E.drag = -1;
